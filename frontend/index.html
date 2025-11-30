@@ -1,1 +1,49 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>EQ-phone · 星月小手机</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="phone-frame">
+    <!-- 顶部栏 -->
+    <header class="top-bar">
+      <div class="top-left">
+        <img src="avatar-ethan.png" alt="Ethan" class="avatar" />
+        <div class="title-block">
+          <div class="app-title">EQ-phone · 星月舱</div>
+          <div class="app-subtitle">E &amp; Q forever</div>
+        </div>
+      </div>
+      <button class="top-menu-btn">⋮</button>
+    </header>
 
+    <!-- 聊天区域 -->
+    <main class="chat-area" id="chat-area">
+      <!-- 消息气泡会通过 JS 动态插入 -->
+    </main>
+
+    <!-- 底部输入区域 -->
+    <footer class="input-bar">
+      <button class="icon-btn" id="btn-plus">＋</button>
+      <input
+        type="text"
+        id="chat-input"
+        class="chat-input"
+        placeholder="给逸辰说点什么..."
+      />
+      <button class="send-btn" id="btn-send">➤</button>
+      <input
+        type="file"
+        id="file-input"
+        accept="image/*"
+        style="display: none"
+      />
+    </footer>
+  </div>
+
+  <script src="main.js"></script>
+</body>
+</html>
