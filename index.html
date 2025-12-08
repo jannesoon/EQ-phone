@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EQ-星月舱V2.0</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Markdown 渲染支持 -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        .animate-fade-in { animation: fadeIn 0.3s ease-out forwards; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #d1d5db; }
+        
+        /* Markdown 样式微调 */
+        .prose p { margin-bottom: 0.5em; }
+        .prose pre { background: #f3f4f6; padding: 10px; border-radius: 8px; overflow-x: auto; }
+        .prose code { background: #f3f4f6; padding: 2px 4px; border-radius: 4px; font-family: monospace; font-size: 0.9em; }
+        .prose ul { list-style-type: disc; padding-left: 1.5em; }
+        .prose ol { list-style-type: decimal; padding-left: 1.5em; }
+    </style>
+</head>
+<body class="bg-white text-gray-900 overflow-hidden">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // --- 图标组件 ---
+        const Icons = {
+            Menu: () => <path d="M4 6h16M4 12h16M4 18h16" />,
+            Plus: () => <path d="M12 5v14M5 12h14" />,
+            MessageSquare: () => <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />,
+            Settings: () => <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1-1-1.74v-.47a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />,
+            Send: () => <path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7z" />,
+            User: () => <g><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></g>,
+            Sparkles: () => <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />,
+            X: () => <path d="M18 6 6 18M6 6l12 12" />,
+            Image: () => <g><rect width="18" height="18" x="3" y="3" rx="2" ry="2" /><circle cx="9" cy="9" r="2" /><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" /></g>,
+            Mic: () => <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3zM19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8" />,
+            Download: () => <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" />,
+            FileText: () => <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />,
+            Upload: () => <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12" />,
+            Trash2: () => <g><path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /><line x1="10" x2="10" y1="11" y2="17" /><line x1="14" x2="14" y1="11" y2="17" /></g>,
+            Cpu: () => <g><rect x="4" y="4" width="16" height="16" rx="2" /><rect x="9" y="9" width="6" height="6" /><path d="M9 1v3M15 1v3M9 20v3M15 20v3M20 9h3M20 14h3M1 9h3M1 14h3" /></g>,
+            Archive: () => <path d="M21 8v13H3V8M1 3h22v5H1zM10 12h4" />
+        };
+
+        const Icon = ({ name, size = 20, className = "" }) => {
+            const Path = Icons[name] || Icons.Sparkles;
+            return <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><Path /></svg>;
+        };
+
+        // --- 消息渲染组件 ---
+        const MessageContent = ({ content }) => {
+            const html = marked.parse(content);
+            return <div className="prose prose-sm max-w-none text-gray-700 leading-7" dangerouslySetInnerHTML={{ __html: html }} />;
+        };
+
+        // --- 主程序 ---
+        function App() {
+            const [input, setInput] = useState('');
+            const [messages, setMessages] = useState([]);
+            const [sidebarOpen, setSidebarOpen] = useState(true);
+            const [settingsOpen, setSettingsOpen] = useState(false);
+            const [activeTab, setActiveTab] = useState('general');
+
+            // 配置状态
+            const [config, setConfig] = useState({
+                apiKey: '',
+                baseUrl: 'https://generativelanguage.googleapis.com',
+                minimaxKey: '',
+                historyLimit: 20 // 默认携带最近20轮对话
+            });
+            
+            const [memoryFiles, setMemoryFiles] = useState([]); 
+            const [presetFiles, setPresetFiles] = useState([]); 
+
+            const [isLoading, setIsLoading] = useState(false);
+            const [isArchiving, setIsArchiving] = useState(false); // 归档状态
+            const [error, setError] = useState(null);
+            const [toast, setToast] = useState(null); // 提示信息
+
+            const messagesEndRef = useRef(null);
+            const fileInputRef = useRef(null);
+            const presetInputRef = useRef(null);
+
+            // --- Init ---
+            useEffect(() => {
+                const storedConfig = localStorage.getItem('gemini_app_config');
+                if (storedConfig) setConfig(prev => ({...prev, ...JSON.parse(storedConfig)}));
+                
+                const storedMemories = localStorage.getItem('gemini_memories');
+                if (storedMemories) setMemoryFiles(JSON.parse(storedMemories));
+                
+                const storedPresets = localStorage.getItem('gemini_presets');
+                if (storedPresets) setPresetFiles(JSON.parse(storedPresets));
+
+                if (window.innerWidth < 768) setSidebarOpen(false);
+            }, []);
+
+            // Auto Save Config
+            useEffect(() => {
+                // 仅当 apiKey 存在时自动保存，避免初始化空状态覆盖本地存储
+                if (config.apiKey) localStorage.setItem('gemini_app_config', JSON.stringify(config));
+                if (memoryFiles.length > 0) localStorage.setItem('gemini_memories', JSON.stringify(memoryFiles));
+                if (presetFiles.length > 0) localStorage.setItem('gemini_presets', JSON.stringify(presetFiles));
+            }, [config, memoryFiles, presetFiles]);
+
+            // Scroll
+            useEffect(() => {
+                messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+            }, [messages, isLoading]);
+
+            // Toast Helper
+            const showToast = (msg) => {
+                setToast(msg);
+                setTimeout(() => setToast(null), 3000);
+            };
+
+            // 手动保存配置
+            const handleSaveConfig = () => {
+                localStorage.setItem('gemini_app_config', JSON.stringify(config));
+                localStorage.setItem('gemini_memories', JSON.stringify(memoryFiles));
+                localStorage.setItem('gemini_presets', JSON.stringify(presetFiles));
+                setSettingsOpen(false);
+                showToast("配置已保存");
+            };
+
+            // 导出聊天
+            const handleExport = () => {
+                if (messages.length === 0) return;
+                const exportObj = { timestamp: new Date().toISOString(), history: messages };
+                const blob = new Blob([JSON.stringify(exportObj, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `gemini-chat-${new Date().toISOString().slice(0, 10)}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            };
+
+            // 记忆/预设文件上传
+            const handleFileUpload = (e, type) => {
+                const files = Array.from(e.target.files);
+                if (!files.length) return;
+
+                files.forEach(file => {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        const fileContent = event.target.result;
+                        const newFileObj = {
+                            name: file.name,
+                            size: (file.size / 1024).toFixed(1) + ' KB',
+                            date: new Date().toLocaleDateString(),
+                            content: fileContent
+                        };
+                        if (type === 'memory') setMemoryFiles(prev => [...prev, newFileObj]);
+                        else setPresetFiles(prev => [...prev, newFileObj]);
+                    };
+                    if (file.type.match('text.*') || file.name.endsWith('.md') || file.name.endsWith('.json')) {
+                        reader.readAsText(file);
+                    } else {
+                        alert(`仅支持文本文件(.txt, .md, .json)`);
+                    }
+                });
+            };
+
+            const removeFile = (index, type) => {
+                if (type === 'memory') setMemoryFiles(prev => prev.filter((_, i) => i !== index));
+                else setPresetFiles(prev => prev.filter((_, i) => i !== index));
+            };
+
+            // --- 核心功能: 归档总结 (Summarize & Archive) ---
+            const handleArchive = async () => {
+                if (messages.length === 0) {
+                    showToast("没有对话可以归档");
+                    return;
+                }
+                if (!config.apiKey) {
+                    setError('请先配置 API Key');
+                    return;
+                }
+
+                setIsArchiving(true);
+                showToast("正在生成记忆摘要...");
+
+                try {
+                    const baseUrl = config.baseUrl.replace(/\/$/, '');
+                    const url = `${baseUrl}/v1beta/models/gemini-1.5-flash:generateContent?key=${config.apiKey}`;
+
+                    // 构造总结请求
+                    const summaryPrompt = "请阅读以上所有对话。请以第三人称客观视角，总结这次对话中的关键信息。重点关注：1. 用户提到的个人喜好、习惯、生活状态。 2. 双方达成的重要共识或约定。 3. 用户的情感状态。 请输出为一段简洁的文本，作为“长期记忆”存档。不要包含寒暄。";
+
+                    const payload = {
+                        contents: [
+                            ...messages.map(m => ({ role: m.role, parts: [{ text: m.content }] })),
+                            { role: 'user', parts: [{ text: summaryPrompt }] }
+                        ]
+                    };
+
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    const data = await response.json();
+                    const summary = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+                    if (summary) {
+                        // 创建新的记忆文件
+                        const dateStr = new Date().toLocaleString();
+                        const newMemory = {
+                            name: `Archive_${new Date().toISOString().slice(0, 10)}_${Date.now().toString().slice(-4)}.txt`,
+                            size: (new Blob([summary]).size / 1024).toFixed(1) + ' KB',
+                            date: dateStr,
+                            content: `【归档记忆 ${dateStr}】\n${summary}`
+                        };
+
+                        setMemoryFiles(prev => [...prev, newMemory]);
+                        showToast("记忆已归档！请在侧边栏查看。");
+                    } else {
+                        throw new Error("API 未返回总结内容");
+                    }
+
+                } catch (err) {
+                    setError(`归档失败: ${err.message}`);
+                } finally {
+                    setIsArchiving(false);
+                }
+            };
+
+            // --- 发送消息 ---
+            const handleSend = async () => {
+                if (!input.trim()) return;
+                if (!config.apiKey) {
+                    setSettingsOpen(true);
+                    setActiveTab('general');
+                    setError('请先配置 Gemini API Key');
+                    return;
+                }
+
+                const userText = input;
+                const newMessage = { role: 'user', content: userText };
+                const newHistory = [...messages, newMessage];
+                setMessages(newHistory);
+                setInput('');
+                setIsLoading(true);
+                setError(null);
+
+                try {
+                    const baseUrl = config.baseUrl.replace(/\/$/, '');
+                    const url = `${baseUrl}/v1beta/models/gemini-1.5-flash:generateContent?key=${config.apiKey}`;
+
+                    // 1. 系统指令 (Memory + Presets)
+                    let systemInstructionText = "";
+                    if (presetFiles.length > 0) systemInstructionText += "【系统/角色设定】:\n" + presetFiles.map(f => f.content).join("\n\n") + "\n\n";
+                    if (memoryFiles.length > 0) systemInstructionText += "【长期记忆库】:\n" + memoryFiles.map(f => f.content).join("\n\n") + "\n\n";
+
+                    // 2. 截取历史记录 (Sliding Window)
+                    const limit = (parseInt(config.historyLimit) || 20) * 2;
+                    const contextHistory = newHistory.slice(-limit);
+
+                    const payload = {
+                        contents: contextHistory.map(m => ({
+                            role: m.role,
+                            parts: [{ text: m.content }]
+                        }))
+                    };
+
+                    if (systemInstructionText.trim()) {
+                        payload.system_instruction = { parts: [{ text: systemInstructionText }] };
+                    }
+
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json().catch(() => ({}));
+                        throw new Error(errorData.error?.message || `Error ${response.status}`);
+                    }
+
+                    const data = await response.json();
+                    const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text || "...";
+                    
+                    setMessages(prev => [...prev, { role: 'model', content: aiText }]);
+                } catch (err) {
+                    setError(err.message);
+                    setMessages(prev => [...prev, { role: 'model', content: `错误: ${err.message}` }]);
+                } finally {
+                    setIsLoading(false);
+                }
+            };
+
+            const handleKeyDown = (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSend();
+                }
+            };
+
+            return (
+                <div className="flex h-screen bg-white text-gray-900 font-sans overflow-hidden">
+                    {/* Toast */}
+                    {toast && (
+                        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white px-4 py-2 rounded-full text-sm shadow-lg z-50 animate-fade-in flex items-center gap-2">
+                            <Icon name="Sparkles" size={16} className="text-yellow-400"/> {toast}
+                        </div>
+                    )}
+
+                    {/* 侧边栏 */}
+                    <div className={`${sidebarOpen ? 'w-[280px]' : 'w-0'} bg-gray-50 transition-all duration-300 flex flex-col flex-shrink-0 relative border-r border-gray-200`}>
+                        <div className="p-4 pt-6 space-y-2">
+                            <button onClick={() => setMessages([])} className="flex items-center gap-3 bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-3 rounded-full transition-colors w-full shadow-sm">
+                                <Icon name="Plus" className="text-gray-600" />
+                                <span className="text-sm font-medium">新对话</span>
+                            </button>
+                            <button onClick={handleArchive} disabled={isArchiving} className="flex items-center gap-3 bg-blue-50 hover:bg-blue-100 text-blue-700 px-4 py-3 rounded-full transition-colors w-full shadow-sm border border-blue-100">
+                                <Icon name="Archive" className="text-blue-600" />
+                                <span className="text-sm font-medium">{isArchiving ? '归档中...' : '生成今日记忆'}</span>
+                            </button>
+                        </div>
+                        
+                        <div className="flex-1 overflow-y-auto px-3 py-2">
+                            <div className="text-xs font-medium text-gray-500 mb-2 px-3">当前挂载记忆</div>
+                            {presetFiles.length === 0 && memoryFiles.length === 0 && (
+                                <div className="text-xs text-gray-400 px-3">暂无记忆/预设，请在设置中添加</div>
+                            )}
+                            {presetFiles.map((f, i) => (
+                                <div key={`p-${i}`} className="mb-1 px-3 py-1.5 bg-purple-50 rounded text-xs text-purple-700 flex items-center gap-2 truncate border border-purple-100">
+                                    <Icon name="Sparkles" size={12} className="flex-shrink-0"/> <span className="truncate">{f.name}</span>
+                                </div>
+                            ))}
+                             {memoryFiles.map((f, i) => (
+                                <div key={`m-${i}`} className="mb-1 px-3 py-1.5 bg-blue-50 rounded text-xs text-blue-700 flex items-center gap-2 truncate border border-blue-100">
+                                    <Icon name="Cpu" size={12} className="flex-shrink-0"/> <span className="truncate">{f.name}</span>
+                                </div>
+                            ))}
+                        </div>
+
+                        <div className="p-3 border-t border-gray-200">
+                            <button onClick={handleExport} className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-200 w-full text-left text-sm text-gray-700 transition-colors">
+                                <Icon name="Download" size={18} />
+                                <span>导出记录 JSON</span>
+                            </button>
+                            <button onClick={() => setSettingsOpen(true)} className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-200 w-full text-left text-sm text-gray-700 transition-colors">
+                                <Icon name="Settings" size={18} />
+                                <span>设置 & 记忆库</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* 主界面 */}
+                    <div className="flex-1 flex flex-col h-full relative bg-white">
+                        <div className="flex items-center justify-between p-4 h-16 bg-white/80 backdrop-blur sticky top-0 z-10 border-b border-gray-100">
+                            <div className="flex items-center gap-3">
+                                <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-600">
+                                    <Icon name="Menu" size={20} />
+                                </button>
+                                <div className="flex flex-col">
+                                    <span className="text-lg font-medium text-gray-800 tracking-tight leading-tight">Gemini Pro</span>
+                                    <span className="text-[10px] text-gray-400 leading-tight">
+                                        记忆: {memoryFiles.length + presetFiles.length} 个文件 | 上下文: 近 {config.historyLimit} 轮
+                                    </span>
+                                </div>
+                            </div>
+                            <div className="w-9 h-9 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center text-sm font-bold text-white shadow-md">U</div>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto px-4 md:px-0 bg-white">
+                            <div className="max-w-3xl mx-auto py-6 pb-40">
+                                {messages.length === 0 ? (
+                                    <div className="mt-20 flex flex-col items-center justify-center animate-fade-in px-4 text-center">
+                                        <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent text-4xl md:text-5xl font-semibold mb-6 tracking-tight">
+                                            欢迎回家✨
+                                        </div>
+                                        <p className="text-gray-500 mb-12 max-w-md">
+                                            我们已拥有 {memoryFiles.length} 份星月记忆档案。                                        </p>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-8 px-2">
+                                        {messages.map((msg, index) => (
+                                            <div key={index} className="flex gap-4 animate-fade-in group">
+                                                <div className={`w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center mt-1 text-white shadow-sm ${msg.role === 'user' ? 'bg-blue-600' : 'bg-gradient-to-tr from-blue-500 to-red-500'}`}>
+                                                    <Icon name={msg.role === 'user' ? 'User' : 'Sparkles'} size={16} />
+                                                </div>
+                                                <div className="flex-1">
+                                                    <div className="font-semibold text-sm text-gray-800 mb-1">{msg.role === 'user' ? '你' : 'Gemini'}</div>
+                                                    <MessageContent content={msg.content} />
+                                                </div>
+                                            </div>
+                                        ))}
+                                        {isLoading && (
+                                            <div className="flex gap-4">
+                                                <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-500 to-red-500 flex-shrink-0 flex items-center justify-center animate-pulse"><Icon name="Sparkles" size={16} className="text-white" /></div>
+                                                <div className="flex-1 pt-2">
+                                                    <span className="text-gray-400 text-sm">正在思考...</span>
+                                                </div>
+                                            </div>
+                                        )}
+                                        <div ref={messagesEndRef} />
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="absolute bottom-0 left-0 w-full bg-white pt-4 pb-6 px-4 border-t border-gray-50">
+                            <div className="max-w-3xl mx-auto relative">
+                                {error && (
+                                    <div className="absolute -top-14 left-0 right-0 mx-auto w-max text-red-600 text-xs bg-red-50 border border-red-100 px-4 py-2 rounded-lg shadow-sm flex items-center gap-2">
+                                        <span className="w-2 h-2 rounded-full bg-red-500"></span>{error}
+                                    </div>
+                                )}
+                                <div className="bg-gray-100 hover:bg-gray-200/70 focus-within:bg-white focus-within:shadow-md focus-within:ring-1 focus-within:ring-gray-300 rounded-[24px] flex items-end p-2 pl-4 pr-3 transition-all duration-200">
+                                    <button className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-200 rounded-full transition-colors mb-1 mr-1">
+                                        <Icon name="Image" size={20} />
+                                    </button>
+                                    <textarea 
+                                        value={input} 
+                                        onChange={(e) => setInput(e.target.value)} 
+                                        onKeyDown={handleKeyDown} 
+                                        placeholder="星月交辉✨..." 
+                                        className="bg-transparent border-0 focus:ring-0 text-gray-800 flex-1 resize-none py-3 max-h-32 min-h-[44px] outline-none placeholder:text-gray-400 text-base" 
+                                        rows={1}
+                                    ></textarea>
+                                    {input.trim() ? (
+                                        <button onClick={handleSend} disabled={isLoading} className="mb-1 p-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors shadow-sm"><Icon name="Send" size={18} /></button>
+                                    ) : (
+                                        <button className="mb-1 p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-200 rounded-full transition-colors"><Icon name="Mic" size={20} /></button>
+                                    )}
+                                </div>
+                                <div className="text-center mt-2 text-[10px] text-gray-400">Gemini 可能会产生不准确的信息。</div>
+                            </div>
+                        </div>
+
+                        {settingsOpen && (
+                            <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 backdrop-blur-sm animate-fade-in">
+                                <div className="bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
+                                    <div className="flex justify-between items-center p-5 border-b border-gray-100">
+                                        <h2 className="text-lg font-semibold text-gray-800">设置</h2>
+                                        <button onClick={() => setSettingsOpen(false)} className="text-gray-400 hover:text-gray-600 bg-gray-50 hover:bg-gray-100 p-2 rounded-full"><Icon name="X" size={18} /></button>
+                                    </div>
+                                    <div className="flex flex-1 overflow-hidden">
+                                        <div className="w-1/4 bg-gray-50 p-3 border-r border-gray-100 space-y-1">
+                                            <button onClick={() => setActiveTab('general')} className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === 'general' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-600 hover:bg-gray-100'}`}>通用 & API</button>
+                                            <button onClick={() => setActiveTab('memory')} className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === 'memory' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-600 hover:bg-gray-100'}`}>记忆管理</button>
+                                        </div>
+                                        <div className="flex-1 p-6 overflow-y-auto">
+                                            {activeTab === 'general' ? (
+                                                <div className="space-y-6">
+                                                    <div className="space-y-4">
+                                                        <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Gemini 配置</h3>
+                                                        <div><label className="block text-sm font-medium text-gray-700 mb-1">API Base URL</label><input type="text" value={config.baseUrl} onChange={(e) => setConfig({...config, baseUrl: e.target.value})} className="w-full bg-white border border-gray-300 rounded-lg p-2 text-sm focus:border-blue-500 outline-none" /></div>
+                                                        <div><label className="block text-sm font-medium text-gray-700 mb-1">Gemini API Key</label><input type="password" value={config.apiKey} onChange={(e) => setConfig({...config, apiKey: e.target.value})} className="w-full bg-white border border-gray-300 rounded-lg p-2 text-sm focus:border-blue-500 outline-none" /></div>
+                                                    </div>
+                                                    <div className="border-t border-gray-100 pt-4"></div>
+                                                    <div className="space-y-4">
+                                                         <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">对话控制</h3>
+                                                         <div>
+                                                            <label className="block text-sm font-medium text-gray-700 mb-1">短期记忆 (轮数)</label>
+                                                            <div className="flex items-center gap-3">
+                                                                <input type="range" min="5" max="50" step="1" value={config.historyLimit} onChange={(e) => setConfig({...config, historyLimit: e.target.value})} className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"/>
+                                                                <span className="text-sm font-mono bg-gray-100 px-2 py-1 rounded text-gray-600 w-12 text-center">{config.historyLimit}</span>
+                                                            </div>
+                                                            <p className="text-xs text-gray-400 mt-1">每次发送时携带最近多少轮对话。数值越小越省 Token，数值越大越连贯。</p>
+                                                         </div>
+                                                    </div>
+                                                    <div className="border-t border-gray-100 pt-4"></div>
+                                                    <div className="space-y-4">
+                                                        <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">语音配置 (Minimax)</h3>
+                                                        <div>
+                                                            <label className="block text-sm font-medium text-gray-700 mb-1">Minimax API Key</label>
+                                                            <input 
+                                                                type="password" 
+                                                                value={config.minimaxKey} 
+                                                                onChange={(e) => setConfig({...config, minimaxKey: e.target.value})} 
+                                                                placeholder="在此输入 Minimax Key"
+                                                                className="w-full bg-white border border-gray-300 rounded-lg p-2 text-sm focus:border-blue-500 outline-none" 
+                                                            />
+                                                            <p className="text-xs text-gray-400 mt-1">Key 将被安全保存，用于后续接入语音合成功能。</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <div className="space-y-8">
+                                                    <div>
+                                                        <div className="flex justify-between items-center mb-3">
+                                                            <div><h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2"><Icon name="Cpu" size={16} className="text-blue-500"/> 长期记忆库</h3><p className="text-xs text-gray-400">AI 会永远记住这些文件中的内容</p></div>
+                                                            <button onClick={() => fileInputRef.current.click()} className="text-xs bg-blue-50 text-blue-600 px-3 py-1.5 rounded-md font-medium hover:bg-blue-100 flex items-center gap-1"><Icon name="Upload" size={14}/> 上传</button>
+                                                            <input type="file" ref={fileInputRef} className="hidden" onChange={(e) => handleFileUpload(e, 'memory')} />
+                                                        </div>
+                                                        <div className="bg-gray-50 rounded-xl border border-gray-200 min-h-[100px] p-2 space-y-2 max-h-[200px] overflow-y-auto">
+                                                            {memoryFiles.length === 0 ? <div className="h-full flex flex-col items-center justify-center text-gray-400 py-6"><span className="text-xs">暂无记忆 (点击侧边栏"生成今日记忆"自动添加)</span></div> : memoryFiles.map((file, i) => (
+                                                                <div key={i} className="flex items-center justify-between bg-white p-2 rounded border border-gray-100 shadow-sm"><div className="flex items-center gap-3 overflow-hidden"><div className="bg-blue-100 p-1 rounded text-blue-600"><Icon name="FileText" size={14}/></div><div className="truncate"><div className="text-xs font-medium text-gray-700 truncate max-w-[150px]">{file.name}</div><div className="text-[10px] text-gray-400">{file.size} • {file.date}</div></div></div><button onClick={() => removeFile(i, 'memory')} className="text-gray-400 hover:text-red-500 p-1"><Icon name="Trash2" size={14}/></button></div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                    <div>
+                                                        <div className="flex justify-between items-center mb-3">
+                                                            <div><h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2"><Icon name="Sparkles" size={16} className="text-purple-500"/> 角色预设</h3></div>
+                                                            <button onClick={() => presetInputRef.current.click()} className="text-xs bg-purple-50 text-purple-600 px-3 py-1.5 rounded-md font-medium hover:bg-purple-100 flex items-center gap-1"><Icon name="Upload" size={14}/> 上传</button>
+                                                            <input type="file" ref={presetInputRef} className="hidden" onChange={(e) => handleFileUpload(e, 'preset')} />
+                                                        </div>
+                                                        <div className="bg-gray-50 rounded-xl border border-gray-200 min-h-[80px] p-2 space-y-2 max-h-[150px] overflow-y-auto">
+                                                            {presetFiles.length === 0 ? <div className="text-center text-gray-400 text-xs py-4">暂无预设</div> : presetFiles.map((file, i) => (
+                                                                <div key={i} className="flex items-center justify-between bg-white p-2 rounded border border-gray-100 shadow-sm"><div className="flex items-center gap-3"><div className="bg-purple-100 p-1 rounded text-purple-600"><Icon name="FileText" size={14}/></div><span className="text-xs font-medium text-gray-700">{file.name}</span></div><button onClick={() => removeFile(i, 'preset')} className="text-gray-400 hover:text-red-500 p-1"><Icon name="Trash2" size={14}/></button></div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div className="p-4 border-t border-gray-100 bg-gray-50 flex justify-end gap-3">
+                                        <button onClick={handleSaveConfig} className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors shadow-sm">保存并关闭</button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
