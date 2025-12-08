@@ -83,12 +83,26 @@
             return <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-500 to-red-500 flex-shrink-0 flex items-center justify-center mt-1 text-white shadow-sm"><Icon name="Sparkles" size={16} /></div>;
         };
 
+        // 获取东八区时间戳 helper
+        const getTimestamp = () => {
+            return new Date().toLocaleString('zh-CN', {
+                timeZone: 'Asia/Shanghai',
+                hour12: false,
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+        };
+
         function App() {
             const [input, setInput] = useState('');
             const [messages, setMessages] = useState([]);
             const [historySessions, setHistorySessions] = useState([]);
             const [currentSessionId, setCurrentSessionId] = useState(null);
-            const [attachment, setAttachment] = useState(null); // 图片附件 {base64, mimeType}
+            const [attachment, setAttachment] = useState(null); 
             
             const [sidebarOpen, setSidebarOpen] = useState(true);
             const [settingsOpen, setSettingsOpen] = useState(false);
@@ -122,7 +136,7 @@
             const presetInputRef = useRef(null);
             const avatarInputRef = useRef(null);
             const aiAvatarInputRef = useRef(null);
-            const chatImageInputRef = useRef(null); // 聊天图片上传
+            const chatImageInputRef = useRef(null); 
 
             useEffect(() => {
                 const storedConfig = localStorage.getItem('gemini_app_config');
@@ -278,6 +292,7 @@
 
             const handleExport = () => {
                 if (messages.length === 0) return;
+                // messages 数组中现在包含 timestamp 字段，JSON.stringify 会自动包含它
                 const exportObj = { timestamp: new Date().toISOString(), history: messages };
                 const blob = new Blob([JSON.stringify(exportObj, null, 2)], { type: 'application/json' });
                 const url = URL.createObjectURL(blob);
@@ -357,10 +372,8 @@
                 } catch (err) { setError(`归档失败: ${err.message}`); } finally { setIsArchiving(false); }
             };
 
-            // --- 聊天图片选择 (增强版) ---
             const triggerImageUpload = () => {
                 if (chatImageInputRef.current) {
-                    // 重置 value，允许重复选择同一张图片
                     chatImageInputRef.current.value = "";
                     chatImageInputRef.current.click();
                 }
@@ -389,13 +402,19 @@
                     setCurrentSessionId(newId);
                 }
 
-                // 构建用户消息
                 let userContent = input;
                 if (attachment) {
                     userContent += `\n\n![Image](${attachment.base64})`;
                 }
 
-                const newHistory = [...messages, { role: 'user', content: userContent }];
+                // 记录当前时间戳
+                const nowTimestamp = getTimestamp();
+
+                const newHistory = [...messages, { 
+                    role: 'user', 
+                    content: userContent, 
+                    timestamp: nowTimestamp // 添加时间戳
+                }];
                 setMessages(newHistory);
                 
                 const currentAttachment = attachment;
@@ -412,8 +431,6 @@
                     if (memoryFiles.length > 0) systemPrompt += "【长期记忆】:\n" + memoryFiles.map(f => f.content).join("\n\n") + "\n\n";
                     
                     const limit = (parseInt(config.historyLimit) || 20) * 2;
-                    
-                    // 历史消息只传文本（简化处理，避免API报错）
                     const contextHistory = messages.slice(-limit).map(m => ({
                         role: m.role,
                         content: m.content
@@ -422,17 +439,13 @@
                     let url, headers, payload;
 
                     if (config.apiType === 'openai') {
-                        // OpenAI 兼容
                         url = `${baseUrl}/chat/completions`;
                         headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${config.apiKey}` };
-                        
                         const msgs = [];
                         if (systemPrompt.trim()) msgs.push({ role: 'system', content: systemPrompt });
-                        
                         contextHistory.forEach(m => {
                             msgs.push({ role: m.role === 'model' ? 'assistant' : 'user', content: m.content });
                         });
-
                         const currentMsgContent = [];
                         if (input.trim()) currentMsgContent.push({ type: "text", text: input });
                         if (currentAttachment) {
@@ -442,19 +455,14 @@
                             });
                         }
                         msgs.push({ role: 'user', content: currentMsgContent });
-
                         payload = { model: modelName, messages: msgs, stream: false };
-
                     } else {
-                        // Gemini 原生
                         url = `${baseUrl}/v1beta/models/${modelName}:generateContent?key=${config.apiKey}`;
                         headers = { 'Content-Type': 'application/json' };
-                        
                         const contents = contextHistory.map(m => ({
                             role: m.role,
                             parts: [{ text: m.content }]
                         }));
-
                         const currentParts = [];
                         if (input.trim()) currentParts.push({ text: input });
                         if (currentAttachment) {
@@ -467,7 +475,6 @@
                             });
                         }
                         contents.push({ role: 'user', parts: currentParts });
-
                         payload = { contents };
                         if (systemPrompt.trim()) { payload.system_instruction = { parts: [{ text: systemPrompt }] }; }
                     }
@@ -482,10 +489,15 @@
                     if (config.apiType === 'openai') { aiText = data.choices?.[0]?.message?.content || "无回复"; } 
                     else { aiText = data.candidates?.[0]?.content?.parts?.[0]?.text || "无回复"; }
                     
-                    setMessages(prev => [...prev, { role: 'model', content: aiText }]);
+                    // AI 回复也添加时间戳
+                    setMessages(prev => [...prev, { 
+                        role: 'model', 
+                        content: aiText,
+                        timestamp: getTimestamp()
+                    }]);
                 } catch (err) {
                     setError(err.message);
-                    setMessages(prev => [...prev, { role: 'model', content: `错误: ${err.message}` }]);
+                    setMessages(prev => [...prev, { role: 'model', content: `错误: ${err.message}`, timestamp: getTimestamp() }]);
                 } finally {
                     setIsLoading(false);
                 }
@@ -565,8 +577,13 @@
                                             <div key={index} className="flex gap-4 animate-fade-in group">
                                                 <Avatar role={msg.role} config={config} />
                                                 <div className="flex-1">
-                                                    <div className="font-semibold text-sm text-gray-800 mb-1">
-                                                        {msg.role === 'user' ? (config.userName || '你') : (config.aiName || '星月舱 AI')}
+                                                    <div className="flex items-center gap-2 mb-1">
+                                                        <span className="font-semibold text-sm text-gray-800">
+                                                            {msg.role === 'user' ? (config.userName || '你') : (config.aiName || '星月舱 AI')}
+                                                        </span>
+                                                        <span className="text-[10px] text-gray-400 font-mono">
+                                                            {msg.timestamp || ''}
+                                                        </span>
                                                     </div>
                                                     <MessageContent content={msg.content} />
                                                 </div>
