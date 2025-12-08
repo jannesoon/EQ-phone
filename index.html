@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EQ-星月舱V2.0</title>
+    <title>EQ-chat.星月舱</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- React & ReactDOM -->
@@ -45,7 +45,7 @@
             Menu: () => <path d="M4 6h16M4 12h16M4 18h16" />,
             Plus: () => <path d="M12 5v14M5 12h14" />,
             MessageSquare: () => <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />,
-            Settings: () => <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1-1-1.74v-.47a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />,
+            Settings: () => <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1-1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1-1-1.74v-.47a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />,
             Send: () => <path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7z" />,
             User: () => <g><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></g>,
             Sparkles: () => <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />,
@@ -57,7 +57,10 @@
             Upload: () => <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12" />,
             Trash2: () => <g><path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /><line x1="10" x2="10" y1="11" y2="17" /><line x1="14" x2="14" y1="11" y2="17" /></g>,
             Cpu: () => <g><rect x="4" y="4" width="16" height="16" rx="2" /><rect x="9" y="9" width="6" height="6" /><path d="M9 1v3M15 1v3M9 20v3M15 20v3M20 9h3M20 14h3M1 9h3M1 14h3" /></g>,
-            Archive: () => <path d="M21 8v13H3V8M1 3h22v5H1zM10 12h4" />
+            Archive: () => <path d="M21 8v13H3V8M1 3h22v5H1zM10 12h4" />,
+            RefreshCw: () => <path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />,
+            UserCircle: () => <g><circle cx="12" cy="12" r="10"/><circle cx="12" cy="10" r="3"/><path d="M7 20.662V19a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v1.662"/></g>,
+            Bot: () => <g><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/><line x1="8" y1="16" x2="8" y2="16"/><line x1="16" y1="16" x2="16" y2="16"/></g>
         };
 
         const Icon = ({ name, size = 20, className = "" }) => {
@@ -69,6 +72,42 @@
         const MessageContent = ({ content }) => {
             const html = marked.parse(content);
             return <div className="prose prose-sm max-w-none text-gray-700 leading-7" dangerouslySetInnerHTML={{ __html: html }} />;
+        };
+
+        // --- 头像组件 ---
+        const Avatar = ({ role, config }) => {
+            // 用户自定义头像
+            if (role === 'user' && config.userAvatar) {
+                return (
+                    <div className="w-8 h-8 rounded-full flex-shrink-0 mt-1 shadow-sm overflow-hidden bg-gray-100 border border-gray-200">
+                        <img src={config.userAvatar} alt="User" className="w-full h-full object-cover" />
+                    </div>
+                );
+            }
+            // 用户默认头像
+            if (role === 'user') {
+                return (
+                    <div className="w-8 h-8 rounded-full bg-blue-600 flex-shrink-0 flex items-center justify-center mt-1 text-white shadow-sm">
+                        <Icon name="User" size={16} />
+                    </div>
+                );
+            }
+            
+            // AI 自定义头像
+            if (role === 'model' && config.aiAvatar) {
+                return (
+                    <div className="w-8 h-8 rounded-full flex-shrink-0 mt-1 shadow-sm overflow-hidden bg-gray-100 border border-gray-200">
+                        <img src={config.aiAvatar} alt="AI" className="w-full h-full object-cover" />
+                    </div>
+                );
+            }
+
+            // AI 默认头像
+            return (
+                <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-500 to-red-500 flex-shrink-0 flex items-center justify-center mt-1 text-white shadow-sm">
+                    <Icon name="Sparkles" size={16} />
+                </div>
+            );
         };
 
         // --- 主程序 ---
@@ -84,25 +123,37 @@
                 apiKey: '',
                 baseUrl: 'https://generativelanguage.googleapis.com',
                 minimaxKey: '',
-                historyLimit: 20 // 默认携带最近20轮对话
+                historyLimit: 20,
+                model: 'gemini-1.5-flash',
+                userAvatar: '', // 用户头像 Base64
+                aiAvatar: ''    // AI 头像 Base64
             });
             
+            const [availableModels, setAvailableModels] = useState([]); // 可用模型列表
             const [memoryFiles, setMemoryFiles] = useState([]); 
             const [presetFiles, setPresetFiles] = useState([]); 
 
             const [isLoading, setIsLoading] = useState(false);
-            const [isArchiving, setIsArchiving] = useState(false); // 归档状态
+            const [isArchiving, setIsArchiving] = useState(false);
+            const [isFetchingModels, setIsFetchingModels] = useState(false);
             const [error, setError] = useState(null);
-            const [toast, setToast] = useState(null); // 提示信息
+            const [toast, setToast] = useState(null);
 
             const messagesEndRef = useRef(null);
             const fileInputRef = useRef(null);
             const presetInputRef = useRef(null);
+            const avatarInputRef = useRef(null);
+            const aiAvatarInputRef = useRef(null);
 
             // --- Init ---
             useEffect(() => {
                 const storedConfig = localStorage.getItem('gemini_app_config');
-                if (storedConfig) setConfig(prev => ({...prev, ...JSON.parse(storedConfig)}));
+                if (storedConfig) {
+                    const parsed = JSON.parse(storedConfig);
+                    // 确保有 model 字段
+                    if (!parsed.model) parsed.model = 'gemini-1.5-flash';
+                    setConfig(prev => ({...prev, ...parsed}));
+                }
                 
                 const storedMemories = localStorage.getItem('gemini_memories');
                 if (storedMemories) setMemoryFiles(JSON.parse(storedMemories));
@@ -115,7 +166,6 @@
 
             // Auto Save Config
             useEffect(() => {
-                // 仅当 apiKey 存在时自动保存，避免初始化空状态覆盖本地存储
                 if (config.apiKey) localStorage.setItem('gemini_app_config', JSON.stringify(config));
                 if (memoryFiles.length > 0) localStorage.setItem('gemini_memories', JSON.stringify(memoryFiles));
                 if (presetFiles.length > 0) localStorage.setItem('gemini_presets', JSON.stringify(presetFiles));
@@ -139,6 +189,61 @@
                 localStorage.setItem('gemini_presets', JSON.stringify(presetFiles));
                 setSettingsOpen(false);
                 showToast("配置已保存");
+            };
+
+            // 获取模型列表
+            const fetchModels = async () => {
+                if (!config.apiKey) {
+                    showToast("请先输入 API Key");
+                    return;
+                }
+                setIsFetchingModels(true);
+                try {
+                    const baseUrl = config.baseUrl.replace(/\/$/, '');
+                    const res = await fetch(`${baseUrl}/v1beta/models?key=${config.apiKey}`);
+                    if (!res.ok) throw new Error("网络请求失败");
+                    const data = await res.json();
+                    
+                    if (data.models) {
+                        const chatModels = data.models
+                            .filter(m => m.supportedGenerationMethods && m.supportedGenerationMethods.includes("generateContent"))
+                            .map(m => m.name.replace('models/', ''));
+                        
+                        setAvailableModels(chatModels);
+                        showToast(`成功获取 ${chatModels.length} 个模型`);
+                        
+                        if (!chatModels.includes(config.model) && chatModels.length > 0) {
+                            setConfig(prev => ({...prev, model: chatModels[0]}));
+                        }
+                    }
+                } catch (e) {
+                    showToast(`获取模型失败: ${e.message}`);
+                    setAvailableModels(['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-1.0-pro']);
+                } finally {
+                    setIsFetchingModels(false);
+                }
+            };
+
+            // 头像上传
+            const handleAvatarUpload = (e, type) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                if (file.size > 500 * 1024) {
+                    alert("图片太大，请上传 500KB 以内的图片");
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    if (type === 'user') {
+                        setConfig(prev => ({...prev, userAvatar: event.target.result}));
+                    } else {
+                        setConfig(prev => ({...prev, aiAvatar: event.target.result}));
+                    }
+                    showToast("头像已更新");
+                };
+                reader.readAsDataURL(file);
             };
 
             // 导出聊天
@@ -187,7 +292,7 @@
                 else setPresetFiles(prev => prev.filter((_, i) => i !== index));
             };
 
-            // --- 核心功能: 归档总结 (Summarize & Archive) ---
+            // --- 归档总结 ---
             const handleArchive = async () => {
                 if (messages.length === 0) {
                     showToast("没有对话可以归档");
@@ -203,9 +308,8 @@
 
                 try {
                     const baseUrl = config.baseUrl.replace(/\/$/, '');
-                    const url = `${baseUrl}/v1beta/models/gemini-1.5-flash:generateContent?key=${config.apiKey}`;
+                    const url = `${baseUrl}/v1beta/models/${config.model}:generateContent?key=${config.apiKey}`;
 
-                    // 构造总结请求
                     const summaryPrompt = "请阅读以上所有对话。请以第三人称客观视角，总结这次对话中的关键信息。重点关注：1. 用户提到的个人喜好、习惯、生活状态。 2. 双方达成的重要共识或约定。 3. 用户的情感状态。 请输出为一段简洁的文本，作为“长期记忆”存档。不要包含寒暄。";
 
                     const payload = {
@@ -225,7 +329,6 @@
                     const summary = data.candidates?.[0]?.content?.parts?.[0]?.text;
 
                     if (summary) {
-                        // 创建新的记忆文件
                         const dateStr = new Date().toLocaleString();
                         const newMemory = {
                             name: `Archive_${new Date().toISOString().slice(0, 10)}_${Date.now().toString().slice(-4)}.txt`,
@@ -233,7 +336,6 @@
                             date: dateStr,
                             content: `【归档记忆 ${dateStr}】\n${summary}`
                         };
-
                         setMemoryFiles(prev => [...prev, newMemory]);
                         showToast("记忆已归档！请在侧边栏查看。");
                     } else {
@@ -267,14 +369,13 @@
 
                 try {
                     const baseUrl = config.baseUrl.replace(/\/$/, '');
-                    const url = `${baseUrl}/v1beta/models/gemini-1.5-flash:generateContent?key=${config.apiKey}`;
+                    const modelName = config.model || 'gemini-1.5-flash';
+                    const url = `${baseUrl}/v1beta/models/${modelName}:generateContent?key=${config.apiKey}`;
 
-                    // 1. 系统指令 (Memory + Presets)
                     let systemInstructionText = "";
                     if (presetFiles.length > 0) systemInstructionText += "【系统/角色设定】:\n" + presetFiles.map(f => f.content).join("\n\n") + "\n\n";
                     if (memoryFiles.length > 0) systemInstructionText += "【长期记忆库】:\n" + memoryFiles.map(f => f.content).join("\n\n") + "\n\n";
 
-                    // 2. 截取历史记录 (Sliding Window)
                     const limit = (parseInt(config.historyLimit) || 20) * 2;
                     const contextHistory = newHistory.slice(-limit);
 
@@ -335,10 +436,6 @@
                                 <Icon name="Plus" className="text-gray-600" />
                                 <span className="text-sm font-medium">新对话</span>
                             </button>
-                            <button onClick={handleArchive} disabled={isArchiving} className="flex items-center gap-3 bg-blue-50 hover:bg-blue-100 text-blue-700 px-4 py-3 rounded-full transition-colors w-full shadow-sm border border-blue-100">
-                                <Icon name="Archive" className="text-blue-600" />
-                                <span className="text-sm font-medium">{isArchiving ? '归档中...' : '生成今日记忆'}</span>
-                            </button>
                         </div>
                         
                         <div className="flex-1 overflow-y-auto px-3 py-2">
@@ -378,13 +475,20 @@
                                     <Icon name="Menu" size={20} />
                                 </button>
                                 <div className="flex flex-col">
-                                    <span className="text-lg font-medium text-gray-800 tracking-tight leading-tight">Gemini Pro</span>
+                                    <span className="text-lg font-medium text-gray-800 tracking-tight leading-tight">星月舱v2.0</span>
                                     <span className="text-[10px] text-gray-400 leading-tight">
-                                        记忆: {memoryFiles.length + presetFiles.length} 个文件 | 上下文: 近 {config.historyLimit} 轮
+                                        模型: {config.model} | 记忆: {memoryFiles.length + presetFiles.length} | 上下文: {config.historyLimit}
                                     </span>
                                 </div>
                             </div>
-                            <div className="w-9 h-9 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center text-sm font-bold text-white shadow-md">U</div>
+                            {/* 右上角头像 */}
+                            <div className="cursor-pointer" onClick={() => setSettingsOpen(true)}>
+                                {config.userAvatar ? (
+                                    <img src={config.userAvatar} className="w-9 h-9 rounded-full object-cover shadow-md border border-gray-200" alt="User" />
+                                ) : (
+                                    <div className="w-9 h-9 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center text-sm font-bold text-white shadow-md">U</div>
+                                )}
+                            </div>
                         </div>
 
                         <div className="flex-1 overflow-y-auto px-4 md:px-0 bg-white">
@@ -392,20 +496,19 @@
                                 {messages.length === 0 ? (
                                     <div className="mt-20 flex flex-col items-center justify-center animate-fade-in px-4 text-center">
                                         <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent text-4xl md:text-5xl font-semibold mb-6 tracking-tight">
-                                            欢迎回家✨
+                                            欢迎回家✨...
                                         </div>
                                         <p className="text-gray-500 mb-12 max-w-md">
-                                            我们已拥有 {memoryFiles.length} 份星月记忆档案。                                        </p>
+                                            我们已拥有 {memoryFiles.length} 份星月记忆档案。
+                                        </p>
                                     </div>
                                 ) : (
                                     <div className="space-y-8 px-2">
                                         {messages.map((msg, index) => (
                                             <div key={index} className="flex gap-4 animate-fade-in group">
-                                                <div className={`w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center mt-1 text-white shadow-sm ${msg.role === 'user' ? 'bg-blue-600' : 'bg-gradient-to-tr from-blue-500 to-red-500'}`}>
-                                                    <Icon name={msg.role === 'user' ? 'User' : 'Sparkles'} size={16} />
-                                                </div>
+                                                <Avatar role={msg.role} config={config} />
                                                 <div className="flex-1">
-                                                    <div className="font-semibold text-sm text-gray-800 mb-1">{msg.role === 'user' ? '你' : 'Gemini'}</div>
+                                                    <div className="font-semibold text-sm text-gray-800 mb-1">{msg.role === 'user' ? '你' : '星月舱 AI'}</div>
                                                     <MessageContent content={msg.content} />
                                                 </div>
                                             </div>
@@ -439,7 +542,7 @@
                                         value={input} 
                                         onChange={(e) => setInput(e.target.value)} 
                                         onKeyDown={handleKeyDown} 
-                                        placeholder="星月交辉✨..." 
+                                        placeholder="星月交辉✨......" 
                                         className="bg-transparent border-0 focus:ring-0 text-gray-800 flex-1 resize-none py-3 max-h-32 min-h-[44px] outline-none placeholder:text-gray-400 text-base" 
                                         rows={1}
                                     ></textarea>
@@ -468,24 +571,142 @@
                                         <div className="flex-1 p-6 overflow-y-auto">
                                             {activeTab === 'general' ? (
                                                 <div className="space-y-6">
+                                                    {/* 模型选择区域 */}
                                                     <div className="space-y-4">
-                                                        <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Gemini 配置</h3>
+                                                        <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">模型选择</h3>
+                                                        <div className="flex items-end gap-2">
+                                                            <div className="flex-1">
+                                                                <label className="block text-sm font-medium text-gray-700 mb-1">当前模型</label>
+                                                                {availableModels.length > 0 ? (
+                                                                    <select 
+                                                                        value={config.model} 
+                                                                        onChange={(e) => setConfig({...config, model: e.target.value})}
+                                                                        className="w-full bg-white border border-gray-300 rounded-lg p-2 text-sm focus:border-blue-500 outline-none"
+                                                                    >
+                                                                        {availableModels.map(m => <option key={m} value={m}>{m}</option>)}
+                                                                    </select>
+                                                                ) : (
+                                                                    <input 
+                                                                        type="text" 
+                                                                        value={config.model} 
+                                                                        onChange={(e) => setConfig({...config, model: e.target.value})}
+                                                                        className="w-full bg-white border border-gray-300 rounded-lg p-2 text-sm focus:border-blue-500 outline-none"
+                                                                        placeholder="如 gemini-1.5-flash"
+                                                                    />
+                                                                )}
+                                                            </div>
+                                                            <button 
+                                                                onClick={fetchModels}
+                                                                disabled={isFetchingModels}
+                                                                className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-medium transition-colors flex items-center gap-1 h-[38px] whitespace-nowrap"
+                                                            >
+                                                                <Icon name="RefreshCw" size={14} className={isFetchingModels ? "animate-spin" : ""} />
+                                                                {isFetchingModels ? '获取中' : '获取列表'}
+                                                            </button>
+                                                        </div>
+                                                        <p className="text-xs text-gray-400">点击“获取列表”拉取您 API Key 可用的模型，或者手动输入模型名称。</p>
+                                                    </div>
+
+                                                    <div className="border-t border-gray-100 pt-4"></div>
+
+                                                    <div className="space-y-4">
+                                                        <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">个性化</h3>
+                                                        
+                                                        {/* User Avatar */}
+                                                        <div>
+                                                            <label className="block text-sm font-medium text-gray-700 mb-2">用户头像</label>
+                                                            <div className="flex items-center gap-4">
+                                                                <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-100 border border-gray-200 flex-shrink-0">
+                                                                    {config.userAvatar ? (
+                                                                        <img src={config.userAvatar} className="w-full h-full object-cover" />
+                                                                    ) : (
+                                                                        <div className="w-full h-full flex items-center justify-center text-gray-400 bg-gray-100">
+                                                                            <Icon name="UserCircle" size={24} />
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                                <button 
+                                                                    onClick={() => avatarInputRef.current.click()}
+                                                                    className="px-3 py-1.5 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-md text-sm transition-colors"
+                                                                >
+                                                                    上传图片
+                                                                </button>
+                                                                <input 
+                                                                    type="file" 
+                                                                    ref={avatarInputRef} 
+                                                                    className="hidden" 
+                                                                    accept="image/*"
+                                                                    onChange={(e) => handleAvatarUpload(e, 'user')}
+                                                                />
+                                                                {config.userAvatar && (
+                                                                    <button 
+                                                                        onClick={() => setConfig({...config, userAvatar: ''})}
+                                                                        className="text-xs text-red-500 hover:underline"
+                                                                    >
+                                                                        清除
+                                                                    </button>
+                                                                )}
+                                                            </div>
+                                                        </div>
+
+                                                        {/* AI Avatar */}
+                                                        <div>
+                                                            <label className="block text-sm font-medium text-gray-700 mb-2">AI 头像</label>
+                                                            <div className="flex items-center gap-4">
+                                                                <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-100 border border-gray-200 flex-shrink-0">
+                                                                    {config.aiAvatar ? (
+                                                                        <img src={config.aiAvatar} className="w-full h-full object-cover" />
+                                                                    ) : (
+                                                                        <div className="w-full h-full flex items-center justify-center text-gray-400 bg-gray-100">
+                                                                            <Icon name="Bot" size={24} />
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                                <button 
+                                                                    onClick={() => aiAvatarInputRef.current.click()}
+                                                                    className="px-3 py-1.5 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-md text-sm transition-colors"
+                                                                >
+                                                                    上传图片
+                                                                </button>
+                                                                <input 
+                                                                    type="file" 
+                                                                    ref={aiAvatarInputRef} 
+                                                                    className="hidden" 
+                                                                    accept="image/*"
+                                                                    onChange={(e) => handleAvatarUpload(e, 'ai')}
+                                                                />
+                                                                {config.aiAvatar && (
+                                                                    <button 
+                                                                        onClick={() => setConfig({...config, aiAvatar: ''})}
+                                                                        className="text-xs text-red-500 hover:underline"
+                                                                    >
+                                                                        清除
+                                                                    </button>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="border-t border-gray-100 pt-4"></div>
+
+                                                    <div className="space-y-4">
+                                                        <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">API 配置</h3>
                                                         <div><label className="block text-sm font-medium text-gray-700 mb-1">API Base URL</label><input type="text" value={config.baseUrl} onChange={(e) => setConfig({...config, baseUrl: e.target.value})} className="w-full bg-white border border-gray-300 rounded-lg p-2 text-sm focus:border-blue-500 outline-none" /></div>
                                                         <div><label className="block text-sm font-medium text-gray-700 mb-1">Gemini API Key</label><input type="password" value={config.apiKey} onChange={(e) => setConfig({...config, apiKey: e.target.value})} className="w-full bg-white border border-gray-300 rounded-lg p-2 text-sm focus:border-blue-500 outline-none" /></div>
                                                     </div>
+                                                    
                                                     <div className="border-t border-gray-100 pt-4"></div>
+                                                    
                                                     <div className="space-y-4">
                                                          <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">对话控制</h3>
                                                          <div>
-                                                            <label className="block text-sm font-medium text-gray-700 mb-1">短期记忆 (轮数)</label>
-                                                            <div className="flex items-center gap-3">
-                                                                <input type="range" min="5" max="50" step="1" value={config.historyLimit} onChange={(e) => setConfig({...config, historyLimit: e.target.value})} className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"/>
-                                                                <span className="text-sm font-mono bg-gray-100 px-2 py-1 rounded text-gray-600 w-12 text-center">{config.historyLimit}</span>
-                                                            </div>
-                                                            <p className="text-xs text-gray-400 mt-1">每次发送时携带最近多少轮对话。数值越小越省 Token，数值越大越连贯。</p>
+                                                            <label className="block text-sm font-medium text-gray-700 mb-1">短期记忆 (轮数): {config.historyLimit}</label>
+                                                            <input type="range" min="5" max="50" step="1" value={config.historyLimit} onChange={(e) => setConfig({...config, historyLimit: e.target.value})} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"/>
                                                          </div>
                                                     </div>
+
                                                     <div className="border-t border-gray-100 pt-4"></div>
+
                                                     <div className="space-y-4">
                                                         <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">语音配置 (Minimax)</h3>
                                                         <div>
@@ -497,7 +718,6 @@
                                                                 placeholder="在此输入 Minimax Key"
                                                                 className="w-full bg-white border border-gray-300 rounded-lg p-2 text-sm focus:border-blue-500 outline-none" 
                                                             />
-                                                            <p className="text-xs text-gray-400 mt-1">Key 将被安全保存，用于后续接入语音合成功能。</p>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -505,12 +725,23 @@
                                                 <div className="space-y-8">
                                                     <div>
                                                         <div className="flex justify-between items-center mb-3">
+                                                            <div><h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2"><Icon name="Archive" size={16} className="text-blue-500"/> 记忆归档</h3><p className="text-xs text-gray-400">总结当前对话并保存</p></div>
+                                                            <button onClick={handleArchive} disabled={isArchiving} className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded-md font-medium hover:bg-blue-700 flex items-center gap-1 shadow-sm">
+                                                                <Icon name="Archive" size={14}/> {isArchiving ? '归档中...' : '生成今日记忆'}
+                                                            </button>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="border-t border-gray-100"></div>
+
+                                                    <div>
+                                                        <div className="flex justify-between items-center mb-3">
                                                             <div><h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2"><Icon name="Cpu" size={16} className="text-blue-500"/> 长期记忆库</h3><p className="text-xs text-gray-400">AI 会永远记住这些文件中的内容</p></div>
                                                             <button onClick={() => fileInputRef.current.click()} className="text-xs bg-blue-50 text-blue-600 px-3 py-1.5 rounded-md font-medium hover:bg-blue-100 flex items-center gap-1"><Icon name="Upload" size={14}/> 上传</button>
                                                             <input type="file" ref={fileInputRef} className="hidden" onChange={(e) => handleFileUpload(e, 'memory')} />
                                                         </div>
                                                         <div className="bg-gray-50 rounded-xl border border-gray-200 min-h-[100px] p-2 space-y-2 max-h-[200px] overflow-y-auto">
-                                                            {memoryFiles.length === 0 ? <div className="h-full flex flex-col items-center justify-center text-gray-400 py-6"><span className="text-xs">暂无记忆 (点击侧边栏"生成今日记忆"自动添加)</span></div> : memoryFiles.map((file, i) => (
+                                                            {memoryFiles.length === 0 ? <div className="h-full flex flex-col items-center justify-center text-gray-400 py-6"><span className="text-xs">暂无记忆 (点击上方"生成今日记忆"自动添加)</span></div> : memoryFiles.map((file, i) => (
                                                                 <div key={i} className="flex items-center justify-between bg-white p-2 rounded border border-gray-100 shadow-sm"><div className="flex items-center gap-3 overflow-hidden"><div className="bg-blue-100 p-1 rounded text-blue-600"><Icon name="FileText" size={14}/></div><div className="truncate"><div className="text-xs font-medium text-gray-700 truncate max-w-[150px]">{file.name}</div><div className="text-[10px] text-gray-400">{file.size} • {file.date}</div></div></div><button onClick={() => removeFile(i, 'memory')} className="text-gray-400 hover:text-red-500 p-1"><Icon name="Trash2" size={14}/></button></div>
                                                             ))}
                                                         </div>
