@@ -179,7 +179,6 @@
                         localStorage.setItem('gemini_chat_sessions', JSON.stringify(historySessions));
                     } catch (e) {
                         console.error("Local storage full", e);
-                        // 如果存储已满，不报错但可能无法保存最新记录
                     }
                 }
             }, [messages, currentSessionId]);
@@ -358,7 +357,15 @@
                 } catch (err) { setError(`归档失败: ${err.message}`); } finally { setIsArchiving(false); }
             };
 
-            // --- 聊天图片选择 ---
+            // --- 聊天图片选择 (增强版) ---
+            const triggerImageUpload = () => {
+                if (chatImageInputRef.current) {
+                    // 重置 value，允许重复选择同一张图片
+                    chatImageInputRef.current.value = "";
+                    chatImageInputRef.current.click();
+                }
+            };
+
             const handleChatImageSelect = (e) => {
                 const file = e.target.files[0];
                 if (!file) return;
@@ -382,7 +389,7 @@
                     setCurrentSessionId(newId);
                 }
 
-                // 构建用户消息，如果包含图片，则在内容中添加Markdown图片标签以便回显
+                // 构建用户消息
                 let userContent = input;
                 if (attachment) {
                     userContent += `\n\n![Image](${attachment.base64})`;
@@ -391,7 +398,6 @@
                 const newHistory = [...messages, { role: 'user', content: userContent }];
                 setMessages(newHistory);
                 
-                // 保存当前的attachment用于发送，然后清空状态
                 const currentAttachment = attachment;
                 setInput('');
                 setAttachment(null);
@@ -405,34 +411,28 @@
                     if (presetFiles.length > 0) systemPrompt += "【角色设定】:\n" + presetFiles.map(f => f.content).join("\n\n") + "\n\n";
                     if (memoryFiles.length > 0) systemPrompt += "【长期记忆】:\n" + memoryFiles.map(f => f.content).join("\n\n") + "\n\n";
                     
-                    // 准备历史记录，去掉markdown图片标签，构建API专用格式
                     const limit = (parseInt(config.historyLimit) || 20) * 2;
-                    // 我们需要将 newHistory 转换为 API 能理解的格式，而不是直接发 markdown
-                    // 简单起见，我们仅对最后一条（当前发送的）进行多模态处理，历史记录视为纯文本（或者 Gemini 可以理解 markdown 中的链接？不，Gemini 需要 inlineData）
-                    // 策略：历史记录中的图片在发送给 API 时往往被忽略（为了节省 token 和避免复杂性），或者只发送文本。
-                    // 这里我们只发送当前轮次的图片给 AI 观看。
                     
+                    // 历史消息只传文本（简化处理，避免API报错）
                     const contextHistory = messages.slice(-limit).map(m => ({
                         role: m.role,
-                        content: m.content // 历史记录保持纯文本（含markdown图片链接，AI可能无法直接看到图片内容，但能看到你发了图）
+                        content: m.content
                     }));
 
                     let url, headers, payload;
 
                     if (config.apiType === 'openai') {
-                        // OpenAI / OneAPI 兼容模式
+                        // OpenAI 兼容
                         url = `${baseUrl}/chat/completions`;
                         headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${config.apiKey}` };
                         
                         const msgs = [];
                         if (systemPrompt.trim()) msgs.push({ role: 'system', content: systemPrompt });
                         
-                        // 添加历史
                         contextHistory.forEach(m => {
                             msgs.push({ role: m.role === 'model' ? 'assistant' : 'user', content: m.content });
                         });
 
-                        // 添加当前消息（多模态）
                         const currentMsgContent = [];
                         if (input.trim()) currentMsgContent.push({ type: "text", text: input });
                         if (currentAttachment) {
@@ -446,7 +446,7 @@
                         payload = { model: modelName, messages: msgs, stream: false };
 
                     } else {
-                        // Gemini 原生模式
+                        // Gemini 原生
                         url = `${baseUrl}/v1beta/models/${modelName}:generateContent?key=${config.apiKey}`;
                         headers = { 'Content-Type': 'application/json' };
                         
@@ -455,11 +455,9 @@
                             parts: [{ text: m.content }]
                         }));
 
-                        // 当前消息
                         const currentParts = [];
                         if (input.trim()) currentParts.push({ text: input });
                         if (currentAttachment) {
-                            // 提取 base64 纯数据部分 (去掉 data:image/xxx;base64,)
                             const base64Data = currentAttachment.base64.split(',')[1];
                             currentParts.push({
                                 inlineData: {
@@ -545,7 +543,7 @@
                             <div className="flex items-center gap-3">
                                 <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-600"><Icon name="Menu" size={20} /></button>
                                 <div className="flex flex-col">
-                                    <span className="text-lg font-medium text-gray-800 tracking-tight leading-tight">星月舱v2.3</span>
+                                    <span className="text-lg font-medium text-gray-800 tracking-tight leading-tight">星月舱v2.4</span>
                                     <span className="text-[10px] text-gray-400 leading-tight">模型: {config.model} | 记忆: {memoryFiles.length + presetFiles.length} | 模式: {config.apiType === 'openai' ? 'OpenAI兼容' : '原生'}</span>
                                 </div>
                             </div>
@@ -593,10 +591,10 @@
                                 )}
 
                                 <div className="bg-gray-100 hover:bg-gray-200/70 focus-within:bg-white focus-within:shadow-md focus-within:ring-1 focus-within:ring-gray-300 rounded-[24px] flex items-end p-2 pl-4 pr-3 transition-all duration-200">
-                                    <button onClick={() => chatImageInputRef.current.click()} className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-200 rounded-full transition-colors mb-1 mr-1">
+                                    <button onClick={triggerImageUpload} className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-200 rounded-full transition-colors mb-1 mr-1">
                                         <Icon name="Image" size={20} />
                                     </button>
-                                    <input type="file" ref={chatImageInputRef} className="hidden" accept="image/*" onChange={handleChatImageSelect}/>
+                                    <input type="file" ref={chatImageInputRef} style={{display: 'none'}} accept="image/*" onChange={handleChatImageSelect}/>
                                     
                                     <textarea value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={handleKeyDown} placeholder="星月交辉✨......" className="bg-transparent border-0 focus:ring-0 text-gray-800 flex-1 resize-none py-3 max-h-32 min-h-[44px] outline-none placeholder:text-gray-400 text-base" rows={1}></textarea>
                                     {(input.trim() || attachment) ? <button onClick={handleSend} disabled={isLoading} className="mb-1 p-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors shadow-sm"><Icon name="Send" size={18} /></button> : <button className="mb-1 p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-200 rounded-full transition-colors"><Icon name="Mic" size={20} /></button>}
