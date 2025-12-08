@@ -364,20 +364,18 @@
                         if (data.presets) setPresetFiles(data.presets);
                         if (data.sessions) {
                             setHistorySessions(data.sessions);
-                            // 恢复后如果不清空当前对话，可能会混淆，建议重置或提示
                             if (data.sessions.length > 0) {
                                 // 默认不自动加载某个会话，保持当前清空或用户选择
                             }
                         }
                         
-                        // 强制写入本地存储
                         localStorage.setItem('gemini_app_config', JSON.stringify(data.config || config));
                         localStorage.setItem('gemini_memories', JSON.stringify(data.memories || []));
                         localStorage.setItem('gemini_presets', JSON.stringify(data.presets || []));
                         localStorage.setItem('gemini_chat_sessions', JSON.stringify(data.sessions || []));
                         
                         showToast("星月档案已完整恢复");
-                        setTimeout(() => window.location.reload(), 1500); // 刷新以确保状态同步
+                        setTimeout(() => window.location.reload(), 1500); 
                     } catch (err) {
                         alert("备份文件无效或损坏");
                     }
@@ -446,6 +444,123 @@
                     });
                 };
                 reader.readAsDataURL(file);
+            };
+
+            // --- 重新生成逻辑 (v2.3 新增) ---
+            const handleRegenerate = async () => {
+                if (isLoading || messages.length === 0) return;
+                
+                let newMessages = [...messages];
+                
+                // 如果最后一条是 AI 的回复（或错误信息），删除它
+                if (newMessages[newMessages.length - 1].role === 'model') {
+                    newMessages.pop();
+                }
+                
+                // 确保还有消息（即用户发送了消息）
+                if (newMessages.length === 0) return;
+
+                // 更新界面，删除 AI 回复
+                setMessages(newMessages);
+                setIsLoading(true);
+                setError(null);
+
+                // 获取最后一条用户消息，尝试提取图片（如果之前发过）
+                const lastUserMsg = newMessages[newMessages.length - 1];
+                let currentText = lastUserMsg.content;
+                let currentImage = null;
+
+                // 简单的正则匹配 Markdown 图片: ![Image](data:image/...)
+                const imageRegex = /!\[Image\]\((data:image\/.*?;base64,.*?)\)/;
+                const match = currentText.match(imageRegex);
+                
+                if (match) {
+                    // 提取图片 Base64
+                    currentImage = {
+                        base64: match[1],
+                        mimeType: match[1].split(';')[0].split(':')[1]
+                    };
+                    // 发送给 API 时，如果使用 Gemini 模式，我们通常只发文本部分，图片通过 inlineData 发送
+                    // 但这里的 content 已经包含了 markdown 图片链接。
+                    // 为了简单起见，我们重新构造请求逻辑，和 handleSend 保持一致
+                    currentText = currentText.replace(imageRegex, '').trim(); 
+                }
+
+                // --- 触发 API 请求 (复用 handleSend 的核心逻辑) ---
+                try {
+                    const baseUrl = config.baseUrl.replace(/\/$/, '');
+                    const modelName = config.model || 'gemini-1.5-flash';
+                    let systemPrompt = "";
+                    if (presetFiles.length > 0) systemPrompt += "【角色设定】:\n" + presetFiles.map(f => f.content).join("\n\n") + "\n\n";
+                    if (memoryFiles.length > 0) systemPrompt += "【长期记忆】:\n" + memoryFiles.map(f => f.content).join("\n\n") + "\n\n";
+                    
+                    const limit = (parseInt(config.historyLimit) || 20) * 2;
+                    // 历史上下文（不包含最后这一条用户消息，因为它将作为 current 发送）
+                    const contextHistory = newMessages.slice(0, -1).slice(-limit).map(m => ({
+                        role: m.role,
+                        content: m.content
+                    }));
+
+                    let url, headers, payload;
+
+                    if (config.apiType === 'openai') {
+                        // OpenAI
+                        url = `${baseUrl}/chat/completions`;
+                        headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${config.apiKey}` };
+                        
+                        const msgs = [];
+                        if (systemPrompt.trim()) msgs.push({ role: 'system', content: systemPrompt });
+                        contextHistory.forEach(m => msgs.push({ role: m.role === 'model' ? 'assistant' : 'user', content: m.content }));
+
+                        const currentMsgContent = [];
+                        if (currentText) currentMsgContent.push({ type: "text", text: currentText });
+                        if (currentImage) {
+                            currentMsgContent.push({ type: "image_url", image_url: { url: currentImage.base64 } });
+                        }
+                        // 如果既没文本也没图片（极少见），至少发个空文本防止报错
+                        if (currentMsgContent.length === 0) currentMsgContent.push({ type: "text", text: "..." });
+                        
+                        msgs.push({ role: 'user', content: currentMsgContent });
+                        payload = { model: modelName, messages: msgs, stream: false };
+
+                    } else {
+                        // Gemini
+                        url = `${baseUrl}/v1beta/models/${modelName}:generateContent?key=${config.apiKey}`;
+                        headers = { 'Content-Type': 'application/json' };
+                        
+                        const contents = contextHistory.map(m => ({ role: m.role, parts: [{ text: m.content }] }));
+                        
+                        const currentParts = [];
+                        if (currentText) currentParts.push({ text: currentText });
+                        if (currentImage) {
+                            const base64Data = currentImage.base64.split(',')[1];
+                            currentParts.push({ inlineData: { mimeType: currentImage.mimeType, data: base64Data } });
+                        }
+                        if (currentParts.length === 0) currentParts.push({ text: "..." });
+
+                        contents.push({ role: 'user', parts: currentParts });
+                        payload = { contents };
+                        if (systemPrompt.trim()) payload.system_instruction = { parts: [{ text: systemPrompt }] };
+                    }
+
+                    const response = await fetch(url, { method: 'POST', headers: headers, body: JSON.stringify(payload) });
+                    if (!response.ok) {
+                        const errData = await response.json().catch(() => ({}));
+                        throw new Error(errData.error?.message || `HTTP ${response.status}`);
+                    }
+                    const data = await response.json();
+                    let aiText = '';
+                    if (config.apiType === 'openai') aiText = data.choices?.[0]?.message?.content || "无回复";
+                    else aiText = data.candidates?.[0]?.content?.parts?.[0]?.text || "无回复";
+                    
+                    setMessages(prev => [...prev, { role: 'model', content: aiText, timestamp: getTimestamp() }]);
+
+                } catch (err) {
+                    setError(err.message);
+                    setMessages(prev => [...prev, { role: 'model', content: `错误: ${err.message}`, timestamp: getTimestamp() }]);
+                } finally {
+                    setIsLoading(false);
+                }
             };
 
             const handleSend = async () => {
@@ -608,7 +723,7 @@
                             <div className="flex items-center gap-3">
                                 <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-600"><Icon name="Menu" size={20} /></button>
                                 <div className="flex flex-col">
-                                    <span className="text-lg font-medium text-gray-800 tracking-tight leading-tight">星月舱v2.5</span>
+                                    <span className="text-lg font-medium text-gray-800 tracking-tight leading-tight">星月舱v2.6</span>
                                     <span className="text-[10px] text-gray-400 leading-tight">模型: {config.model} | 记忆: {memoryFiles.length + presetFiles.length} | 模式: {config.apiType === 'openai' ? 'OpenAI兼容' : '原生'}</span>
                                 </div>
                             </div>
@@ -651,6 +766,17 @@
 
                         <div className="absolute bottom-0 left-0 w-full bg-white pt-4 pb-6 px-4 border-t border-gray-50">
                             <div className="max-w-3xl mx-auto relative">
+                                {/* 重新生成按钮 */}
+                                {messages.length > 0 && !isLoading && (
+                                    <button 
+                                        onClick={handleRegenerate}
+                                        className="absolute -top-12 right-0 bg-white border border-gray-200 text-gray-600 px-3 py-1.5 rounded-full text-xs font-medium shadow-sm hover:bg-gray-50 hover:text-blue-600 transition-all flex items-center gap-1.5"
+                                        title="重新生成最后一条回复"
+                                    >
+                                        <Icon name="RefreshCw" size={12}/> 重新生成
+                                    </button>
+                                )}
+
                                 {error && <div className="absolute -top-14 left-0 right-0 mx-auto w-max text-red-600 text-xs bg-red-50 border border-red-100 px-4 py-2 rounded-lg shadow-sm flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-red-500"></span>{error}</div>}
                                 
                                 {attachment && (
