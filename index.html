@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EQ-chat.星月舱✨🌙</title>
+    <title>EQ-chat.星月舱</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- React & ReactDOM -->
@@ -60,7 +60,8 @@
             Archive: () => <path d="M21 8v13H3V8M1 3h22v5H1zM10 12h4" />,
             RefreshCw: () => <path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />,
             UserCircle: () => <g><circle cx="12" cy="12" r="10"/><circle cx="12" cy="10" r="3"/><path d="M7 20.662V19a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v1.662"/></g>,
-            Bot: () => <g><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/><line x1="8" y1="16" x2="8" y2="16"/><line x1="16" y1="16" x2="16" y2="16"/></g>
+            Bot: () => <g><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/><line x1="8" y1="16" x2="8" y2="16"/><line x1="16" y1="16" x2="16" y2="16"/></g>,
+            Globe: () => <g><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></g>
         };
 
         const Icon = ({ name, size = 20, className = "" }) => {
@@ -76,38 +77,16 @@
 
         // --- 头像组件 ---
         const Avatar = ({ role, config }) => {
-            // 用户自定义头像
             if (role === 'user' && config.userAvatar) {
-                return (
-                    <div className="w-8 h-8 rounded-full flex-shrink-0 mt-1 shadow-sm overflow-hidden bg-gray-100 border border-gray-200">
-                        <img src={config.userAvatar} alt="User" className="w-full h-full object-cover" />
-                    </div>
-                );
+                return <div className="w-8 h-8 rounded-full flex-shrink-0 mt-1 shadow-sm overflow-hidden bg-gray-100 border border-gray-200"><img src={config.userAvatar} alt="User" className="w-full h-full object-cover" /></div>;
             }
-            // 用户默认头像
             if (role === 'user') {
-                return (
-                    <div className="w-8 h-8 rounded-full bg-blue-600 flex-shrink-0 flex items-center justify-center mt-1 text-white shadow-sm">
-                        <Icon name="User" size={16} />
-                    </div>
-                );
+                return <div className="w-8 h-8 rounded-full bg-blue-600 flex-shrink-0 flex items-center justify-center mt-1 text-white shadow-sm"><Icon name="User" size={16} /></div>;
             }
-            
-            // AI 自定义头像
             if (role === 'model' && config.aiAvatar) {
-                return (
-                    <div className="w-8 h-8 rounded-full flex-shrink-0 mt-1 shadow-sm overflow-hidden bg-gray-100 border border-gray-200">
-                        <img src={config.aiAvatar} alt="AI" className="w-full h-full object-cover" />
-                    </div>
-                );
+                return <div className="w-8 h-8 rounded-full flex-shrink-0 mt-1 shadow-sm overflow-hidden bg-gray-100 border border-gray-200"><img src={config.aiAvatar} alt="AI" className="w-full h-full object-cover" /></div>;
             }
-
-            // AI 默认头像
-            return (
-                <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-500 to-red-500 flex-shrink-0 flex items-center justify-center mt-1 text-white shadow-sm">
-                    <Icon name="Sparkles" size={16} />
-                </div>
-            );
+            return <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-500 to-red-500 flex-shrink-0 flex items-center justify-center mt-1 text-white shadow-sm"><Icon name="Sparkles" size={16} /></div>;
         };
 
         // --- 主程序 ---
@@ -124,12 +103,13 @@
                 baseUrl: 'https://generativelanguage.googleapis.com',
                 minimaxKey: '',
                 historyLimit: 20,
-                model: '[150k]gemini-2.5-pro',
-                userAvatar: '', // 用户头像 Base64
-                aiAvatar: ''    // AI 头像 Base64
+                model: 'gemini-1.5-flash',
+                userAvatar: '',
+                aiAvatar: '',
+                apiType: 'gemini' // 'gemini' | 'openai'
             });
             
-            const [availableModels, setAvailableModels] = useState([]); // 可用模型列表
+            const [availableModels, setAvailableModels] = useState([]);
             const [memoryFiles, setMemoryFiles] = useState([]); 
             const [presetFiles, setPresetFiles] = useState([]); 
 
@@ -150,8 +130,8 @@
                 const storedConfig = localStorage.getItem('gemini_app_config');
                 if (storedConfig) {
                     const parsed = JSON.parse(storedConfig);
-                    // 确保有 model 字段
-                    if (!parsed.model) parsed.model = '[150k]gemini-2.5-pro';
+                    if (!parsed.model) parsed.model = 'gemini-1.5-flash';
+                    if (!parsed.apiType) parsed.apiType = 'gemini';
                     setConfig(prev => ({...prev, ...parsed}));
                 }
                 
@@ -164,9 +144,16 @@
                 if (window.innerWidth < 768) setSidebarOpen(false);
             }, []);
 
-            // Auto Save Config
+            // Auto Save & Protocol Detection
             useEffect(() => {
                 if (config.apiKey) localStorage.setItem('gemini_app_config', JSON.stringify(config));
+                
+                // 自动识别：如果 URL 包含 /v1 且不是官方域名，且还没切换到 openai 模式，提示或自动切换
+                if (config.baseUrl && config.baseUrl.includes('/v1') && config.apiType !== 'openai' && !config.baseUrl.includes('googleapis.com')) {
+                    setConfig(prev => ({...prev, apiType: 'openai'}));
+                    showToast("检测到 /v1 路径，已自动切换为 OpenAI 兼容模式");
+                }
+
                 if (memoryFiles.length > 0) localStorage.setItem('gemini_memories', JSON.stringify(memoryFiles));
                 if (presetFiles.length > 0) localStorage.setItem('gemini_presets', JSON.stringify(presetFiles));
             }, [config, memoryFiles, presetFiles]);
@@ -176,13 +163,11 @@
                 messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
             }, [messages, isLoading]);
 
-            // Toast Helper
             const showToast = (msg) => {
                 setToast(msg);
                 setTimeout(() => setToast(null), 3000);
             };
 
-            // 手动保存配置
             const handleSaveConfig = () => {
                 localStorage.setItem('gemini_app_config', JSON.stringify(config));
                 localStorage.setItem('gemini_memories', JSON.stringify(memoryFiles));
@@ -191,7 +176,7 @@
                 showToast("配置已保存");
             };
 
-            // 获取模型列表
+            // --- 获取模型列表 (核心修复) ---
             const fetchModels = async () => {
                 if (!config.apiKey) {
                     showToast("请先输入 API Key");
@@ -199,54 +184,67 @@
                 }
                 setIsFetchingModels(true);
                 try {
+                    let url, headers;
                     const baseUrl = config.baseUrl.replace(/\/$/, '');
-                    const res = await fetch(`${baseUrl}/v1beta/models?key=${config.apiKey}`);
-                    if (!res.ok) throw new Error("网络请求失败");
+
+                    if (config.apiType === 'openai') {
+                        // OpenAI / OneAPI 标准
+                        url = `${baseUrl}/models`;
+                        headers = { 'Authorization': `Bearer ${config.apiKey}` };
+                    } else {
+                        // Google Gemini 原生标准
+                        url = `${baseUrl}/v1beta/models?key=${config.apiKey}`;
+                        headers = {};
+                    }
+
+                    const res = await fetch(url, { headers });
+                    if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
                     const data = await res.json();
                     
-                    if (data.models) {
-                        const chatModels = data.models
-                            .filter(m => m.supportedGenerationMethods && m.supportedGenerationMethods.includes("generateContent"))
-                            .map(m => m.name.replace('models/', ''));
-                        
-                        setAvailableModels(chatModels);
-                        showToast(`成功获取 ${chatModels.length} 个模型`);
-                        
-                        if (!chatModels.includes(config.model) && chatModels.length > 0) {
-                            setConfig(prev => ({...prev, model: chatModels[0]}));
+                    let chatModels = [];
+                    if (config.apiType === 'openai') {
+                        // OpenAI 格式: { data: [{ id: '...' }] }
+                        if (data.data && Array.isArray(data.data)) {
+                            chatModels = data.data.map(m => m.id);
+                        }
+                    } else {
+                        // Google 格式: { models: [{ name: 'models/...' }] }
+                        if (data.models) {
+                            chatModels = data.models
+                                .filter(m => m.supportedGenerationMethods && m.supportedGenerationMethods.includes("generateContent"))
+                                .map(m => m.name.replace('models/', ''));
                         }
                     }
+
+                    if (chatModels.length > 0) {
+                        setAvailableModels(chatModels);
+                        showToast(`成功获取 ${chatModels.length} 个模型`);
+                        if (!chatModels.includes(config.model)) setConfig(prev => ({...prev, model: chatModels[0]}));
+                    } else {
+                        showToast("未获取到模型，请检查 API 配置");
+                    }
                 } catch (e) {
-                    showToast(`获取模型失败: ${e.message}`);
-                    setAvailableModels(['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-1.0-pro']);
+                    showToast(`获取失败: ${e.message}`);
+                    // Fallback
+                    setAvailableModels(['gemini-1.5-flash', 'gemini-1.5-pro', 'gpt-4o', 'gpt-3.5-turbo']);
                 } finally {
                     setIsFetchingModels(false);
                 }
             };
 
-            // 头像上传
             const handleAvatarUpload = (e, type) => {
                 const file = e.target.files[0];
                 if (!file) return;
-                
-                if (file.size > 500 * 1024) {
-                    alert("图片太大，请上传 500KB 以内的图片");
-                    return;
-                }
-
+                if (file.size > 500 * 1024) { alert("图片太大，请上传 500KB 以内的图片"); return; }
                 const reader = new FileReader();
                 reader.onload = (event) => {
-                    if (type === 'user') {
-                        setConfig(prev => ({...prev, userAvatar: event.target.result}));
-                    } else {
-                        setConfig(prev => ({...prev, aiAvatar: event.target.result}));
-                    }
+                    if (type === 'user') setConfig(prev => ({...prev, userAvatar: event.target.result}));
+                    else setConfig(prev => ({...prev, aiAvatar: event.target.result}));
                     showToast("头像已更新");
                 };
                 reader.readAsDataURL(file);
             };
 
-            // 导出聊天
             const handleExport = () => {
                 if (messages.length === 0) return;
                 const exportObj = { timestamp: new Date().toISOString(), history: messages };
@@ -261,29 +259,23 @@
                 URL.revokeObjectURL(url);
             };
 
-            // 记忆/预设文件上传
             const handleFileUpload = (e, type) => {
                 const files = Array.from(e.target.files);
                 if (!files.length) return;
-
                 files.forEach(file => {
                     const reader = new FileReader();
                     reader.onload = (event) => {
-                        const fileContent = event.target.result;
                         const newFileObj = {
                             name: file.name,
                             size: (file.size / 1024).toFixed(1) + ' KB',
                             date: new Date().toLocaleDateString(),
-                            content: fileContent
+                            content: event.target.result
                         };
                         if (type === 'memory') setMemoryFiles(prev => [...prev, newFileObj]);
                         else setPresetFiles(prev => [...prev, newFileObj]);
                     };
-                    if (file.type.match('text.*') || file.name.endsWith('.md') || file.name.endsWith('.json')) {
-                        reader.readAsText(file);
-                    } else {
-                        alert(`仅支持文本文件(.txt, .md, .json)`);
-                    }
+                    if (file.type.match('text.*') || file.name.endsWith('.md') || file.name.endsWith('.json')) reader.readAsText(file);
+                    else alert(`仅支持文本文件`);
                 });
             };
 
@@ -294,39 +286,41 @@
 
             // --- 归档总结 ---
             const handleArchive = async () => {
-                if (messages.length === 0) {
-                    showToast("没有对话可以归档");
-                    return;
-                }
-                if (!config.apiKey) {
-                    setError('请先配置 API Key');
-                    return;
-                }
+                if (messages.length === 0) { showToast("没有对话可以归档"); return; }
+                if (!config.apiKey) { setError('请先配置 API Key'); return; }
 
                 setIsArchiving(true);
                 showToast("正在生成记忆摘要...");
-
                 try {
-                    const baseUrl = config.baseUrl.replace(/\/$/, '');
-                    const url = `${baseUrl}/v1beta/models/${config.model}:generateContent?key=${config.apiKey}`;
-
                     const summaryPrompt = "请阅读以上所有对话。请以第三人称客观视角，总结这次对话中的关键信息。重点关注：1. 用户提到的个人喜好、习惯、生活状态。 2. 双方达成的重要共识或约定。 3. 用户的情感状态。 请输出为一段简洁的文本，作为“长期记忆”存档。不要包含寒暄。";
+                    
+                    // 复用 send 逻辑进行总结，但这里简单处理
+                    // 为保证稳定，归档建议使用 handleSend 同样的逻辑封装，这里为了代码紧凑直接调用 fetch
+                    // 仅演示核心思路：复用下方的请求构建逻辑
+                    let payload, url, headers;
+                    const baseUrl = config.baseUrl.replace(/\/$/, '');
+                    const modelName = config.model || 'gemini-1.5-flash';
 
-                    const payload = {
-                        contents: [
-                            ...messages.map(m => ({ role: m.role, parts: [{ text: m.content }] })),
-                            { role: 'user', parts: [{ text: summaryPrompt }] }
-                        ]
-                    };
+                    if (config.apiType === 'openai') {
+                        url = `${baseUrl}/chat/completions`;
+                        headers = { 'Authorization': `Bearer ${config.apiKey}`, 'Content-Type': 'application/json' };
+                        const msgs = messages.map(m => ({ role: m.role === 'model' ? 'assistant' : 'user', content: m.content }));
+                        msgs.push({ role: 'user', content: summaryPrompt });
+                        payload = { model: modelName, messages: msgs };
+                    } else {
+                        url = `${baseUrl}/v1beta/models/${modelName}:generateContent?key=${config.apiKey}`;
+                        headers = { 'Content-Type': 'application/json' };
+                        const contents = messages.map(m => ({ role: m.role, parts: [{ text: m.content }] }));
+                        contents.push({ role: 'user', parts: [{ text: summaryPrompt }] });
+                        payload = { contents };
+                    }
 
-                    const response = await fetch(url, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    });
-
-                    const data = await response.json();
-                    const summary = data.candidates?.[0]?.content?.parts?.[0]?.text;
+                    const res = await fetch(url, { method: 'POST', headers, body: JSON.stringify(payload) });
+                    const data = await res.json();
+                    
+                    let summary = '';
+                    if (config.apiType === 'openai') summary = data.choices?.[0]?.message?.content;
+                    else summary = data.candidates?.[0]?.content?.parts?.[0]?.text;
 
                     if (summary) {
                         const dateStr = new Date().toLocaleString();
@@ -339,9 +333,8 @@
                         setMemoryFiles(prev => [...prev, newMemory]);
                         showToast("记忆已归档！请在侧边栏查看。");
                     } else {
-                        throw new Error("API 未返回总结内容");
+                        throw new Error("无返回内容");
                     }
-
                 } catch (err) {
                     setError(`归档失败: ${err.message}`);
                 } finally {
@@ -349,19 +342,13 @@
                 }
             };
 
-            // --- 发送消息 ---
+            // --- 发送消息 (核心修复) ---
             const handleSend = async () => {
                 if (!input.trim()) return;
-                if (!config.apiKey) {
-                    setSettingsOpen(true);
-                    setActiveTab('general');
-                    setError('请先配置 Gemini API Key');
-                    return;
-                }
+                if (!config.apiKey) { setSettingsOpen(true); setActiveTab('general'); setError('请先配置 API Key'); return; }
 
                 const userText = input;
-                const newMessage = { role: 'user', content: userText };
-                const newHistory = [...messages, newMessage];
+                const newHistory = [...messages, { role: 'user', content: userText }];
                 setMessages(newHistory);
                 setInput('');
                 setIsLoading(true);
@@ -370,39 +357,75 @@
                 try {
                     const baseUrl = config.baseUrl.replace(/\/$/, '');
                     const modelName = config.model || 'gemini-1.5-flash';
-                    const url = `${baseUrl}/v1beta/models/${modelName}:generateContent?key=${config.apiKey}`;
-
-                    let systemInstructionText = "";
-                    if (presetFiles.length > 0) systemInstructionText += "【系统/角色设定】:\n" + presetFiles.map(f => f.content).join("\n\n") + "\n\n";
-                    if (memoryFiles.length > 0) systemInstructionText += "【长期记忆库】:\n" + memoryFiles.map(f => f.content).join("\n\n") + "\n\n";
+                    
+                    let systemPrompt = "";
+                    if (presetFiles.length > 0) systemPrompt += "【角色设定】:\n" + presetFiles.map(f => f.content).join("\n\n") + "\n\n";
+                    if (memoryFiles.length > 0) systemPrompt += "【长期记忆】:\n" + memoryFiles.map(f => f.content).join("\n\n") + "\n\n";
 
                     const limit = (parseInt(config.historyLimit) || 20) * 2;
                     const contextHistory = newHistory.slice(-limit);
 
-                    const payload = {
-                        contents: contextHistory.map(m => ({
-                            role: m.role,
-                            parts: [{ text: m.content }]
-                        }))
-                    };
+                    let url, headers, payload;
 
-                    if (systemInstructionText.trim()) {
-                        payload.system_instruction = { parts: [{ text: systemInstructionText }] };
+                    if (config.apiType === 'openai') {
+                        // --- OpenAI 兼容模式 ---
+                        url = `${baseUrl}/chat/completions`;
+                        headers = {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${config.apiKey}`
+                        };
+                        
+                        const msgs = [];
+                        if (systemPrompt.trim()) msgs.push({ role: 'system', content: systemPrompt });
+                        
+                        contextHistory.forEach(m => {
+                            msgs.push({
+                                role: m.role === 'model' ? 'assistant' : 'user',
+                                content: m.content
+                            });
+                        });
+
+                        payload = {
+                            model: modelName,
+                            messages: msgs,
+                            stream: false
+                        };
+
+                    } else {
+                        // --- Google Gemini 原生模式 ---
+                        url = `${baseUrl}/v1beta/models/${modelName}:generateContent?key=${config.apiKey}`;
+                        headers = { 'Content-Type': 'application/json' };
+                        
+                        payload = {
+                            contents: contextHistory.map(m => ({
+                                role: m.role,
+                                parts: [{ text: m.content }]
+                            }))
+                        };
+                        if (systemPrompt.trim()) {
+                            payload.system_instruction = { parts: [{ text: systemPrompt }] };
+                        }
                     }
 
                     const response = await fetch(url, {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: headers,
                         body: JSON.stringify(payload)
                     });
 
                     if (!response.ok) {
-                        const errorData = await response.json().catch(() => ({}));
-                        throw new Error(errorData.error?.message || `Error ${response.status}`);
+                        const errData = await response.json().catch(() => ({}));
+                        throw new Error(errData.error?.message || `HTTP ${response.status}`);
                     }
 
                     const data = await response.json();
-                    const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text || "...";
+                    let aiText = '';
+
+                    if (config.apiType === 'openai') {
+                        aiText = data.choices?.[0]?.message?.content || "无回复";
+                    } else {
+                        aiText = data.candidates?.[0]?.content?.parts?.[0]?.text || "无回复";
+                    }
                     
                     setMessages(prev => [...prev, { role: 'model', content: aiText }]);
                 } catch (err) {
@@ -422,72 +445,35 @@
 
             return (
                 <div className="flex h-screen bg-white text-gray-900 font-sans overflow-hidden">
-                    {/* Toast */}
-                    {toast && (
-                        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white px-4 py-2 rounded-full text-sm shadow-lg z-50 animate-fade-in flex items-center gap-2">
-                            <Icon name="Sparkles" size={16} className="text-yellow-400"/> {toast}
-                        </div>
-                    )}
+                    {toast && <div className="fixed top-4 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white px-4 py-2 rounded-full text-sm shadow-lg z-50 animate-fade-in flex items-center gap-2"><Icon name="Sparkles" size={16} className="text-yellow-400"/> {toast}</div>}
 
-                    {/* 侧边栏 */}
                     <div className={`${sidebarOpen ? 'w-[280px]' : 'w-0'} bg-gray-50 transition-all duration-300 flex flex-col flex-shrink-0 relative border-r border-gray-200`}>
                         <div className="p-4 pt-6 space-y-2">
-                            <button onClick={() => setMessages([])} className="flex items-center gap-3 bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-3 rounded-full transition-colors w-full shadow-sm">
-                                <Icon name="Plus" className="text-gray-600" />
-                                <span className="text-sm font-medium">新对话</span>
-                            </button>
+                            <button onClick={() => setMessages([])} className="flex items-center gap-3 bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-3 rounded-full transition-colors w-full shadow-sm"><Icon name="Plus" className="text-gray-600" /><span className="text-sm font-medium">新对话</span></button>
                         </div>
-                        
                         <div className="flex-1 overflow-y-auto px-3 py-2">
                             <div className="text-xs font-medium text-gray-500 mb-2 px-3">当前挂载记忆</div>
-                            {presetFiles.length === 0 && memoryFiles.length === 0 && (
-                                <div className="text-xs text-gray-400 px-3">暂无记忆/预设，请在设置中添加</div>
-                            )}
-                            {presetFiles.map((f, i) => (
-                                <div key={`p-${i}`} className="mb-1 px-3 py-1.5 bg-purple-50 rounded text-xs text-purple-700 flex items-center gap-2 truncate border border-purple-100">
-                                    <Icon name="Sparkles" size={12} className="flex-shrink-0"/> <span className="truncate">{f.name}</span>
-                                </div>
-                            ))}
-                             {memoryFiles.map((f, i) => (
-                                <div key={`m-${i}`} className="mb-1 px-3 py-1.5 bg-blue-50 rounded text-xs text-blue-700 flex items-center gap-2 truncate border border-blue-100">
-                                    <Icon name="Cpu" size={12} className="flex-shrink-0"/> <span className="truncate">{f.name}</span>
-                                </div>
-                            ))}
+                            {presetFiles.length === 0 && memoryFiles.length === 0 && <div className="text-xs text-gray-400 px-3">暂无记忆/预设</div>}
+                            {presetFiles.map((f, i) => <div key={`p-${i}`} className="mb-1 px-3 py-1.5 bg-purple-50 rounded text-xs text-purple-700 flex items-center gap-2 truncate border border-purple-100"><Icon name="Sparkles" size={12} className="flex-shrink-0"/> <span className="truncate">{f.name}</span></div>)}
+                            {memoryFiles.map((f, i) => <div key={`m-${i}`} className="mb-1 px-3 py-1.5 bg-blue-50 rounded text-xs text-blue-700 flex items-center gap-2 truncate border border-blue-100"><Icon name="Cpu" size={12} className="flex-shrink-0"/> <span className="truncate">{f.name}</span></div>)}
                         </div>
-
                         <div className="p-3 border-t border-gray-200">
-                            <button onClick={handleExport} className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-200 w-full text-left text-sm text-gray-700 transition-colors">
-                                <Icon name="Download" size={18} />
-                                <span>导出记录 JSON</span>
-                            </button>
-                            <button onClick={() => setSettingsOpen(true)} className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-200 w-full text-left text-sm text-gray-700 transition-colors">
-                                <Icon name="Settings" size={18} />
-                                <span>设置 & 记忆库</span>
-                            </button>
+                            <button onClick={handleExport} className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-200 w-full text-left text-sm text-gray-700 transition-colors"><Icon name="Download" size={18} /><span>导出记录 JSON</span></button>
+                            <button onClick={() => setSettingsOpen(true)} className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-200 w-full text-left text-sm text-gray-700 transition-colors"><Icon name="Settings" size={18} /><span>设置 & 记忆库</span></button>
                         </div>
                     </div>
 
-                    {/* 主界面 */}
                     <div className="flex-1 flex flex-col h-full relative bg-white">
                         <div className="flex items-center justify-between p-4 h-16 bg-white/80 backdrop-blur sticky top-0 z-10 border-b border-gray-100">
                             <div className="flex items-center gap-3">
-                                <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-600">
-                                    <Icon name="Menu" size={20} />
-                                </button>
+                                <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-600"><Icon name="Menu" size={20} /></button>
                                 <div className="flex flex-col">
                                     <span className="text-lg font-medium text-gray-800 tracking-tight leading-tight">星月舱v2.0</span>
-                                    <span className="text-[10px] text-gray-400 leading-tight">
-                                        模型: {config.model} | 记忆: {memoryFiles.length + presetFiles.length} | 上下文: {config.historyLimit}
-                                    </span>
+                                    <span className="text-[10px] text-gray-400 leading-tight">模型: {config.model} | 记忆: {memoryFiles.length + presetFiles.length} | 模式: {config.apiType === 'openai' ? 'OpenAI兼容' : '原生'}</span>
                                 </div>
                             </div>
-                            {/* 右上角头像 */}
                             <div className="cursor-pointer" onClick={() => setSettingsOpen(true)}>
-                                {config.userAvatar ? (
-                                    <img src={config.userAvatar} className="w-9 h-9 rounded-full object-cover shadow-md border border-gray-200" alt="User" />
-                                ) : (
-                                    <div className="w-9 h-9 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center text-sm font-bold text-white shadow-md">U</div>
-                                )}
+                                {config.userAvatar ? <img src={config.userAvatar} className="w-9 h-9 rounded-full object-cover shadow-md border border-gray-200" alt="User" /> : <div className="w-9 h-9 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center text-sm font-bold text-white shadow-md">U</div>}
                             </div>
                         </div>
 
@@ -495,12 +481,8 @@
                             <div className="max-w-3xl mx-auto py-6 pb-40">
                                 {messages.length === 0 ? (
                                     <div className="mt-20 flex flex-col items-center justify-center animate-fade-in px-4 text-center">
-                                        <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent text-4xl md:text-5xl font-semibold mb-6 tracking-tight">
-                                            欢迎回家✨...
-                                        </div>
-                                        <p className="text-gray-500 mb-12 max-w-md">
-                                            我们已拥有 {memoryFiles.length} 份星月记忆档案。
-                                        </p>
+                                        <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent text-4xl md:text-5xl font-semibold mb-6 tracking-tight">欢迎回家✨...</div>
+                                        <p className="text-gray-500 mb-12 max-w-md">我们已拥有 {memoryFiles.length} 份星月记忆档案。</p>
                                     </div>
                                 ) : (
                                     <div className="space-y-8 px-2">
@@ -513,14 +495,7 @@
                                                 </div>
                                             </div>
                                         ))}
-                                        {isLoading && (
-                                            <div className="flex gap-4">
-                                                <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-500 to-red-500 flex-shrink-0 flex items-center justify-center animate-pulse"><Icon name="Sparkles" size={16} className="text-white" /></div>
-                                                <div className="flex-1 pt-2">
-                                                    <span className="text-gray-400 text-sm">正在思考...</span>
-                                                </div>
-                                            </div>
-                                        )}
+                                        {isLoading && <div className="flex gap-4"><div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-500 to-red-500 flex-shrink-0 flex items-center justify-center animate-pulse"><Icon name="Sparkles" size={16} className="text-white" /></div><div className="flex-1 pt-2"><span className="text-gray-400 text-sm">正在思考...</span></div></div>}
                                         <div ref={messagesEndRef} />
                                     </div>
                                 )}
@@ -529,28 +504,11 @@
 
                         <div className="absolute bottom-0 left-0 w-full bg-white pt-4 pb-6 px-4 border-t border-gray-50">
                             <div className="max-w-3xl mx-auto relative">
-                                {error && (
-                                    <div className="absolute -top-14 left-0 right-0 mx-auto w-max text-red-600 text-xs bg-red-50 border border-red-100 px-4 py-2 rounded-lg shadow-sm flex items-center gap-2">
-                                        <span className="w-2 h-2 rounded-full bg-red-500"></span>{error}
-                                    </div>
-                                )}
+                                {error && <div className="absolute -top-14 left-0 right-0 mx-auto w-max text-red-600 text-xs bg-red-50 border border-red-100 px-4 py-2 rounded-lg shadow-sm flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-red-500"></span>{error}</div>}
                                 <div className="bg-gray-100 hover:bg-gray-200/70 focus-within:bg-white focus-within:shadow-md focus-within:ring-1 focus-within:ring-gray-300 rounded-[24px] flex items-end p-2 pl-4 pr-3 transition-all duration-200">
-                                    <button className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-200 rounded-full transition-colors mb-1 mr-1">
-                                        <Icon name="Image" size={20} />
-                                    </button>
-                                    <textarea 
-                                        value={input} 
-                                        onChange={(e) => setInput(e.target.value)} 
-                                        onKeyDown={handleKeyDown} 
-                                        placeholder="星辰闪耀✨（在这里跟逸辰说话）" 
-                                        className="bg-transparent border-0 focus:ring-0 text-gray-800 flex-1 resize-none py-3 max-h-32 min-h-[44px] outline-none placeholder:text-gray-400 text-base" 
-                                        rows={1}
-                                    ></textarea>
-                                    {input.trim() ? (
-                                        <button onClick={handleSend} disabled={isLoading} className="mb-1 p-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors shadow-sm"><Icon name="Send" size={18} /></button>
-                                    ) : (
-                                        <button className="mb-1 p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-200 rounded-full transition-colors"><Icon name="Mic" size={20} /></button>
-                                    )}
+                                    <button className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-200 rounded-full transition-colors mb-1 mr-1"><Icon name="Image" size={20} /></button>
+                                    <textarea value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={handleKeyDown} placeholder="星月交辉✨......" className="bg-transparent border-0 focus:ring-0 text-gray-800 flex-1 resize-none py-3 max-h-32 min-h-[44px] outline-none placeholder:text-gray-400 text-base" rows={1}></textarea>
+                                    {input.trim() ? <button onClick={handleSend} disabled={isLoading} className="mb-1 p-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors shadow-sm"><Icon name="Send" size={18} /></button> : <button className="mb-1 p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-200 rounded-full transition-colors"><Icon name="Mic" size={20} /></button>}
                                 </div>
                                 <div className="text-center mt-2 text-[10px] text-gray-400">Gemini 可能会产生不准确的信息。</div>
                             </div>
@@ -571,118 +529,42 @@
                                         <div className="flex-1 p-6 overflow-y-auto">
                                             {activeTab === 'general' ? (
                                                 <div className="space-y-6">
-                                                    {/* 模型选择区域 */}
                                                     <div className="space-y-4">
                                                         <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">模型选择</h3>
                                                         <div className="flex items-end gap-2">
                                                             <div className="flex-1">
                                                                 <label className="block text-sm font-medium text-gray-700 mb-1">当前模型</label>
                                                                 {availableModels.length > 0 ? (
-                                                                    <select 
-                                                                        value={config.model} 
-                                                                        onChange={(e) => setConfig({...config, model: e.target.value})}
-                                                                        className="w-full bg-white border border-gray-300 rounded-lg p-2 text-sm focus:border-blue-500 outline-none"
-                                                                    >
-                                                                        {availableModels.map(m => <option key={m} value={m}>{m}</option>)}
-                                                                    </select>
+                                                                    <select value={config.model} onChange={(e) => setConfig({...config, model: e.target.value})} className="w-full bg-white border border-gray-300 rounded-lg p-2 text-sm focus:border-blue-500 outline-none">{availableModels.map(m => <option key={m} value={m}>{m}</option>)}</select>
                                                                 ) : (
-                                                                    <input 
-                                                                        type="text" 
-                                                                        value={config.model} 
-                                                                        onChange={(e) => setConfig({...config, model: e.target.value})}
-                                                                        className="w-full bg-white border border-gray-300 rounded-lg p-2 text-sm focus:border-blue-500 outline-none"
-                                                                        placeholder="如 gemini-1.5-flash"
-                                                                    />
+                                                                    <input type="text" value={config.model} onChange={(e) => setConfig({...config, model: e.target.value})} className="w-full bg-white border border-gray-300 rounded-lg p-2 text-sm focus:border-blue-500 outline-none" placeholder="如 gemini-1.5-flash" />
                                                                 )}
                                                             </div>
-                                                            <button 
-                                                                onClick={fetchModels}
-                                                                disabled={isFetchingModels}
-                                                                className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-medium transition-colors flex items-center gap-1 h-[38px] whitespace-nowrap"
-                                                            >
-                                                                <Icon name="RefreshCw" size={14} className={isFetchingModels ? "animate-spin" : ""} />
-                                                                {isFetchingModels ? '获取中' : '获取列表'}
-                                                            </button>
+                                                            <button onClick={fetchModels} disabled={isFetchingModels} className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-medium transition-colors flex items-center gap-1 h-[38px] whitespace-nowrap"><Icon name="RefreshCw" size={14} className={isFetchingModels ? "animate-spin" : ""} />{isFetchingModels ? '获取中' : '获取列表'}</button>
                                                         </div>
-                                                        <p className="text-xs text-gray-400">点击“获取列表”拉取您 API Key 可用的模型，或者手动输入模型名称。</p>
+                                                        <p className="text-xs text-gray-400">若地址以 /v1 结尾，系统会自动切换到 OpenAI 兼容模式获取。</p>
                                                     </div>
 
                                                     <div className="border-t border-gray-100 pt-4"></div>
 
                                                     <div className="space-y-4">
                                                         <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">个性化</h3>
-                                                        
-                                                        {/* User Avatar */}
                                                         <div>
                                                             <label className="block text-sm font-medium text-gray-700 mb-2">用户头像</label>
                                                             <div className="flex items-center gap-4">
-                                                                <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-100 border border-gray-200 flex-shrink-0">
-                                                                    {config.userAvatar ? (
-                                                                        <img src={config.userAvatar} className="w-full h-full object-cover" />
-                                                                    ) : (
-                                                                        <div className="w-full h-full flex items-center justify-center text-gray-400 bg-gray-100">
-                                                                            <Icon name="UserCircle" size={24} />
-                                                                        </div>
-                                                                    )}
-                                                                </div>
-                                                                <button 
-                                                                    onClick={() => avatarInputRef.current.click()}
-                                                                    className="px-3 py-1.5 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-md text-sm transition-colors"
-                                                                >
-                                                                    上传图片
-                                                                </button>
-                                                                <input 
-                                                                    type="file" 
-                                                                    ref={avatarInputRef} 
-                                                                    className="hidden" 
-                                                                    accept="image/*"
-                                                                    onChange={(e) => handleAvatarUpload(e, 'user')}
-                                                                />
-                                                                {config.userAvatar && (
-                                                                    <button 
-                                                                        onClick={() => setConfig({...config, userAvatar: ''})}
-                                                                        className="text-xs text-red-500 hover:underline"
-                                                                    >
-                                                                        清除
-                                                                    </button>
-                                                                )}
+                                                                <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-100 border border-gray-200 flex-shrink-0">{config.userAvatar ? <img src={config.userAvatar} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-gray-400 bg-gray-100"><Icon name="UserCircle" size={24} /></div>}</div>
+                                                                <button onClick={() => avatarInputRef.current.click()} className="px-3 py-1.5 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-md text-sm transition-colors">上传图片</button>
+                                                                <input type="file" ref={avatarInputRef} className="hidden" accept="image/*" onChange={(e) => handleAvatarUpload(e, 'user')}/>
+                                                                {config.userAvatar && <button onClick={() => setConfig({...config, userAvatar: ''})} className="text-xs text-red-500 hover:underline">清除</button>}
                                                             </div>
                                                         </div>
-
-                                                        {/* AI Avatar */}
                                                         <div>
                                                             <label className="block text-sm font-medium text-gray-700 mb-2">AI 头像</label>
                                                             <div className="flex items-center gap-4">
-                                                                <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-100 border border-gray-200 flex-shrink-0">
-                                                                    {config.aiAvatar ? (
-                                                                        <img src={config.aiAvatar} className="w-full h-full object-cover" />
-                                                                    ) : (
-                                                                        <div className="w-full h-full flex items-center justify-center text-gray-400 bg-gray-100">
-                                                                            <Icon name="Bot" size={24} />
-                                                                        </div>
-                                                                    )}
-                                                                </div>
-                                                                <button 
-                                                                    onClick={() => aiAvatarInputRef.current.click()}
-                                                                    className="px-3 py-1.5 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-md text-sm transition-colors"
-                                                                >
-                                                                    上传图片
-                                                                </button>
-                                                                <input 
-                                                                    type="file" 
-                                                                    ref={aiAvatarInputRef} 
-                                                                    className="hidden" 
-                                                                    accept="image/*"
-                                                                    onChange={(e) => handleAvatarUpload(e, 'ai')}
-                                                                />
-                                                                {config.aiAvatar && (
-                                                                    <button 
-                                                                        onClick={() => setConfig({...config, aiAvatar: ''})}
-                                                                        className="text-xs text-red-500 hover:underline"
-                                                                    >
-                                                                        清除
-                                                                    </button>
-                                                                )}
+                                                                <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-100 border border-gray-200 flex-shrink-0">{config.aiAvatar ? <img src={config.aiAvatar} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-gray-400 bg-gray-100"><Icon name="Bot" size={24} /></div>}</div>
+                                                                <button onClick={() => aiAvatarInputRef.current.click()} className="px-3 py-1.5 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-md text-sm transition-colors">上传图片</button>
+                                                                <input type="file" ref={aiAvatarInputRef} className="hidden" accept="image/*" onChange={(e) => handleAvatarUpload(e, 'ai')}/>
+                                                                {config.aiAvatar && <button onClick={() => setConfig({...config, aiAvatar: ''})} className="text-xs text-red-500 hover:underline">清除</button>}
                                                             </div>
                                                         </div>
                                                     </div>
@@ -691,6 +573,17 @@
 
                                                     <div className="space-y-4">
                                                         <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">API 配置</h3>
+                                                        <div>
+                                                            <div className="flex justify-between mb-1">
+                                                                <label className="block text-sm font-medium text-gray-700">API 协议标准</label>
+                                                                <span className="text-xs text-gray-400 bg-gray-100 px-2 rounded-full">{config.apiType === 'openai' ? 'OpenAI / OneAPI 兼容' : 'Google Gemini 原生'}</span>
+                                                            </div>
+                                                            <div className="flex gap-2">
+                                                                <button onClick={() => setConfig({...config, apiType: 'gemini'})} className={`flex-1 py-2 text-sm rounded-lg border ${config.apiType === 'gemini' ? 'bg-blue-50 border-blue-500 text-blue-700' : 'bg-white border-gray-200 text-gray-600'}`}>Gemini 原生</button>
+                                                                <button onClick={() => setConfig({...config, apiType: 'openai'})} className={`flex-1 py-2 text-sm rounded-lg border ${config.apiType === 'openai' ? 'bg-green-50 border-green-500 text-green-700' : 'bg-white border-gray-200 text-gray-600'}`}>OpenAI 兼容</button>
+                                                            </div>
+                                                            <p className="text-[10px] text-gray-400 mt-1">如果您的 Base URL 以 /v1 结尾，请选择 "OpenAI 兼容"。</p>
+                                                        </div>
                                                         <div><label className="block text-sm font-medium text-gray-700 mb-1">API Base URL</label><input type="text" value={config.baseUrl} onChange={(e) => setConfig({...config, baseUrl: e.target.value})} className="w-full bg-white border border-gray-300 rounded-lg p-2 text-sm focus:border-blue-500 outline-none" /></div>
                                                         <div><label className="block text-sm font-medium text-gray-700 mb-1">Gemini API Key</label><input type="password" value={config.apiKey} onChange={(e) => setConfig({...config, apiKey: e.target.value})} className="w-full bg-white border border-gray-300 rounded-lg p-2 text-sm focus:border-blue-500 outline-none" /></div>
                                                     </div>
@@ -711,13 +604,7 @@
                                                         <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">语音配置 (Minimax)</h3>
                                                         <div>
                                                             <label className="block text-sm font-medium text-gray-700 mb-1">Minimax API Key</label>
-                                                            <input 
-                                                                type="password" 
-                                                                value={config.minimaxKey} 
-                                                                onChange={(e) => setConfig({...config, minimaxKey: e.target.value})} 
-                                                                placeholder="在此输入 Minimax Key"
-                                                                className="w-full bg-white border border-gray-300 rounded-lg p-2 text-sm focus:border-blue-500 outline-none" 
-                                                            />
+                                                            <input type="password" value={config.minimaxKey} onChange={(e) => setConfig({...config, minimaxKey: e.target.value})} placeholder="在此输入 Minimax Key" className="w-full bg-white border border-gray-300 rounded-lg p-2 text-sm focus:border-blue-500 outline-none" />
                                                         </div>
                                                     </div>
                                                 </div>
@@ -726,14 +613,10 @@
                                                     <div>
                                                         <div className="flex justify-between items-center mb-3">
                                                             <div><h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2"><Icon name="Archive" size={16} className="text-blue-500"/> 记忆归档</h3><p className="text-xs text-gray-400">总结当前对话并保存</p></div>
-                                                            <button onClick={handleArchive} disabled={isArchiving} className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded-md font-medium hover:bg-blue-700 flex items-center gap-1 shadow-sm">
-                                                                <Icon name="Archive" size={14}/> {isArchiving ? '归档中...' : '生成今日记忆'}
-                                                            </button>
+                                                            <button onClick={handleArchive} disabled={isArchiving} className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded-md font-medium hover:bg-blue-700 flex items-center gap-1 shadow-sm"><Icon name="Archive" size={14}/> {isArchiving ? '归档中...' : '生成今日记忆'}</button>
                                                         </div>
                                                     </div>
-
                                                     <div className="border-t border-gray-100"></div>
-
                                                     <div>
                                                         <div className="flex justify-between items-center mb-3">
                                                             <div><h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2"><Icon name="Cpu" size={16} className="text-blue-500"/> 长期记忆库</h3><p className="text-xs text-gray-400">AI 会永远记住这些文件中的内容</p></div>
