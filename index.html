@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EQ-chat.星月舱</title>
+    <title>EQ-chat.星月舱✨🌙</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- React & ReactDOM -->
@@ -124,7 +124,7 @@
                 baseUrl: 'https://generativelanguage.googleapis.com',
                 minimaxKey: '',
                 historyLimit: 20,
-                model: 'gemini-1.5-flash',
+                model: '[150k]gemini-2.5-pro',
                 userAvatar: '', // 用户头像 Base64
                 aiAvatar: ''    // AI 头像 Base64
             });
@@ -151,7 +151,7 @@
                 if (storedConfig) {
                     const parsed = JSON.parse(storedConfig);
                     // 确保有 model 字段
-                    if (!parsed.model) parsed.model = 'gemini-1.5-flash';
+                    if (!parsed.model) parsed.model = '[150k]gemini-2.5-pro';
                     setConfig(prev => ({...prev, ...parsed}));
                 }
                 
@@ -542,7 +542,7 @@
                                         value={input} 
                                         onChange={(e) => setInput(e.target.value)} 
                                         onKeyDown={handleKeyDown} 
-                                        placeholder="星月交辉✨......" 
+                                        placeholder="星辰闪耀✨（在这里跟逸辰说话）" 
                                         className="bg-transparent border-0 focus:ring-0 text-gray-800 flex-1 resize-none py-3 max-h-32 min-h-[44px] outline-none placeholder:text-gray-400 text-base" 
                                         rows={1}
                                     ></textarea>
