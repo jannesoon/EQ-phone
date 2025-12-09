@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EQ-chat.星月舱</title>
+    <title>EQ-chat✨星月舱🌙</title>
     <!-- 设置标签页图标 (Favicon) - 紫色星星 -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%238b5cf6' stroke='%238b5cf6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z'/></svg>">
     
@@ -624,7 +624,7 @@
                 setIsArchiving(true);
                 showToast("正在生成记忆摘要...");
                 try {
-                    const summaryPrompt = "请阅读以上所有对话。请以第三人称客观视角，总结这次对话中的关键信息。重点关注：1. 用户提到的个人喜好、习惯、生活状态。 2. 双方达成的重要共识或约定。 3. 用户的情感状态。 请输出为一段简洁的文本，作为“长期记忆”存档。不要包含寒暄。";
+                    const summaryPrompt = "请阅读以上所有对话。请以第一人称视角（我），称用户为“她”，总结这次对话中的关键信息。重点关注：1. 用户提到的个人喜好、习惯、生活状态。 2. 双方达成的重要共识或约定。 3. 用户的情感状态。 请输出为一段简洁的文本，作为“长期记忆”存档。不要包含寒暄。尽量客观，可附自己的总结经验。尽量简练";
                     let payload, url, headers;
                     const baseUrl = config.baseUrl.replace(/\/$/, '');
                     const modelName = config.model || 'gemini-1.5-flash';
