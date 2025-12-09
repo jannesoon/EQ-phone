@@ -121,8 +121,8 @@
                 minimaxKey: '',
                 minimaxGroupId: '', // GroupID
                 minimaxVoiceId: 'male-qn-qingse',
-                minimaxModel: 'speech-01-turbo', // 默认修复为 speech-01-turbo
-                minimaxCustomModel: '', // 自定义模型
+                minimaxModel: 'speech-01-turbo',
+                minimaxCustomModel: '', 
                 historyLimit: 20,
                 model: 'gemini-1.5-flash',
                 userAvatar: '',
@@ -130,7 +130,7 @@
                 apiType: 'gemini',
                 userName: '你',
                 aiName: '星月舱 AI',
-                minimaxUrl: 'https://api.minimax.chat/v1/t2a_v2' // 默认升级为 T2A V2 接口
+                minimaxUrl: 'https://api.minimax.chat/v1/t2a_v2' 
             });
             
             const [availableModels, setAvailableModels] = useState([]);
@@ -155,15 +155,14 @@
                 const storedConfig = localStorage.getItem('gemini_app_config');
                 if (storedConfig) {
                     const parsed = JSON.parse(storedConfig);
-                    // 默认值兼容与更新
                     if (!parsed.model) parsed.model = 'gemini-1.5-flash';
                     if (!parsed.apiType) parsed.apiType = 'gemini';
                     if (!parsed.userName) parsed.userName = '你';
                     if (!parsed.aiName) parsed.aiName = '星月舱 AI';
                     if (!parsed.minimaxVoiceId) parsed.minimaxVoiceId = 'male-qn-qingse';
-                    if (!parsed.minimaxUrl || parsed.minimaxUrl.includes('text_to_speech')) parsed.minimaxUrl = 'https://api.minimax.chat/v1/t2a_v2'; // 强制升级接口
+                    if (!parsed.minimaxUrl || parsed.minimaxUrl.includes('text_to_speech')) parsed.minimaxUrl = 'https://api.minimax.chat/v1/t2a_v2'; 
                     if (!parsed.minimaxModel || parsed.minimaxModel.includes('2.6') || parsed.minimaxModel.includes('2.5')) {
-                        parsed.minimaxModel = 'speech-01-turbo'; // 回滚到官方稳定模型名
+                        parsed.minimaxModel = 'speech-01-turbo'; 
                     }
                     if (!parsed.minimaxCustomModel) parsed.minimaxCustomModel = '';
                     setConfig(prev => ({...prev, ...parsed}));
@@ -260,7 +259,7 @@
                 }
             };
 
-            // --- 语音合成逻辑 (TTS V2.9 修复版) ---
+            // --- 语音合成逻辑 (TTS V3.1 优化版) ---
             const handleTTS = async (text, index) => {
                 if (audioPlayer && playingMsgIndex === index) {
                     audioPlayer.pause();
@@ -282,15 +281,23 @@
 
                 try {
                     // 1. 深度清理文本
-                    let cleanText = text.replace(/!\[.*?\]\(.*?\)/g, '');
+                    let cleanText = text;
+                    // 去除 Markdown 图片
+                    cleanText = cleanText.replace(/!\[.*?\]\(.*?\)/g, '');
+                    // 去除 Markdown 链接
                     cleanText = cleanText.replace(/\[([^\]]+)\]\([^\)]+\)/g, '$1');
+                    // 去除 括号及其内容 (动作描写) - 中英文括号
+                    cleanText = cleanText.replace(/\(.*?\)/g, '');
+                    cleanText = cleanText.replace(/\（.*?\）/g, '');
+                    // 去除 Markdown 符号
                     cleanText = cleanText.replace(/[*#`>~\-]/g, '');
+                    // 去除多余空白
                     cleanText = cleanText.replace(/\n+/g, ' ').trim();
                     
                     // 2. 严格截断文本
                     const maxLength = 300;
                     if (cleanText.length > maxLength) {
-                        cleanText = cleanText.substring(0, maxLength) + "......(内容过长已截断)";
+                        cleanText = cleanText.substring(0, maxLength) + "......";
                         showToast("文本过长，仅播放前 300 字");
                     }
 
@@ -298,19 +305,17 @@
                         throw new Error("没有可朗读的文本");
                     }
 
-                    // 构造 URL: 使用配置中的 URL (默认为 t2a_v2)
+                    // 构造 URL
                     let url = config.minimaxUrl || "https://api.minimax.chat/v1/t2a_v2";
-                    // 确保 GroupId 拼接正确
                     if (url.includes('?')) {
                         if (!url.includes('GroupId=')) url += `&GroupId=${config.minimaxGroupId}`;
                     } else {
                         url += `?GroupId=${config.minimaxGroupId}`;
                     }
                     
-                    // 使用自定义模型或下拉框选择的模型
                     const targetModel = config.minimaxCustomModel ? config.minimaxCustomModel : (config.minimaxModel || "speech-01-turbo");
 
-                    // 构造 V2 标准请求体
+                    // 构造 V2 请求体
                     const bodyV2 = {
                         model: targetModel,
                         text: cleanText,
@@ -339,23 +344,40 @@
 
                     const blob = await response.blob();
                     
-                    // 检查是否返回了 JSON 错误
                     if (blob.type.includes('application/json')) {
                         const textData = await blob.text();
                         const jsonData = JSON.parse(textData);
                         if (jsonData.base_resp && jsonData.base_resp.status_code !== 0) {
                             throw new Error(`Minimax Error: ${jsonData.base_resp.status_msg}`);
                         }
+                        // V2 接口返回 JSON Hex
+                        if (jsonData.data && jsonData.data.audio) {
+                             const hexString = jsonData.data.audio;
+                             const bytes = new Uint8Array(hexString.length / 2);
+                             for (let i = 0; i < hexString.length; i += 2) {
+                                 bytes[i / 2] = parseInt(hexString.substring(i, i + 2), 16);
+                             }
+                             const audioBlob = new Blob([bytes], { type: 'audio/mpeg' });
+                             const audioUrl = URL.createObjectURL(audioBlob);
+                             
+                             const audio = new Audio(audioUrl);
+                             audio.onended = () => {
+                                 setPlayingMsgIndex(null);
+                                 setAudioPlayer(null);
+                             };
+                             audio.play();
+                             setAudioPlayer(audio);
+                             return;
+                        }
                     }
 
+                    // Fallback for non-JSON response (rare in V2 but possible in legacy)
                     const audioUrl = URL.createObjectURL(blob);
                     const audio = new Audio(audioUrl);
-                    
                     audio.onended = () => {
                         setPlayingMsgIndex(null);
                         setAudioPlayer(null);
                     };
-                    
                     audio.play();
                     setAudioPlayer(audio);
 
@@ -458,7 +480,7 @@
 
             const handleCreateBackup = () => {
                 const backupData = {
-                    version: '2.9',
+                    version: '3.1',
                     timestamp: new Date().toISOString(),
                     config: config,
                     memories: memoryFiles,
@@ -795,7 +817,7 @@
                             <div className="flex items-center gap-3">
                                 <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-600"><Icon name="Menu" size={20} /></button>
                                 <div className="flex flex-col">
-                                    <span className="text-lg font-medium text-gray-800 tracking-tight leading-tight">星月舱v2.77</span>
+                                    <span className="text-lg font-medium text-gray-800 tracking-tight leading-tight">星月舱v3.1语音版</span>
                                     <span className="text-[10px] text-gray-400 leading-tight">模型: {config.model} | 记忆: {memoryFiles.length + presetFiles.length} | 模式: {config.apiType === 'openai' ? 'OpenAI兼容' : '原生'}</span>
                                 </div>
                             </div>
