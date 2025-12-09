@@ -275,14 +275,26 @@
                 setPlayingMsgIndex(index);
 
                 try {
-                    // 1. 清理文本：去除 Markdown 符号
-                    let cleanText = text.replace(/[*#`>~\-\[\]()]/g, ''); 
+                    // 1. 深度清理文本
+                    // 去除 Markdown 图片 (![alt](url))
+                    let cleanText = text.replace(/!\[.*?\]\(.*?\)/g, '');
+                    // 去除 Markdown 链接 ([text](url)) -> 保留 text
+                    cleanText = cleanText.replace(/\[([^\]]+)\]\([^\)]+\)/g, '$1');
+                    // 去除 Markdown 符号 (*, #, `, >, ~)
+                    cleanText = cleanText.replace(/[*#`>~\-]/g, '');
+                    // 去除多余换行
+                    cleanText = cleanText.replace(/\n+/g, ' ').trim();
                     
-                    // 2. 截断文本：防止 "text too long" 错误 (Minimax 限制)
-                    // 一般建议限制在 500-1000 字符内，这里为了稳定取前 600 字
-                    if (cleanText.length > 600) {
-                        cleanText = cleanText.substring(0, 600) + "...";
-                        showToast("文本过长，仅播放前 600 字");
+                    // 2. 严格截断文本：防止 "text too long" 错误
+                    // Minimax 某些模型限制较严格，为了稳定性，限制在 300 字以内
+                    const maxLength = 300;
+                    if (cleanText.length > maxLength) {
+                        cleanText = cleanText.substring(0, maxLength) + "......(内容过长已截断)";
+                        showToast("文本过长，仅播放前 300 字");
+                    }
+
+                    if (!cleanText) {
+                        throw new Error("没有可朗读的文本");
                     }
 
                     const url = `https://api.minimax.chat/v1/text_to_speech?GroupId=${config.minimaxGroupId}`;
@@ -304,7 +316,8 @@
                     });
 
                     if (!response.ok) {
-                        throw new Error(`HTTP Error: ${response.status}`);
+                        const err = await response.json().catch(() => ({}));
+                        throw new Error(err.base_resp?.status_msg || `HTTP Error: ${response.status}`);
                     }
 
                     const blob = await response.blob();
@@ -764,7 +777,7 @@
                             <div className="flex items-center gap-3">
                                 <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-600"><Icon name="Menu" size={20} /></button>
                                 <div className="flex flex-col">
-                                    <span className="text-lg font-medium text-gray-800 tracking-tight leading-tight">星月舱v2.7</span>
+                                    <span className="text-lg font-medium text-gray-800 tracking-tight leading-tight">星月舱v2.76</span>
                                     <span className="text-[10px] text-gray-400 leading-tight">模型: {config.model} | 记忆: {memoryFiles.length + presetFiles.length} | 模式: {config.apiType === 'openai' ? 'OpenAI兼容' : '原生'}</span>
                                 </div>
                             </div>
