@@ -121,7 +121,7 @@
                 minimaxKey: '',
                 minimaxGroupId: '', // GroupID
                 minimaxVoiceId: 'male-qn-qingse',
-                minimaxModel: 'speech-2.6-turbo', // 更新默认模型
+                minimaxModel: 'speech-2.6-turbo', // 默认更新为 turbo
                 historyLimit: 20,
                 model: 'gemini-1.5-flash',
                 userAvatar: '',
@@ -153,13 +153,13 @@
                 const storedConfig = localStorage.getItem('gemini_app_config');
                 if (storedConfig) {
                     const parsed = JSON.parse(storedConfig);
-                    // 默认值兼容
+                    // 默认值兼容与更新
                     if (!parsed.model) parsed.model = 'gemini-1.5-flash';
                     if (!parsed.apiType) parsed.apiType = 'gemini';
                     if (!parsed.userName) parsed.userName = '你';
                     if (!parsed.aiName) parsed.aiName = '星月舱 AI';
                     if (!parsed.minimaxVoiceId) parsed.minimaxVoiceId = 'male-qn-qingse';
-                    if (!parsed.minimaxModel) parsed.minimaxModel = 'speech-2.6-turbo'; // 升级默认
+                    if (!parsed.minimaxModel || parsed.minimaxModel === 'speech-01-turbo') parsed.minimaxModel = 'speech-2.6-turbo'; // 强制升级旧模型配置
                     setConfig(prev => ({...prev, ...parsed}));
                 }
                 const storedMemories = localStorage.getItem('gemini_memories');
@@ -254,7 +254,7 @@
                 }
             };
 
-            // --- 语音合成逻辑 (TTS 升级版) ---
+            // --- 语音合成逻辑 (TTS 升级版 - 文本截断 & 符号清理) ---
             const handleTTS = async (text, index) => {
                 if (audioPlayer && playingMsgIndex === index) {
                     audioPlayer.pause();
@@ -275,7 +275,16 @@
                 setPlayingMsgIndex(index);
 
                 try {
-                    // 构造 URL: V1 接口必须带 GroupId
+                    // 1. 清理文本：去除 Markdown 符号
+                    let cleanText = text.replace(/[*#`>~\-\[\]()]/g, ''); 
+                    
+                    // 2. 截断文本：防止 "text too long" 错误 (Minimax 限制)
+                    // 一般建议限制在 500-1000 字符内，这里为了稳定取前 600 字
+                    if (cleanText.length > 600) {
+                        cleanText = cleanText.substring(0, 600) + "...";
+                        showToast("文本过长，仅播放前 600 字");
+                    }
+
                     const url = `https://api.minimax.chat/v1/text_to_speech?GroupId=${config.minimaxGroupId}`;
                     
                     const response = await fetch(url, {
@@ -286,7 +295,7 @@
                         },
                         body: JSON.stringify({
                             voice_id: config.minimaxVoiceId,
-                            text: text,
+                            text: cleanText,
                             model: config.minimaxModel || "speech-2.6-turbo",
                             speed: 1.0,
                             vol: 1.0,
@@ -300,7 +309,6 @@
 
                     const blob = await response.blob();
                     
-                    // 检查是否返回了 JSON 错误
                     if (blob.type.includes('application/json')) {
                         const textData = await blob.text();
                         const jsonData = JSON.parse(textData);
@@ -756,7 +764,7 @@
                             <div className="flex items-center gap-3">
                                 <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-600"><Icon name="Menu" size={20} /></button>
                                 <div className="flex flex-col">
-                                    <span className="text-lg font-medium text-gray-800 tracking-tight leading-tight">星月舱v2.0</span>
+                                    <span className="text-lg font-medium text-gray-800 tracking-tight leading-tight">星月舱v2.7</span>
                                     <span className="text-[10px] text-gray-400 leading-tight">模型: {config.model} | 记忆: {memoryFiles.length + presetFiles.length} | 模式: {config.apiType === 'openai' ? 'OpenAI兼容' : '原生'}</span>
                                 </div>
                             </div>
