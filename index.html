@@ -110,7 +110,7 @@
             const [settingsOpen, setSettingsOpen] = useState(false);
             const [activeTab, setActiveTab] = useState('general');
 
-            // 播放状态管理
+            // 播放状态
             const [audioPlayer, setAudioPlayer] = useState(null);
             const [playingMsgIndex, setPlayingMsgIndex] = useState(null);
             const [isTTSLoading, setIsTTSLoading] = useState(false);
@@ -119,8 +119,9 @@
                 apiKey: '',
                 baseUrl: 'https://generativelanguage.googleapis.com',
                 minimaxKey: '',
-                minimaxUrl: 'https://api.minimax.chat/v1/text_to_speech?GroupId=181000000000000', // 默认 Minimax URL
-                minimaxVoiceId: 'male-qn-qingse', // 默认语音 ID
+                minimaxGroupId: '', // 新增 GroupID
+                minimaxVoiceId: 'male-qn-qingse',
+                minimaxModel: 'speech-01-turbo', // 新增 TTS 模型
                 historyLimit: 20,
                 model: 'gemini-1.5-flash',
                 userAvatar: '',
@@ -152,12 +153,13 @@
                 const storedConfig = localStorage.getItem('gemini_app_config');
                 if (storedConfig) {
                     const parsed = JSON.parse(storedConfig);
+                    // 默认值兼容
                     if (!parsed.model) parsed.model = 'gemini-1.5-flash';
                     if (!parsed.apiType) parsed.apiType = 'gemini';
                     if (!parsed.userName) parsed.userName = '你';
                     if (!parsed.aiName) parsed.aiName = '星月舱 AI';
-                    if (!parsed.minimaxUrl) parsed.minimaxUrl = 'https://api.minimax.chat/v1/text_to_speech?GroupId=181000000000000';
                     if (!parsed.minimaxVoiceId) parsed.minimaxVoiceId = 'male-qn-qingse';
+                    if (!parsed.minimaxModel) parsed.minimaxModel = 'speech-01-turbo';
                     setConfig(prev => ({...prev, ...parsed}));
                 }
                 const storedMemories = localStorage.getItem('gemini_memories');
@@ -252,25 +254,20 @@
                 }
             };
 
-            // --- 语音合成逻辑 (TTS) ---
+            // --- 语音合成逻辑 (TTS 升级版) ---
             const handleTTS = async (text, index) => {
-                // 如果当前正在播放，且点击的是同一个，则停止
                 if (audioPlayer && playingMsgIndex === index) {
                     audioPlayer.pause();
                     setAudioPlayer(null);
                     setPlayingMsgIndex(null);
                     return;
                 }
+                if (audioPlayer) audioPlayer.pause();
 
-                // 如果已经在播放其他的，先停止
-                if (audioPlayer) {
-                    audioPlayer.pause();
-                }
-
-                if (!config.minimaxKey) {
-                    showToast("请先配置 Minimax API Key");
+                if (!config.minimaxKey || !config.minimaxGroupId) {
+                    showToast("请在设置中配置 Minimax API Key 和 Group ID");
                     setSettingsOpen(true);
-                    setActiveTab('general'); // 跳转到设置
+                    setActiveTab('general');
                     return;
                 }
 
@@ -278,7 +275,9 @@
                 setPlayingMsgIndex(index);
 
                 try {
-                    const url = config.minimaxUrl;
+                    // 构造 URL: V1 接口必须带 GroupId
+                    const url = `https://api.minimax.chat/v1/text_to_speech?GroupId=${config.minimaxGroupId}`;
+                    
                     const response = await fetch(url, {
                         method: 'POST',
                         headers: {
@@ -288,7 +287,7 @@
                         body: JSON.stringify({
                             voice_id: config.minimaxVoiceId,
                             text: text,
-                            model: "speech-01",
+                            model: config.minimaxModel || "speech-01-turbo",
                             speed: 1.0,
                             vol: 1.0,
                             pitch: 0
@@ -296,12 +295,20 @@
                     });
 
                     if (!response.ok) {
-                        const err = await response.json().catch(() => ({}));
-                        throw new Error(err.message || `TTS 请求失败: ${response.status}`);
+                        throw new Error(`HTTP Error: ${response.status}`);
                     }
 
-                    // 获取音频 Blob
                     const blob = await response.blob();
+                    
+                    // 检查是否返回了 JSON 错误 (Minimax 有时返回 200 但内容是错误 JSON)
+                    if (blob.type.includes('application/json')) {
+                        const textData = await blob.text();
+                        const jsonData = JSON.parse(textData);
+                        if (jsonData.base_resp && jsonData.base_resp.status_code !== 0) {
+                            throw new Error(`Minimax Error: ${jsonData.base_resp.status_msg}`);
+                        }
+                    }
+
                     const audioUrl = URL.createObjectURL(blob);
                     const audio = new Audio(audioUrl);
                     
@@ -314,7 +321,7 @@
                     setAudioPlayer(audio);
 
                 } catch (err) {
-                    showToast(err.message);
+                    showToast(`语音生成失败: ${err.message}`);
                     setPlayingMsgIndex(null);
                 } finally {
                     setIsTTSLoading(false);
@@ -412,7 +419,7 @@
 
             const handleCreateBackup = () => {
                 const backupData = {
-                    version: '2.2',
+                    version: '2.5',
                     timestamp: new Date().toISOString(),
                     config: config,
                     memories: memoryFiles,
@@ -441,9 +448,7 @@
                         if (data.config) setConfig(data.config);
                         if (data.memories) setMemoryFiles(data.memories);
                         if (data.presets) setPresetFiles(data.presets);
-                        if (data.sessions) {
-                            setHistorySessions(data.sessions);
-                        }
+                        if (data.sessions) setHistorySessions(data.sessions);
                         
                         localStorage.setItem('gemini_app_config', JSON.stringify(data.config || config));
                         localStorage.setItem('gemini_memories', JSON.stringify(data.memories || []));
@@ -953,9 +958,9 @@
                                                             <input type="password" value={config.minimaxKey} onChange={(e) => setConfig({...config, minimaxKey: e.target.value})} placeholder="在此输入 Minimax Key" className="w-full bg-white border border-gray-300 rounded-lg p-2 text-sm focus:border-blue-500 outline-none" />
                                                         </div>
                                                         <div>
-                                                            <label className="block text-sm font-medium text-gray-700 mb-1">语音合成接口地址 (TTS URL)</label>
-                                                            <input type="text" value={config.minimaxUrl} onChange={(e) => setConfig({...config, minimaxUrl: e.target.value})} placeholder="例如: https://api.minimax.chat/v1/text_to_speech" className="w-full bg-white border border-gray-300 rounded-lg p-2 text-sm focus:border-blue-500 outline-none" />
-                                                            <p className="text-[10px] text-gray-400 mt-1">默认为 Minimax 官方接口，如使用代理请修改。</p>
+                                                            <label className="block text-sm font-medium text-gray-700 mb-1">Minimax Group ID</label>
+                                                            <input type="text" value={config.minimaxGroupId} onChange={(e) => setConfig({...config, minimaxGroupId: e.target.value})} placeholder="例如: 181000000000000" className="w-full bg-white border border-gray-300 rounded-lg p-2 text-sm focus:border-blue-500 outline-none" />
+                                                            <p className="text-[10px] text-gray-400 mt-1">请在 Minimax 账户信息中查看您的 Group ID。</p>
                                                         </div>
                                                         <div>
                                                             <label className="block text-sm font-medium text-gray-700 mb-1">语音 ID (Voice ID)</label>
@@ -973,41 +978,17 @@
                                                                 </select>
                                                             </div>
                                                         </div>
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                            {activeTab === 'memory' && (
-                                                <div className="space-y-8">
-                                                    <div>
-                                                        <div className="flex justify-between items-center mb-3">
-                                                            <div><h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2"><Icon name="Archive" size={16} className="text-blue-500"/> 记忆归档</h3><p className="text-xs text-gray-400">总结当前对话并保存</p></div>
-                                                            <button onClick={handleArchive} disabled={isArchiving} className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded-md font-medium hover:bg-blue-700 flex items-center gap-1 shadow-sm"><Icon name="Archive" size={14}/> {isArchiving ? '归档中...' : '生成今日记忆'}</button>
-                                                        </div>
-                                                    </div>
-                                                    <div className="border-t border-gray-100"></div>
-                                                    <div>
-                                                        <div className="flex justify-between items-center mb-3">
-                                                            <div><h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2"><Icon name="Cpu" size={16} className="text-blue-500"/> 长期记忆库</h3><p className="text-xs text-gray-400">AI 会永远记住这些文件中的内容</p></div>
-                                                            <button onClick={() => fileInputRef.current.click()} className="text-xs bg-blue-50 text-blue-600 px-3 py-1.5 rounded-md font-medium hover:bg-blue-100 flex items-center gap-1"><Icon name="Upload" size={14}/> 上传</button>
-                                                            <input type="file" ref={fileInputRef} className="hidden" onChange={(e) => handleFileUpload(e, 'memory')} />
-                                                        </div>
-                                                        <div className="bg-gray-50 rounded-xl border border-gray-200 min-h-[100px] p-2 space-y-2 max-h-[200px] overflow-y-auto">
-                                                            {memoryFiles.length === 0 ? <div className="h-full flex flex-col items-center justify-center text-gray-400 py-6"><span className="text-xs">暂无记忆 (点击上方"生成今日记忆"自动添加)</span></div> : memoryFiles.map((file, i) => (
-                                                                <div key={i} className="flex items-center justify-between bg-white p-2 rounded border border-gray-100 shadow-sm"><div className="flex items-center gap-3 overflow-hidden"><div className="bg-blue-100 p-1 rounded text-blue-600"><Icon name="FileText" size={14}/></div><div className="truncate"><div className="text-xs font-medium text-gray-700 truncate max-w-[150px]">{file.name}</div><div className="text-[10px] text-gray-400">{file.size} • {file.date}</div></div></div><button onClick={() => removeFile(i, 'memory')} className="text-gray-400 hover:text-red-500 p-1"><Icon name="Trash2" size={14}/></button></div>
-                                                            ))}
-                                                        </div>
-                                                    </div>
-                                                    <div>
-                                                        <div className="flex justify-between items-center mb-3">
-                                                            <div><h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2"><Icon name="Sparkles" size={16} className="text-purple-500"/> 角色预设</h3></div>
-                                                            <button onClick={() => presetInputRef.current.click()} className="text-xs bg-purple-50 text-purple-600 px-3 py-1.5 rounded-md font-medium hover:bg-purple-100 flex items-center gap-1"><Icon name="Upload" size={14}/> 上传</button>
-                                                            <input type="file" ref={presetInputRef} className="hidden" onChange={(e) => handleFileUpload(e, 'preset')} />
-                                                        </div>
-                                                        <div className="bg-gray-50 rounded-xl border border-gray-200 min-h-[80px] p-2 space-y-2 max-h-[150px] overflow-y-auto">
-                                                            {presetFiles.length === 0 ? <div className="text-center text-gray-400 text-xs py-4">暂无预设</div> : presetFiles.map((file, i) => (
-                                                                <div key={i} className="flex items-center justify-between bg-white p-2 rounded border border-gray-100 shadow-sm"><div className="flex items-center gap-3"><div className="bg-purple-100 p-1 rounded text-purple-600"><Icon name="FileText" size={14}/></div><span className="text-xs font-medium text-gray-700">{file.name}</span></div><button onClick={() => removeFile(i, 'preset')} className="text-gray-400 hover:text-red-500 p-1"><Icon name="Trash2" size={14}/></button></div>
-                                                            ))}
+                                                        <div>
+                                                            <label className="block text-sm font-medium text-gray-700 mb-1">语音模型 (Model)</label>
+                                                            <select 
+                                                                className="w-full bg-white border border-gray-300 rounded-lg p-2 text-sm outline-none"
+                                                                value={config.minimaxModel}
+                                                                onChange={(e) => setConfig({...config, minimaxModel: e.target.value})}
+                                                            >
+                                                                <option value="speech-01-turbo">speech-01-turbo (推荐)</option>
+                                                                <option value="speech-01-hd">speech-01-hd (高清)</option>
+                                                                <option value="speech-01">speech-01 (标准)</option>
+                                                            </select>
                                                         </div>
                                                     </div>
                                                 </div>
