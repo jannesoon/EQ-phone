@@ -64,7 +64,9 @@
             Bot: () => <g><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/><line x1="8" y1="16" x2="8" y2="16"/><line x1="16" y1="16" x2="16" y2="16"/></g>,
             Globe: () => <g><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></g>,
             MessageSquareText: () => <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />,
-            Database: () => <g><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></g>
+            Database: () => <g><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></g>,
+            Volume2: () => <g><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></g>,
+            StopCircle: () => <g><circle cx="12" cy="12" r="10"></circle><rect x="9" y="9" width="6" height="6"></rect></g>
         };
 
         const Icon = ({ name, size = 20, className = "" }) => {
@@ -108,10 +110,17 @@
             const [settingsOpen, setSettingsOpen] = useState(false);
             const [activeTab, setActiveTab] = useState('general');
 
+            // 播放状态管理
+            const [audioPlayer, setAudioPlayer] = useState(null);
+            const [playingMsgIndex, setPlayingMsgIndex] = useState(null);
+            const [isTTSLoading, setIsTTSLoading] = useState(false);
+
             const [config, setConfig] = useState({
                 apiKey: '',
                 baseUrl: 'https://generativelanguage.googleapis.com',
                 minimaxKey: '',
+                minimaxUrl: 'https://api.minimax.chat/v1/text_to_speech?GroupId=181000000000000', // 默认 Minimax URL
+                minimaxVoiceId: 'male-qn-qingse', // 默认语音 ID
                 historyLimit: 20,
                 model: 'gemini-1.5-flash',
                 userAvatar: '',
@@ -137,7 +146,7 @@
             const avatarInputRef = useRef(null);
             const aiAvatarInputRef = useRef(null);
             const chatImageInputRef = useRef(null); 
-            const backupInputRef = useRef(null); // 备份文件上传
+            const backupInputRef = useRef(null); 
 
             useEffect(() => {
                 const storedConfig = localStorage.getItem('gemini_app_config');
@@ -147,6 +156,8 @@
                     if (!parsed.apiType) parsed.apiType = 'gemini';
                     if (!parsed.userName) parsed.userName = '你';
                     if (!parsed.aiName) parsed.aiName = '星月舱 AI';
+                    if (!parsed.minimaxUrl) parsed.minimaxUrl = 'https://api.minimax.chat/v1/text_to_speech?GroupId=181000000000000';
+                    if (!parsed.minimaxVoiceId) parsed.minimaxVoiceId = 'male-qn-qingse';
                     setConfig(prev => ({...prev, ...parsed}));
                 }
                 const storedMemories = localStorage.getItem('gemini_memories');
@@ -241,6 +252,75 @@
                 }
             };
 
+            // --- 语音合成逻辑 (TTS) ---
+            const handleTTS = async (text, index) => {
+                // 如果当前正在播放，且点击的是同一个，则停止
+                if (audioPlayer && playingMsgIndex === index) {
+                    audioPlayer.pause();
+                    setAudioPlayer(null);
+                    setPlayingMsgIndex(null);
+                    return;
+                }
+
+                // 如果已经在播放其他的，先停止
+                if (audioPlayer) {
+                    audioPlayer.pause();
+                }
+
+                if (!config.minimaxKey) {
+                    showToast("请先配置 Minimax API Key");
+                    setSettingsOpen(true);
+                    setActiveTab('general'); // 跳转到设置
+                    return;
+                }
+
+                setIsTTSLoading(true);
+                setPlayingMsgIndex(index);
+
+                try {
+                    const url = config.minimaxUrl;
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${config.minimaxKey}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            voice_id: config.minimaxVoiceId,
+                            text: text,
+                            model: "speech-01",
+                            speed: 1.0,
+                            vol: 1.0,
+                            pitch: 0
+                        })
+                    });
+
+                    if (!response.ok) {
+                        const err = await response.json().catch(() => ({}));
+                        throw new Error(err.message || `TTS 请求失败: ${response.status}`);
+                    }
+
+                    // 获取音频 Blob
+                    const blob = await response.blob();
+                    const audioUrl = URL.createObjectURL(blob);
+                    const audio = new Audio(audioUrl);
+                    
+                    audio.onended = () => {
+                        setPlayingMsgIndex(null);
+                        setAudioPlayer(null);
+                    };
+                    
+                    audio.play();
+                    setAudioPlayer(audio);
+
+                } catch (err) {
+                    showToast(err.message);
+                    setPlayingMsgIndex(null);
+                } finally {
+                    setIsTTSLoading(false);
+                }
+            };
+
             const fetchModels = async () => {
                 if (!config.apiKey) { showToast("请先输入 API Key"); return; }
                 setIsFetchingModels(true);
@@ -330,7 +410,6 @@
                 else setPresetFiles(prev => prev.filter((_, i) => i !== index));
             };
 
-            // --- 全量备份与恢复 ---
             const handleCreateBackup = () => {
                 const backupData = {
                     version: '2.2',
@@ -364,9 +443,6 @@
                         if (data.presets) setPresetFiles(data.presets);
                         if (data.sessions) {
                             setHistorySessions(data.sessions);
-                            if (data.sessions.length > 0) {
-                                // 默认不自动加载某个会话，保持当前清空或用户选择
-                            }
                         }
                         
                         localStorage.setItem('gemini_app_config', JSON.stringify(data.config || config));
@@ -446,90 +522,48 @@
                 reader.readAsDataURL(file);
             };
 
-            // --- 重新生成逻辑 (v2.3 新增) ---
             const handleRegenerate = async () => {
                 if (isLoading || messages.length === 0) return;
-                
                 let newMessages = [...messages];
-                
-                // 如果最后一条是 AI 的回复（或错误信息），删除它
-                if (newMessages[newMessages.length - 1].role === 'model') {
-                    newMessages.pop();
-                }
-                
-                // 确保还有消息（即用户发送了消息）
+                if (newMessages[newMessages.length - 1].role === 'model') newMessages.pop();
                 if (newMessages.length === 0) return;
-
-                // 更新界面，删除 AI 回复
                 setMessages(newMessages);
                 setIsLoading(true);
                 setError(null);
-
-                // 获取最后一条用户消息，尝试提取图片（如果之前发过）
                 const lastUserMsg = newMessages[newMessages.length - 1];
                 let currentText = lastUserMsg.content;
                 let currentImage = null;
-
-                // 简单的正则匹配 Markdown 图片: ![Image](data:image/...)
                 const imageRegex = /!\[Image\]\((data:image\/.*?;base64,.*?)\)/;
                 const match = currentText.match(imageRegex);
-                
                 if (match) {
-                    // 提取图片 Base64
-                    currentImage = {
-                        base64: match[1],
-                        mimeType: match[1].split(';')[0].split(':')[1]
-                    };
-                    // 发送给 API 时，如果使用 Gemini 模式，我们通常只发文本部分，图片通过 inlineData 发送
-                    // 但这里的 content 已经包含了 markdown 图片链接。
-                    // 为了简单起见，我们重新构造请求逻辑，和 handleSend 保持一致
+                    currentImage = { base64: match[1], mimeType: match[1].split(';')[0].split(':')[1] };
                     currentText = currentText.replace(imageRegex, '').trim(); 
                 }
-
-                // --- 触发 API 请求 (复用 handleSend 的核心逻辑) ---
                 try {
                     const baseUrl = config.baseUrl.replace(/\/$/, '');
                     const modelName = config.model || 'gemini-1.5-flash';
                     let systemPrompt = "";
                     if (presetFiles.length > 0) systemPrompt += "【角色设定】:\n" + presetFiles.map(f => f.content).join("\n\n") + "\n\n";
                     if (memoryFiles.length > 0) systemPrompt += "【长期记忆】:\n" + memoryFiles.map(f => f.content).join("\n\n") + "\n\n";
-                    
                     const limit = (parseInt(config.historyLimit) || 20) * 2;
-                    // 历史上下文（不包含最后这一条用户消息，因为它将作为 current 发送）
-                    const contextHistory = newMessages.slice(0, -1).slice(-limit).map(m => ({
-                        role: m.role,
-                        content: m.content
-                    }));
-
+                    const contextHistory = newMessages.slice(0, -1).slice(-limit).map(m => ({ role: m.role, content: m.content }));
                     let url, headers, payload;
-
                     if (config.apiType === 'openai') {
-                        // OpenAI
                         url = `${baseUrl}/chat/completions`;
                         headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${config.apiKey}` };
-                        
                         const msgs = [];
                         if (systemPrompt.trim()) msgs.push({ role: 'system', content: systemPrompt });
                         contextHistory.forEach(m => msgs.push({ role: m.role === 'model' ? 'assistant' : 'user', content: m.content }));
-
                         const currentMsgContent = [];
                         if (currentText) currentMsgContent.push({ type: "text", text: currentText });
-                        if (currentImage) {
-                            currentMsgContent.push({ type: "image_url", image_url: { url: currentImage.base64 } });
-                        }
-                        // 如果既没文本也没图片（极少见），至少发个空文本防止报错
+                        if (currentImage) currentMsgContent.push({ type: "image_url", image_url: { url: currentImage.base64 } });
                         if (currentMsgContent.length === 0) currentMsgContent.push({ type: "text", text: "..." });
-                        
                         msgs.push({ role: 'user', content: currentMsgContent });
                         payload = { model: modelName, messages: msgs, stream: false };
-
                     } else {
-                        // Gemini
                         url = `${baseUrl}/v1beta/models/${modelName}:generateContent?key=${config.apiKey}`;
                         headers = { 'Content-Type': 'application/json' };
-                        
                         const contents = contextHistory.map(m => ({ role: m.role, parts: [{ text: m.content }] }));
-                        
                         const currentParts = [];
                         if (currentText) currentParts.push({ text: currentText });
                         if (currentImage) {
@@ -537,12 +571,10 @@
                             currentParts.push({ inlineData: { mimeType: currentImage.mimeType, data: base64Data } });
                         }
                         if (currentParts.length === 0) currentParts.push({ text: "..." });
-
                         contents.push({ role: 'user', parts: currentParts });
                         payload = { contents };
                         if (systemPrompt.trim()) payload.system_instruction = { parts: [{ text: systemPrompt }] };
                     }
-
                     const response = await fetch(url, { method: 'POST', headers: headers, body: JSON.stringify(payload) });
                     if (!response.ok) {
                         const errData = await response.json().catch(() => ({}));
@@ -552,15 +584,11 @@
                     let aiText = '';
                     if (config.apiType === 'openai') aiText = data.choices?.[0]?.message?.content || "无回复";
                     else aiText = data.candidates?.[0]?.content?.parts?.[0]?.text || "无回复";
-                    
                     setMessages(prev => [...prev, { role: 'model', content: aiText, timestamp: getTimestamp() }]);
-
                 } catch (err) {
                     setError(err.message);
                     setMessages(prev => [...prev, { role: 'model', content: `错误: ${err.message}`, timestamp: getTimestamp() }]);
-                } finally {
-                    setIsLoading(false);
-                }
+                } finally { setIsLoading(false); }
             };
 
             const handleSend = async () => {
@@ -723,7 +751,7 @@
                             <div className="flex items-center gap-3">
                                 <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-600"><Icon name="Menu" size={20} /></button>
                                 <div className="flex flex-col">
-                                    <span className="text-lg font-medium text-gray-800 tracking-tight leading-tight">星月舱v2.6</span>
+                                    <span className="text-lg font-medium text-gray-800 tracking-tight leading-tight">星月舱v2.7</span>
                                     <span className="text-[10px] text-gray-400 leading-tight">模型: {config.model} | 记忆: {memoryFiles.length + presetFiles.length} | 模式: {config.apiType === 'openai' ? 'OpenAI兼容' : '原生'}</span>
                                 </div>
                             </div>
@@ -754,6 +782,30 @@
                                                         </span>
                                                     </div>
                                                     <MessageContent content={msg.content} />
+                                                    
+                                                    {/* 语音播放按钮 */}
+                                                    {msg.role === 'model' && (
+                                                        <div className="mt-2 flex items-center gap-2">
+                                                            <button 
+                                                                onClick={() => handleTTS(msg.content, index)}
+                                                                disabled={isTTSLoading && playingMsgIndex !== index}
+                                                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                                                                    playingMsgIndex === index 
+                                                                        ? 'bg-red-50 text-red-600 border border-red-200' 
+                                                                        : 'bg-gray-50 text-gray-600 border border-gray-200 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200'
+                                                                }`}
+                                                            >
+                                                                {isTTSLoading && playingMsgIndex === index ? (
+                                                                    <Icon name="RefreshCw" size={12} className="animate-spin"/>
+                                                                ) : playingMsgIndex === index ? (
+                                                                    <Icon name="StopCircle" size={12}/>
+                                                                ) : (
+                                                                    <Icon name="Volume2" size={12}/>
+                                                                )}
+                                                                {playingMsgIndex === index ? (isTTSLoading ? '生成语音...' : '停止播放') : '播放语音'}
+                                                            </button>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
                                         ))}
@@ -899,6 +951,27 @@
                                                         <div>
                                                             <label className="block text-sm font-medium text-gray-700 mb-1">Minimax API Key</label>
                                                             <input type="password" value={config.minimaxKey} onChange={(e) => setConfig({...config, minimaxKey: e.target.value})} placeholder="在此输入 Minimax Key" className="w-full bg-white border border-gray-300 rounded-lg p-2 text-sm focus:border-blue-500 outline-none" />
+                                                        </div>
+                                                        <div>
+                                                            <label className="block text-sm font-medium text-gray-700 mb-1">语音合成接口地址 (TTS URL)</label>
+                                                            <input type="text" value={config.minimaxUrl} onChange={(e) => setConfig({...config, minimaxUrl: e.target.value})} placeholder="例如: https://api.minimax.chat/v1/text_to_speech" className="w-full bg-white border border-gray-300 rounded-lg p-2 text-sm focus:border-blue-500 outline-none" />
+                                                            <p className="text-[10px] text-gray-400 mt-1">默认为 Minimax 官方接口，如使用代理请修改。</p>
+                                                        </div>
+                                                        <div>
+                                                            <label className="block text-sm font-medium text-gray-700 mb-1">语音 ID (Voice ID)</label>
+                                                            <div className="flex gap-2">
+                                                                <input type="text" value={config.minimaxVoiceId} onChange={(e) => setConfig({...config, minimaxVoiceId: e.target.value})} placeholder="例如: male-qn-qingse" className="flex-1 bg-white border border-gray-300 rounded-lg p-2 text-sm focus:border-blue-500 outline-none" />
+                                                                <select 
+                                                                    className="bg-gray-50 border border-gray-300 rounded-lg p-2 text-sm outline-none"
+                                                                    onChange={(e) => setConfig({...config, minimaxVoiceId: e.target.value})}
+                                                                    value={config.minimaxVoiceId}
+                                                                >
+                                                                    <option value="male-qn-qingse">青涩男声</option>
+                                                                    <option value="female-shaonv">少女音</option>
+                                                                    <option value="female-yujie">御姐音</option>
+                                                                    <option value="male-qn-jingying">精英男声</option>
+                                                                </select>
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 </div>
