@@ -119,9 +119,9 @@
                 apiKey: '',
                 baseUrl: 'https://generativelanguage.googleapis.com',
                 minimaxKey: '',
-                minimaxGroupId: '', // 新增 GroupID
+                minimaxGroupId: '', // GroupID
                 minimaxVoiceId: 'male-qn-qingse',
-                minimaxModel: 'speech-01-turbo', // 新增 TTS 模型
+                minimaxModel: 'speech-2.6-turbo', // 更新默认模型
                 historyLimit: 20,
                 model: 'gemini-1.5-flash',
                 userAvatar: '',
@@ -159,7 +159,7 @@
                     if (!parsed.userName) parsed.userName = '你';
                     if (!parsed.aiName) parsed.aiName = '星月舱 AI';
                     if (!parsed.minimaxVoiceId) parsed.minimaxVoiceId = 'male-qn-qingse';
-                    if (!parsed.minimaxModel) parsed.minimaxModel = 'speech-01-turbo';
+                    if (!parsed.minimaxModel) parsed.minimaxModel = 'speech-2.6-turbo'; // 升级默认
                     setConfig(prev => ({...prev, ...parsed}));
                 }
                 const storedMemories = localStorage.getItem('gemini_memories');
@@ -254,7 +254,7 @@
                 }
             };
 
-            // --- 语音合成逻辑 (TTS 升级版) ---
+            // --- 语音合成逻辑 (TTS) ---
             const handleTTS = async (text, index) => {
                 if (audioPlayer && playingMsgIndex === index) {
                     audioPlayer.pause();
@@ -275,7 +275,7 @@
                 setPlayingMsgIndex(index);
 
                 try {
-                    // 构造 URL: V1 接口必须带 GroupId
+                    // 构造 URL
                     const url = `https://api.minimax.chat/v1/text_to_speech?GroupId=${config.minimaxGroupId}`;
                     
                     const response = await fetch(url, {
@@ -287,7 +287,7 @@
                         body: JSON.stringify({
                             voice_id: config.minimaxVoiceId,
                             text: text,
-                            model: config.minimaxModel || "speech-01-turbo",
+                            model: config.minimaxModel || "speech-2.6-turbo",
                             speed: 1.0,
                             vol: 1.0,
                             pitch: 0
@@ -300,7 +300,6 @@
 
                     const blob = await response.blob();
                     
-                    // 检查是否返回了 JSON 错误 (Minimax 有时返回 200 但内容是错误 JSON)
                     if (blob.type.includes('application/json')) {
                         const textData = await blob.text();
                         const jsonData = JSON.parse(textData);
@@ -419,7 +418,7 @@
 
             const handleCreateBackup = () => {
                 const backupData = {
-                    version: '2.5',
+                    version: '2.6',
                     timestamp: new Date().toISOString(),
                     config: config,
                     memories: memoryFiles,
@@ -756,7 +755,7 @@
                             <div className="flex items-center gap-3">
                                 <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-600"><Icon name="Menu" size={20} /></button>
                                 <div className="flex flex-col">
-                                    <span className="text-lg font-medium text-gray-800 tracking-tight leading-tight">星月舱v2.7</span>
+                                    <span className="text-lg font-medium text-gray-800 tracking-tight leading-tight">星月舱v2.72</span>
                                     <span className="text-[10px] text-gray-400 leading-tight">模型: {config.model} | 记忆: {memoryFiles.length + presetFiles.length} | 模式: {config.apiType === 'openai' ? 'OpenAI兼容' : '原生'}</span>
                                 </div>
                             </div>
@@ -834,7 +833,12 @@
                                     </button>
                                 )}
 
-                                {error && <div className="absolute -top-14 left-0 right-0 mx-auto w-max text-red-600 text-xs bg-red-50 border border-red-100 px-4 py-2 rounded-lg shadow-sm flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-red-500"></span>{error}</div>}
+                                {error && (
+                                    <div className="absolute -top-16 left-0 right-0 mx-auto w-max max-w-[90%] text-red-600 text-xs bg-red-50 border border-red-100 px-4 py-2 rounded-lg shadow-sm flex flex-col gap-1 items-center">
+                                        <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-red-500 shrink-0"></span><span className="truncate">{error}</span></div>
+                                        {error.includes("429") && <span className="text-[10px] text-red-400">提示: Gemini 免费版频率限制，请稍后重试</span>}
+                                    </div>
+                                )}
                                 
                                 {attachment && (
                                     <div className="absolute -top-20 left-4 w-16 h-16 rounded-lg overflow-hidden border border-gray-200 shadow-md group">
@@ -985,10 +989,47 @@
                                                                 value={config.minimaxModel}
                                                                 onChange={(e) => setConfig({...config, minimaxModel: e.target.value})}
                                                             >
-                                                                <option value="speech-2.6-hd">speech-01-turbo (推荐)</option>
-                                                                <option value="speech-2.5-hd">speech-01-hd </option>
-                                                                <option value="speech-2.6-turbo">speech-01 </option>
+                                                                <option value="speech-2.6-turbo">speech-2.6-turbo (推荐)</option>
+                                                                <option value="speech-2.6-hd">speech-2.6-hd (高清)</option>
+                                                                <option value="speech-2.5-turbo">speech-2.5-turbo</option>
+                                                                <option value="speech-2.5-hd">speech-2.5-hd</option>
                                                             </select>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {activeTab === 'memory' && (
+                                                <div className="space-y-8">
+                                                    <div>
+                                                        <div className="flex justify-between items-center mb-3">
+                                                            <div><h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2"><Icon name="Archive" size={16} className="text-blue-500"/> 记忆归档</h3><p className="text-xs text-gray-400">总结当前对话并保存</p></div>
+                                                            <button onClick={handleArchive} disabled={isArchiving} className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded-md font-medium hover:bg-blue-700 flex items-center gap-1 shadow-sm"><Icon name="Archive" size={14}/> {isArchiving ? '归档中...' : '生成今日记忆'}</button>
+                                                        </div>
+                                                    </div>
+                                                    <div className="border-t border-gray-100"></div>
+                                                    <div>
+                                                        <div className="flex justify-between items-center mb-3">
+                                                            <div><h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2"><Icon name="Cpu" size={16} className="text-blue-500"/> 长期记忆库</h3><p className="text-xs text-gray-400">AI 会永远记住这些文件中的内容</p></div>
+                                                            <button onClick={() => fileInputRef.current.click()} className="text-xs bg-blue-50 text-blue-600 px-3 py-1.5 rounded-md font-medium hover:bg-blue-100 flex items-center gap-1"><Icon name="Upload" size={14}/> 上传</button>
+                                                            <input type="file" ref={fileInputRef} className="hidden" onChange={(e) => handleFileUpload(e, 'memory')} />
+                                                        </div>
+                                                        <div className="bg-gray-50 rounded-xl border border-gray-200 min-h-[100px] p-2 space-y-2 max-h-[200px] overflow-y-auto">
+                                                            {memoryFiles.length === 0 ? <div className="h-full flex flex-col items-center justify-center text-gray-400 py-6"><span className="text-xs">暂无记忆 (点击上方"生成今日记忆"自动添加)</span></div> : memoryFiles.map((file, i) => (
+                                                                <div key={i} className="flex items-center justify-between bg-white p-2 rounded border border-gray-100 shadow-sm"><div className="flex items-center gap-3 overflow-hidden"><div className="bg-blue-100 p-1 rounded text-blue-600"><Icon name="FileText" size={14}/></div><div className="truncate"><div className="text-xs font-medium text-gray-700 truncate max-w-[150px]">{file.name}</div><div className="text-[10px] text-gray-400">{file.size} • {file.date}</div></div></div><button onClick={() => removeFile(i, 'memory')} className="text-gray-400 hover:text-red-500 p-1"><Icon name="Trash2" size={14}/></button></div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                    <div>
+                                                        <div className="flex justify-between items-center mb-3">
+                                                            <div><h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2"><Icon name="Sparkles" size={16} className="text-purple-500"/> 角色预设</h3></div>
+                                                            <button onClick={() => presetInputRef.current.click()} className="text-xs bg-purple-50 text-purple-600 px-3 py-1.5 rounded-md font-medium hover:bg-purple-100 flex items-center gap-1"><Icon name="Upload" size={14}/> 上传</button>
+                                                            <input type="file" ref={presetInputRef} className="hidden" onChange={(e) => handleFileUpload(e, 'preset')} />
+                                                        </div>
+                                                        <div className="bg-gray-50 rounded-xl border border-gray-200 min-h-[80px] p-2 space-y-2 max-h-[150px] overflow-y-auto">
+                                                            {presetFiles.length === 0 ? <div className="text-center text-gray-400 text-xs py-4">暂无预设</div> : presetFiles.map((file, i) => (
+                                                                <div key={i} className="flex items-center justify-between bg-white p-2 rounded border border-gray-100 shadow-sm"><div className="flex items-center gap-3"><div className="bg-purple-100 p-1 rounded text-purple-600"><Icon name="FileText" size={14}/></div><span className="text-xs font-medium text-gray-700">{file.name}</span></div><button onClick={() => removeFile(i, 'preset')} className="text-gray-400 hover:text-red-500 p-1"><Icon name="Trash2" size={14}/></button></div>
+                                                            ))}
                                                         </div>
                                                     </div>
                                                 </div>
