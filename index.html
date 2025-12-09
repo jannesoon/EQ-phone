@@ -129,7 +129,8 @@
                 aiAvatar: '',
                 apiType: 'gemini',
                 userName: '你',
-                aiName: '星月舱 AI'
+                aiName: '星月舱 AI',
+                minimaxUrl: 'https://api.minimax.chat/v1/t2a_v2' // 默认升级为 T2A V2 接口
             });
             
             const [availableModels, setAvailableModels] = useState([]);
@@ -160,9 +161,9 @@
                     if (!parsed.userName) parsed.userName = '你';
                     if (!parsed.aiName) parsed.aiName = '星月舱 AI';
                     if (!parsed.minimaxVoiceId) parsed.minimaxVoiceId = 'male-qn-qingse';
-                    // 强制修复不存在的模型
+                    if (!parsed.minimaxUrl || parsed.minimaxUrl.includes('text_to_speech')) parsed.minimaxUrl = 'https://api.minimax.chat/v1/t2a_v2'; // 强制升级接口
                     if (!parsed.minimaxModel || parsed.minimaxModel.includes('2.6') || parsed.minimaxModel.includes('2.5')) {
-                        parsed.minimaxModel = 'speech-01-turbo';
+                        parsed.minimaxModel = 'speech-01-turbo'; // 回滚到官方稳定模型名
                     }
                     if (!parsed.minimaxCustomModel) parsed.minimaxCustomModel = '';
                     setConfig(prev => ({...prev, ...parsed}));
@@ -259,7 +260,7 @@
                 }
             };
 
-            // --- 语音合成逻辑 (TTS 升级版 - 文本截断 & 符号清理) ---
+            // --- 语音合成逻辑 (TTS V2.9 修复版) ---
             const handleTTS = async (text, index) => {
                 if (audioPlayer && playingMsgIndex === index) {
                     audioPlayer.pause();
@@ -297,10 +298,30 @@
                         throw new Error("没有可朗读的文本");
                     }
 
-                    const url = `https://api.minimax.chat/v1/text_to_speech?GroupId=${config.minimaxGroupId}`;
+                    // 构造 URL: 使用配置中的 URL (默认为 t2a_v2)
+                    let url = config.minimaxUrl || "https://api.minimax.chat/v1/t2a_v2";
+                    // 确保 GroupId 拼接正确
+                    if (url.includes('?')) {
+                        if (!url.includes('GroupId=')) url += `&GroupId=${config.minimaxGroupId}`;
+                    } else {
+                        url += `?GroupId=${config.minimaxGroupId}`;
+                    }
                     
                     // 使用自定义模型或下拉框选择的模型
                     const targetModel = config.minimaxCustomModel ? config.minimaxCustomModel : (config.minimaxModel || "speech-01-turbo");
+
+                    // 构造 V2 标准请求体
+                    const bodyV2 = {
+                        model: targetModel,
+                        text: cleanText,
+                        stream: false,
+                        voice_setting: {
+                            voice_id: config.minimaxVoiceId,
+                            speed: 1.0,
+                            vol: 1.0,
+                            pitch: 0
+                        }
+                    };
 
                     const response = await fetch(url, {
                         method: 'POST',
@@ -308,14 +329,7 @@
                             'Authorization': `Bearer ${config.minimaxKey}`,
                             'Content-Type': 'application/json'
                         },
-                        body: JSON.stringify({
-                            voice_id: config.minimaxVoiceId,
-                            text: cleanText,
-                            model: targetModel,
-                            speed: 1.0,
-                            vol: 1.0,
-                            pitch: 0
-                        })
+                        body: JSON.stringify(bodyV2)
                     });
 
                     if (!response.ok) {
@@ -325,6 +339,7 @@
 
                     const blob = await response.blob();
                     
+                    // 检查是否返回了 JSON 错误
                     if (blob.type.includes('application/json')) {
                         const textData = await blob.text();
                         const jsonData = JSON.parse(textData);
@@ -443,7 +458,7 @@
 
             const handleCreateBackup = () => {
                 const backupData = {
-                    version: '2.8',
+                    version: '2.9',
                     timestamp: new Date().toISOString(),
                     config: config,
                     memories: memoryFiles,
@@ -765,8 +780,8 @@
                             
                             <div className="pt-2 border-t border-gray-100">
                                 <div className="text-xs font-medium text-gray-400 mb-2 px-3 uppercase tracking-wider">星月档案 ({presetFiles.length + memoryFiles.length})</div>
-                                {presetFiles.map((f, i) => <div key={`p-${i}`} className="mb-1 px-3 py-1.5 bg-purple-50 rounded text-xs text-purple-700 flex items-center gap-2 truncate border border-purple-100"><Icon name="Sparkles" size={12} className="flex-shrink-0"/> <span className="truncate">{f.name}</span></div>)}
-                                {memoryFiles.map((f, i) => <div key={`m-${i}`} className="mb-1 px-3 py-1.5 bg-blue-50 rounded text-xs text-blue-700 flex items-center gap-2 truncate border border-blue-100"><Icon name="Cpu" size={12} className="flex-shrink-0"/> <span className="truncate">{f.name}</span></div>)}
+                                {presetFiles.map((f, i) => <div key={`p-${i}`} className="mb-1 px-3 py-1.5 bg-purple-50 rounded text-xs text-purple-700 flex items-center gap-2 truncate border border-purple-100"><Icon name="Sparkles" size={12} className="flex-shrink-0"/> <span className="truncate">{f.name}</span><button onClick={() => removeFile(i, 'preset')} className="ml-auto p-1 text-gray-400 hover:text-red-500"><Icon name="Trash2" size={12}/></button></div>)}
+                                {memoryFiles.map((f, i) => <div key={`m-${i}`} className="mb-1 px-3 py-1.5 bg-blue-50 rounded text-xs text-blue-700 flex items-center gap-2 truncate border border-blue-100"><Icon name="Cpu" size={12} className="flex-shrink-0"/> <span className="truncate">{f.name}</span><button onClick={() => removeFile(i, 'memory')} className="ml-auto p-1 text-gray-400 hover:text-red-500"><Icon name="Trash2" size={12}/></button></div>)}
                             </div>
                         </div>
                         <div className="p-3 border-t border-gray-200">
@@ -780,7 +795,7 @@
                             <div className="flex items-center gap-3">
                                 <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-600"><Icon name="Menu" size={20} /></button>
                                 <div className="flex flex-col">
-                                    <span className="text-lg font-medium text-gray-800 tracking-tight leading-tight">星月舱v2.78</span>
+                                    <span className="text-lg font-medium text-gray-800 tracking-tight leading-tight">星月舱v2.77</span>
                                     <span className="text-[10px] text-gray-400 leading-tight">模型: {config.model} | 记忆: {memoryFiles.length + presetFiles.length} | 模式: {config.apiType === 'openai' ? 'OpenAI兼容' : '原生'}</span>
                                 </div>
                             </div>
