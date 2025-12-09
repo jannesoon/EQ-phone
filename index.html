@@ -66,7 +66,9 @@
             MessageSquareText: () => <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />,
             Database: () => <g><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></g>,
             Volume2: () => <g><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></g>,
-            StopCircle: () => <g><circle cx="12" cy="12" r="10"></circle><rect x="9" y="9" width="6" height="6"></rect></g>
+            StopCircle: () => <g><circle cx="12" cy="12" r="10"></circle><rect x="9" y="9" width="6" height="6"></rect></g>,
+            Edit: () => <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>,
+            Check: () => <polyline points="20 6 9 17 4 12"/>
         };
 
         const Icon = ({ name, size = 20, className = "" }) => {
@@ -106,6 +108,10 @@
             const [currentSessionId, setCurrentSessionId] = useState(null);
             const [attachment, setAttachment] = useState(null); 
             
+            // 历史记录重命名状态
+            const [editingSessionId, setEditingSessionId] = useState(null);
+            const [editTitle, setEditTitle] = useState('');
+
             const [sidebarOpen, setSidebarOpen] = useState(true);
             const [settingsOpen, setSettingsOpen] = useState(false);
             const [activeTab, setActiveTab] = useState('general');
@@ -155,6 +161,7 @@
                 const storedConfig = localStorage.getItem('gemini_app_config');
                 if (storedConfig) {
                     const parsed = JSON.parse(storedConfig);
+                    // 默认值兼容与更新
                     if (!parsed.model) parsed.model = 'gemini-1.5-flash';
                     if (!parsed.apiType) parsed.apiType = 'gemini';
                     if (!parsed.userName) parsed.userName = '你';
@@ -190,7 +197,12 @@
                 if (messages.length > 0 && currentSessionId) {
                     const updatedSessions = historySessions.map(session => {
                         if (session.id === currentSessionId) {
-                            const title = session.messages.length === 0 && messages.length > 0 ? messages[0].content.slice(0, 20).replace(/!\[.*?\]\(.*?\)/g, '[图片]') : session.title;
+                            // 仅当没有自定义标题时才自动更新标题，这里为了简化，每次有新消息且标题是"新对话"时更新
+                            // 或者不做自动更新，让用户自己改。为了体验，如果标题是"新对话"，尝试更新。
+                            let title = session.title;
+                            if (session.title === '新对话' && messages.length > 0) {
+                                title = messages[0].content.slice(0, 20).replace(/!\[.*?\]\(.*?\)/g, '[图片]');
+                            }
                             return { ...session, messages: messages, title: title, timestamp: Date.now() };
                         }
                         return session;
@@ -259,7 +271,29 @@
                 }
             };
 
-            // --- 语音合成逻辑 (TTS V3.1 优化版) ---
+            // --- 历史会话重命名 ---
+            const startEditing = (e, session) => {
+                e.stopPropagation();
+                setEditingSessionId(session.id);
+                setEditTitle(session.title);
+            };
+
+            const saveTitle = (e) => {
+                e.stopPropagation();
+                const updatedSessions = historySessions.map(s => 
+                    s.id === editingSessionId ? { ...s, title: editTitle } : s
+                );
+                setHistorySessions(updatedSessions);
+                localStorage.setItem('gemini_chat_sessions', JSON.stringify(updatedSessions));
+                setEditingSessionId(null);
+            };
+
+            const cancelEditing = (e) => {
+                e.stopPropagation();
+                setEditingSessionId(null);
+            };
+
+            // --- 语音合成逻辑 (TTS V3.1) ---
             const handleTTS = async (text, index) => {
                 if (audioPlayer && playingMsgIndex === index) {
                     audioPlayer.pause();
@@ -280,32 +314,19 @@
                 setPlayingMsgIndex(index);
 
                 try {
-                    // 1. 深度清理文本
-                    let cleanText = text;
-                    // 去除 Markdown 图片
-                    cleanText = cleanText.replace(/!\[.*?\]\(.*?\)/g, '');
-                    // 去除 Markdown 链接
+                    let cleanText = text.replace(/!\[.*?\]\(.*?\)/g, '');
                     cleanText = cleanText.replace(/\[([^\]]+)\]\([^\)]+\)/g, '$1');
-                    // 去除 括号及其内容 (动作描写) - 中英文括号
                     cleanText = cleanText.replace(/\(.*?\)/g, '');
                     cleanText = cleanText.replace(/\（.*?\）/g, '');
-                    // 去除 Markdown 符号
                     cleanText = cleanText.replace(/[*#`>~\-]/g, '');
-                    // 去除多余空白
                     cleanText = cleanText.replace(/\n+/g, ' ').trim();
-                    
-                    // 2. 严格截断文本
                     const maxLength = 300;
                     if (cleanText.length > maxLength) {
                         cleanText = cleanText.substring(0, maxLength) + "......";
                         showToast("文本过长，仅播放前 300 字");
                     }
+                    if (!cleanText) throw new Error("没有可朗读的文本");
 
-                    if (!cleanText) {
-                        throw new Error("没有可朗读的文本");
-                    }
-
-                    // 构造 URL
                     let url = config.minimaxUrl || "https://api.minimax.chat/v1/t2a_v2";
                     if (url.includes('?')) {
                         if (!url.includes('GroupId=')) url += `&GroupId=${config.minimaxGroupId}`;
@@ -315,7 +336,6 @@
                     
                     const targetModel = config.minimaxCustomModel ? config.minimaxCustomModel : (config.minimaxModel || "speech-01-turbo");
 
-                    // 构造 V2 请求体
                     const bodyV2 = {
                         model: targetModel,
                         text: cleanText,
@@ -343,14 +363,12 @@
                     }
 
                     const blob = await response.blob();
-                    
                     if (blob.type.includes('application/json')) {
                         const textData = await blob.text();
                         const jsonData = JSON.parse(textData);
                         if (jsonData.base_resp && jsonData.base_resp.status_code !== 0) {
                             throw new Error(`Minimax Error: ${jsonData.base_resp.status_msg}`);
                         }
-                        // V2 接口返回 JSON Hex
                         if (jsonData.data && jsonData.data.audio) {
                              const hexString = jsonData.data.audio;
                              const bytes = new Uint8Array(hexString.length / 2);
@@ -359,25 +377,17 @@
                              }
                              const audioBlob = new Blob([bytes], { type: 'audio/mpeg' });
                              const audioUrl = URL.createObjectURL(audioBlob);
-                             
                              const audio = new Audio(audioUrl);
-                             audio.onended = () => {
-                                 setPlayingMsgIndex(null);
-                                 setAudioPlayer(null);
-                             };
+                             audio.onended = () => { setPlayingMsgIndex(null); setAudioPlayer(null); };
                              audio.play();
                              setAudioPlayer(audio);
                              return;
                         }
                     }
 
-                    // Fallback for non-JSON response (rare in V2 but possible in legacy)
                     const audioUrl = URL.createObjectURL(blob);
                     const audio = new Audio(audioUrl);
-                    audio.onended = () => {
-                        setPlayingMsgIndex(null);
-                        setAudioPlayer(null);
-                    };
+                    audio.onended = () => { setPlayingMsgIndex(null); setAudioPlayer(null); };
                     audio.play();
                     setAudioPlayer(audio);
 
@@ -789,21 +799,44 @@
                                         className={`group relative mb-1 px-3 py-2 rounded-lg text-sm flex items-center gap-2 cursor-pointer transition-colors ${currentSessionId === session.id ? 'bg-blue-100 text-blue-700 font-medium' : 'hover:bg-gray-100 text-gray-700'}`}
                                     >
                                         <Icon name="MessageSquareText" size={16} className={currentSessionId === session.id ? "text-blue-600" : "text-gray-400"}/> 
-                                        <span className="truncate flex-1">{session.title || '未命名对话'}</span>
-                                        <button 
-                                            onClick={(e) => deleteSession(e, session.id)}
-                                            className="opacity-0 group-hover:opacity-100 p-1 hover:text-red-500 transition-opacity"
-                                        >
-                                            <Icon name="Trash2" size={14}/>
-                                        </button>
+                                        
+                                        {editingSessionId === session.id ? (
+                                            <div className="flex-1 flex items-center gap-1">
+                                                <input 
+                                                    type="text" 
+                                                    value={editTitle} 
+                                                    onChange={(e) => setEditTitle(e.target.value)}
+                                                    onClick={(e) => e.stopPropagation()}
+                                                    onKeyDown={(e) => e.key === 'Enter' && saveTitle(e)}
+                                                    className="w-full bg-white border border-blue-300 rounded px-1 text-xs focus:outline-none"
+                                                    autoFocus
+                                                />
+                                                <button onClick={saveTitle} className="text-green-600 hover:text-green-700"><Icon name="Check" size={14}/></button>
+                                                <button onClick={cancelEditing} className="text-gray-400 hover:text-gray-600"><Icon name="X" size={14}/></button>
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <span className="truncate flex-1">{session.title || '未命名对话'}</span>
+                                                <div className="flex opacity-0 group-hover:opacity-100 transition-opacity gap-1">
+                                                    <button 
+                                                        onClick={(e) => startEditing(e, session)}
+                                                        className="p-1 hover:text-blue-500"
+                                                        title="重命名"
+                                                    >
+                                                        <Icon name="Edit" size={14}/>
+                                                    </button>
+                                                    <button 
+                                                        onClick={(e) => deleteSession(e, session.id)}
+                                                        className="p-1 hover:text-red-500"
+                                                        title="删除"
+                                                    >
+                                                        <Icon name="Trash2" size={14}/>
+                                                    </button>
+                                                </div>
+                                            </>
+                                        )}
                                     </div>
                                 ))}
-                            </div>
-                            
-                            <div className="pt-2 border-t border-gray-100">
-                                <div className="text-xs font-medium text-gray-400 mb-2 px-3 uppercase tracking-wider">星月档案 ({presetFiles.length + memoryFiles.length})</div>
-                                {presetFiles.map((f, i) => <div key={`p-${i}`} className="mb-1 px-3 py-1.5 bg-purple-50 rounded text-xs text-purple-700 flex items-center gap-2 truncate border border-purple-100"><Icon name="Sparkles" size={12} className="flex-shrink-0"/> <span className="truncate">{f.name}</span><button onClick={() => removeFile(i, 'preset')} className="ml-auto p-1 text-gray-400 hover:text-red-500"><Icon name="Trash2" size={12}/></button></div>)}
-                                {memoryFiles.map((f, i) => <div key={`m-${i}`} className="mb-1 px-3 py-1.5 bg-blue-50 rounded text-xs text-blue-700 flex items-center gap-2 truncate border border-blue-100"><Icon name="Cpu" size={12} className="flex-shrink-0"/> <span className="truncate">{f.name}</span><button onClick={() => removeFile(i, 'memory')} className="ml-auto p-1 text-gray-400 hover:text-red-500"><Icon name="Trash2" size={12}/></button></div>)}
                             </div>
                         </div>
                         <div className="p-3 border-t border-gray-200">
@@ -817,7 +850,7 @@
                             <div className="flex items-center gap-3">
                                 <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-600"><Icon name="Menu" size={20} /></button>
                                 <div className="flex flex-col">
-                                    <span className="text-lg font-medium text-gray-800 tracking-tight leading-tight">星月舱v3.1语音版</span>
+                                    <span className="text-lg font-medium text-gray-800 tracking-tight leading-tight">星月舱v3.1</span>
                                     <span className="text-[10px] text-gray-400 leading-tight">模型: {config.model} | 记忆: {memoryFiles.length + presetFiles.length} | 模式: {config.apiType === 'openai' ? 'OpenAI兼容' : '原生'}</span>
                                 </div>
                             </div>
@@ -1052,7 +1085,7 @@
                                                                     value={config.minimaxModel}
                                                                     onChange={(e) => setConfig({...config, minimaxModel: e.target.value, minimaxCustomModel: ''})}
                                                                 >
-                                                                    <option value="speech-01-turbo">speech-01-turbo (推荐)</option>
+                                                                    <option value="speech-01-turbo">speech-01-turbo (极速)</option>
                                                                     <option value="speech-01-hd">speech-01-hd (高清)</option>
                                                                     <option value="speech-01">speech-01 (标准)</option>
                                                                 </select>
@@ -1065,7 +1098,7 @@
                                                                     title="手动输入新模型ID，将覆盖左侧选择"
                                                                 />
                                                             </div>
-                                                            <p className="text-[10px] text-gray-400 mt-1">如官方发布新模型，可在右侧手动填入 ID。</p>
+                                                            <p className="text-[10px] text-gray-400 mt-1">默认使用 speech-01-turbo。如需自定义，请在右侧输入。</p>
                                                         </div>
                                                     </div>
                                                 </div>
