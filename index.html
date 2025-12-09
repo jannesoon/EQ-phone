@@ -254,7 +254,7 @@
                 }
             };
 
-            // --- 语音合成逻辑 (TTS) ---
+            // --- 语音合成逻辑 (TTS 升级版) ---
             const handleTTS = async (text, index) => {
                 if (audioPlayer && playingMsgIndex === index) {
                     audioPlayer.pause();
@@ -275,7 +275,7 @@
                 setPlayingMsgIndex(index);
 
                 try {
-                    // 构造 URL
+                    // 构造 URL: V1 接口必须带 GroupId
                     const url = `https://api.minimax.chat/v1/text_to_speech?GroupId=${config.minimaxGroupId}`;
                     
                     const response = await fetch(url, {
@@ -300,6 +300,7 @@
 
                     const blob = await response.blob();
                     
+                    // 检查是否返回了 JSON 错误
                     if (blob.type.includes('application/json')) {
                         const textData = await blob.text();
                         const jsonData = JSON.parse(textData);
@@ -755,7 +756,7 @@
                             <div className="flex items-center gap-3">
                                 <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-600"><Icon name="Menu" size={20} /></button>
                                 <div className="flex flex-col">
-                                    <span className="text-lg font-medium text-gray-800 tracking-tight leading-tight">星月舱v2.72</span>
+                                    <span className="text-lg font-medium text-gray-800 tracking-tight leading-tight">星月舱v2.0</span>
                                     <span className="text-[10px] text-gray-400 leading-tight">模型: {config.model} | 记忆: {memoryFiles.length + presetFiles.length} | 模式: {config.apiType === 'openai' ? 'OpenAI兼容' : '原生'}</span>
                                 </div>
                             </div>
@@ -836,7 +837,7 @@
                                 {error && (
                                     <div className="absolute -top-16 left-0 right-0 mx-auto w-max max-w-[90%] text-red-600 text-xs bg-red-50 border border-red-100 px-4 py-2 rounded-lg shadow-sm flex flex-col gap-1 items-center">
                                         <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-red-500 shrink-0"></span><span className="truncate">{error}</span></div>
-                                        {error.includes("429") && <span className="text-[10px] text-red-400">提示: Gemini 免费版频率限制，请稍后重试</span>}
+                                        {(error.includes("429") || error.includes("Code 8")) && <span className="text-[10px] text-red-400">提示: 触发免费版频率限制，请稍等几秒再点击“重新生成”</span>}
                                     </div>
                                 )}
                                 
