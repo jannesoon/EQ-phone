@@ -68,7 +68,8 @@
             Volume2: () => <g><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></g>,
             StopCircle: () => <g><circle cx="12" cy="12" r="10"></circle><rect x="9" y="9" width="6" height="6"></rect></g>,
             Edit: () => <g><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></g>,
-            Check: () => <polyline points="20 6 9 17 4 12"/>
+            Check: () => <polyline points="20 6 9 17 4 12"/>,
+            Save: () => <g><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></g>
         };
 
         const Icon = ({ name, size = 20, className = "" }) => {
@@ -101,6 +102,51 @@
             });
         };
 
+        // --- 图片压缩工具 ---
+        const compressImage = (file) => {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = (event) => {
+                    const img = new Image();
+                    img.src = event.target.result;
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+                        
+                        // 最大尺寸限制
+                        const MAX_WIDTH = 1024;
+                        const MAX_HEIGHT = 1024;
+                        let width = img.width;
+                        let height = img.height;
+
+                        if (width > height) {
+                            if (width > MAX_WIDTH) {
+                                height *= MAX_WIDTH / width;
+                                width = MAX_WIDTH;
+                            }
+                        } else {
+                            if (height > MAX_HEIGHT) {
+                                width *= MAX_HEIGHT / height;
+                                height = MAX_HEIGHT;
+                            }
+                        }
+
+                        canvas.width = width;
+                        canvas.height = height;
+                        ctx.drawImage(img, 0, 0, width, height);
+                        
+                        // 压缩为 JPEG, 质量 0.7
+                        const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
+                        resolve({
+                            base64: compressedBase64,
+                            mimeType: 'image/jpeg'
+                        });
+                    };
+                };
+            });
+        };
+
         function App() {
             const [input, setInput] = useState('');
             const [messages, setMessages] = useState([]);
@@ -108,9 +154,12 @@
             const [currentSessionId, setCurrentSessionId] = useState(null);
             const [attachment, setAttachment] = useState(null); 
             
-            // 历史记录重命名状态
             const [editingSessionId, setEditingSessionId] = useState(null);
             const [editTitle, setEditTitle] = useState('');
+
+            // 记忆编辑状态
+            const [editingMemoryIndex, setEditingMemoryIndex] = useState(null);
+            const [editingMemoryContent, setEditingMemoryContent] = useState('');
 
             const [sidebarOpen, setSidebarOpen] = useState(true);
             const [settingsOpen, setSettingsOpen] = useState(false);
@@ -125,7 +174,7 @@
                 apiKey: '',
                 baseUrl: 'https://generativelanguage.googleapis.com',
                 minimaxKey: '',
-                minimaxGroupId: '', // GroupID
+                minimaxGroupId: '',
                 minimaxVoiceId: 'male-qn-qingse',
                 minimaxModel: 'speech-01-turbo',
                 minimaxCustomModel: '', 
@@ -141,8 +190,7 @@
             
             const [availableModels, setAvailableModels] = useState([]);
             const [memoryFiles, setMemoryFiles] = useState([]); 
-            const [presetFiles, setPresetFiles] = useState([]); 
-
+            
             const [isLoading, setIsLoading] = useState(false);
             const [isArchiving, setIsArchiving] = useState(false);
             const [isFetchingModels, setIsFetchingModels] = useState(false);
@@ -151,7 +199,6 @@
 
             const messagesEndRef = useRef(null);
             const fileInputRef = useRef(null);
-            const presetInputRef = useRef(null);
             const avatarInputRef = useRef(null);
             const aiAvatarInputRef = useRef(null);
             const chatImageInputRef = useRef(null); 
@@ -176,8 +223,6 @@
                 }
                 const storedMemories = localStorage.getItem('gemini_memories');
                 if (storedMemories) setMemoryFiles(JSON.parse(storedMemories));
-                const storedPresets = localStorage.getItem('gemini_presets');
-                if (storedPresets) setPresetFiles(JSON.parse(storedPresets));
                 const storedSessions = localStorage.getItem('gemini_chat_sessions');
                 if (storedSessions) setHistorySessions(JSON.parse(storedSessions));
                 if (window.innerWidth < 768) setSidebarOpen(false);
@@ -190,14 +235,16 @@
                     showToast("检测到 /v1 路径，已自动切换为 OpenAI 兼容模式");
                 }
                 if (memoryFiles.length > 0) localStorage.setItem('gemini_memories', JSON.stringify(memoryFiles));
-                if (presetFiles.length > 0) localStorage.setItem('gemini_presets', JSON.stringify(presetFiles));
-            }, [config, memoryFiles, presetFiles]);
+            }, [config, memoryFiles]);
 
             useEffect(() => {
                 if (messages.length > 0 && currentSessionId) {
                     const updatedSessions = historySessions.map(session => {
                         if (session.id === currentSessionId) {
-                            const title = session.messages.length === 0 && messages.length > 0 ? messages[0].content.slice(0, 20).replace(/!\[.*?\]\(.*?\)/g, '[图片]') : session.title;
+                            let title = session.title;
+                            if (session.title === '新对话' && messages.length > 0) {
+                                title = messages[0].content.slice(0, 20).replace(/!\[.*?\]\(.*?\)/g, '[图片]');
+                            }
                             return { ...session, messages: messages, title: title, timestamp: Date.now() };
                         }
                         return session;
@@ -235,7 +282,6 @@
             const handleSaveConfig = () => {
                 localStorage.setItem('gemini_app_config', JSON.stringify(config));
                 localStorage.setItem('gemini_memories', JSON.stringify(memoryFiles));
-                localStorage.setItem('gemini_presets', JSON.stringify(presetFiles));
                 setSettingsOpen(false);
                 showToast("配置已保存");
             };
@@ -266,7 +312,6 @@
                 }
             };
 
-            // --- 历史会话重命名 ---
             const startEditing = (e, session) => {
                 e.stopPropagation();
                 setEditingSessionId(session.id);
@@ -288,7 +333,32 @@
                 setEditingSessionId(null);
             };
 
-            // --- 语音合成逻辑 (TTS V3.1) ---
+            // --- 记忆文件内容编辑 ---
+            const startEditingMemory = (index) => {
+                setEditingMemoryIndex(index);
+                setEditingMemoryContent(memoryFiles[index].content);
+            };
+
+            const saveMemoryEdit = () => {
+                const updatedFiles = [...memoryFiles];
+                updatedFiles[editingMemoryIndex].content = editingMemoryContent;
+                // 更新大小显示（估算）
+                const sizeInBytes = new Blob([editingMemoryContent]).size;
+                updatedFiles[editingMemoryIndex].size = (sizeInBytes / 1024).toFixed(1) + ' KB';
+                updatedFiles[editingMemoryIndex].date = new Date().toLocaleDateString() + ' (已编辑)';
+                
+                setMemoryFiles(updatedFiles);
+                localStorage.setItem('gemini_memories', JSON.stringify(updatedFiles));
+                setEditingMemoryIndex(null);
+                showToast("记忆内容已更新");
+            };
+
+            const cancelMemoryEdit = () => {
+                setEditingMemoryIndex(null);
+                setEditingMemoryContent('');
+            };
+
+            // --- 语音合成逻辑 (TTS V3.2 修复版) ---
             const handleTTS = async (text, index) => {
                 if (audioPlayer && playingMsgIndex === index) {
                     audioPlayer.pause();
@@ -315,10 +385,10 @@
                     cleanText = cleanText.replace(/\（.*?\）/g, '');
                     cleanText = cleanText.replace(/[*#`>~\-]/g, '');
                     cleanText = cleanText.replace(/\n+/g, ' ').trim();
-                    const maxLength = 300;
+                    const maxLength = 240; 
                     if (cleanText.length > maxLength) {
                         cleanText = cleanText.substring(0, maxLength) + "......";
-                        showToast("文本过长，仅播放前 300 字");
+                        showToast("文本过长，仅播放前 240 字");
                     }
                     if (!cleanText) throw new Error("没有可朗读的文本");
 
@@ -434,14 +504,13 @@
             const handleAvatarUpload = (e, type) => {
                 const file = e.target.files[0];
                 if (!file) return;
-                if (file.size > 500 * 1024) { alert("图片太大，请上传 500KB 以内的图片"); return; }
-                const reader = new FileReader();
-                reader.onload = (event) => {
-                    if (type === 'user') setConfig(prev => ({...prev, userAvatar: event.target.result}));
-                    else setConfig(prev => ({...prev, aiAvatar: event.target.result}));
-                    showToast("头像已更新");
-                };
-                reader.readAsDataURL(file);
+                compressImage(file).then(result => {
+                    if (type === 'user') setConfig(prev => ({...prev, userAvatar: result.base64}));
+                    else setConfig(prev => ({...prev, aiAvatar: result.base64}));
+                    showToast("头像已更新 (已压缩)");
+                }).catch(err => {
+                    alert("图片处理失败");
+                });
             };
 
             const handleExport = () => {
@@ -471,7 +540,6 @@
                             content: event.target.result
                         };
                         if (type === 'memory') setMemoryFiles(prev => [...prev, newFileObj]);
-                        else setPresetFiles(prev => [...prev, newFileObj]);
                     };
                     if (file.type.match('text.*') || file.name.endsWith('.md') || file.name.endsWith('.json')) reader.readAsText(file);
                     else alert(`仅支持文本文件`);
@@ -480,16 +548,14 @@
 
             const removeFile = (index, type) => {
                 if (type === 'memory') setMemoryFiles(prev => prev.filter((_, i) => i !== index));
-                else setPresetFiles(prev => prev.filter((_, i) => i !== index));
             };
 
             const handleCreateBackup = () => {
                 const backupData = {
-                    version: '3.1',
+                    version: '3.3',
                     timestamp: new Date().toISOString(),
                     config: config,
                     memories: memoryFiles,
-                    presets: presetFiles,
                     sessions: historySessions
                 };
                 const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
@@ -513,12 +579,10 @@
                         const data = JSON.parse(event.target.result);
                         if (data.config) setConfig(data.config);
                         if (data.memories) setMemoryFiles(data.memories);
-                        if (data.presets) setPresetFiles(data.presets);
                         if (data.sessions) setHistorySessions(data.sessions);
                         
                         localStorage.setItem('gemini_app_config', JSON.stringify(data.config || config));
                         localStorage.setItem('gemini_memories', JSON.stringify(data.memories || []));
-                        localStorage.setItem('gemini_presets', JSON.stringify(data.presets || []));
                         localStorage.setItem('gemini_chat_sessions', JSON.stringify(data.sessions || []));
                         
                         showToast("星月档案已完整恢复");
@@ -582,15 +646,9 @@
             const handleChatImageSelect = (e) => {
                 const file = e.target.files[0];
                 if (!file) return;
-                const reader = new FileReader();
-                reader.onload = (event) => {
-                    const base64 = event.target.result;
-                    setAttachment({
-                        base64: base64,
-                        mimeType: file.type
-                    });
-                };
-                reader.readAsDataURL(file);
+                compressImage(file).then(result => {
+                    setAttachment(result);
+                });
             };
 
             const handleRegenerate = async () => {
@@ -614,8 +672,7 @@
                     const baseUrl = config.baseUrl.replace(/\/$/, '');
                     const modelName = config.model || 'gemini-1.5-flash';
                     let systemPrompt = "";
-                    if (presetFiles.length > 0) systemPrompt += "【角色设定】:\n" + presetFiles.map(f => f.content).join("\n\n") + "\n\n";
-                    if (memoryFiles.length > 0) systemPrompt += "【长期记忆】:\n" + memoryFiles.map(f => f.content).join("\n\n") + "\n\n";
+                    if (memoryFiles.length > 0) systemPrompt += "【星月记忆库】:\n" + memoryFiles.map(f => f.content).join("\n\n") + "\n\n";
                     const limit = (parseInt(config.historyLimit) || 20) * 2;
                     const contextHistory = newMessages.slice(0, -1).slice(-limit).map(m => ({ role: m.role, content: m.content }));
                     let url, headers, payload;
@@ -695,8 +752,7 @@
                     const baseUrl = config.baseUrl.replace(/\/$/, '');
                     const modelName = config.model || 'gemini-1.5-flash';
                     let systemPrompt = "";
-                    if (presetFiles.length > 0) systemPrompt += "【角色设定】:\n" + presetFiles.map(f => f.content).join("\n\n") + "\n\n";
-                    if (memoryFiles.length > 0) systemPrompt += "【长期记忆】:\n" + memoryFiles.map(f => f.content).join("\n\n") + "\n\n";
+                    if (memoryFiles.length > 0) systemPrompt += "【星月记忆库】:\n" + memoryFiles.map(f => f.content).join("\n\n") + "\n\n";
                     
                     const limit = (parseInt(config.historyLimit) || 20) * 2;
                     const contextHistory = messages.slice(-limit).map(m => ({
@@ -833,6 +889,11 @@
                                     </div>
                                 ))}
                             </div>
+                            
+                            <div className="pt-2 border-t border-gray-100">
+                                <div className="text-xs font-medium text-gray-400 mb-2 px-3 uppercase tracking-wider">星月档案 ({memoryFiles.length})</div>
+                                {memoryFiles.map((f, i) => <div key={`m-${i}`} className="mb-1 px-3 py-1.5 bg-blue-50 rounded text-xs text-blue-700 flex items-center gap-2 truncate border border-blue-100"><Icon name="Cpu" size={12} className="flex-shrink-0"/> <span className="truncate">{f.name}</span></div>)}
+                            </div>
                         </div>
                         <div className="p-3 border-t border-gray-200">
                             <button onClick={handleExport} className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-200 w-full text-left text-sm text-gray-700 transition-colors"><Icon name="Download" size={18} /><span>导出记录 JSON</span></button>
@@ -845,8 +906,8 @@
                             <div className="flex items-center gap-3">
                                 <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-600"><Icon name="Menu" size={20} /></button>
                                 <div className="flex flex-col">
-                                    <span className="text-lg font-medium text-gray-800 tracking-tight leading-tight">星月舱v3.1</span>
-                                    <span className="text-[10px] text-gray-400 leading-tight">模型: {config.model} | 记忆: {memoryFiles.length + presetFiles.length} | 模式: {config.apiType === 'openai' ? 'OpenAI兼容' : '原生'}</span>
+                                    <span className="text-lg font-medium text-gray-800 tracking-tight leading-tight">星月舱v3.3</span>
+                                    <span className="text-[10px] text-gray-400 leading-tight">模型: {config.model} | 记忆: {memoryFiles.length} | 模式: {config.apiType === 'openai' ? 'OpenAI兼容' : '原生'}</span>
                                 </div>
                             </div>
                             <div className="cursor-pointer" onClick={() => setSettingsOpen(true)}>
@@ -1110,25 +1171,46 @@
                                                     <div className="border-t border-gray-100"></div>
                                                     <div>
                                                         <div className="flex justify-between items-center mb-3">
-                                                            <div><h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2"><Icon name="Cpu" size={16} className="text-blue-500"/> 长期记忆库</h3><p className="text-xs text-gray-400">AI 会永远记住这些文件中的内容</p></div>
-                                                            <button onClick={() => fileInputRef.current.click()} className="text-xs bg-blue-50 text-blue-600 px-3 py-1.5 rounded-md font-medium hover:bg-blue-100 flex items-center gap-1"><Icon name="Upload" size={14}/> 上传</button>
-                                                            <input type="file" ref={fileInputRef} className="hidden" onChange={(e) => handleFileUpload(e, 'memory')} />
+                                                            <div><h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2"><Icon name="Cpu" size={16} className="text-blue-500"/> 星月记忆库</h3><p className="text-xs text-gray-400">AI 会永远记住这些内容 (支持编辑)</p></div>
+                                                            <div className="flex gap-2">
+                                                                <button onClick={() => fileInputRef.current.click()} className="text-xs bg-blue-50 text-blue-600 px-3 py-1.5 rounded-md font-medium hover:bg-blue-100 flex items-center gap-1"><Icon name="Upload" size={14}/> 上传文件</button>
+                                                                <input type="file" ref={fileInputRef} className="hidden" onChange={(e) => handleFileUpload(e, 'memory')} />
+                                                            </div>
                                                         </div>
-                                                        <div className="bg-gray-50 rounded-xl border border-gray-200 min-h-[100px] p-2 space-y-2 max-h-[200px] overflow-y-auto">
-                                                            {memoryFiles.length === 0 ? <div className="h-full flex flex-col items-center justify-center text-gray-400 py-6"><span className="text-xs">暂无记忆 (点击上方"生成今日记忆"自动添加)</span></div> : memoryFiles.map((file, i) => (
-                                                                <div key={i} className="flex items-center justify-between bg-white p-2 rounded border border-gray-100 shadow-sm"><div className="flex items-center gap-3 overflow-hidden"><div className="bg-blue-100 p-1 rounded text-blue-600"><Icon name="FileText" size={14}/></div><div className="truncate"><div className="text-xs font-medium text-gray-700 truncate max-w-[150px]">{file.name}</div><div className="text-[10px] text-gray-400">{file.size} • {file.date}</div></div></div><button onClick={() => removeFile(i, 'memory')} className="text-gray-400 hover:text-red-500 p-1"><Icon name="Trash2" size={14}/></button></div>
-                                                            ))}
-                                                        </div>
-                                                    </div>
-                                                    <div>
-                                                        <div className="flex justify-between items-center mb-3">
-                                                            <div><h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2"><Icon name="Sparkles" size={16} className="text-purple-500"/> 角色预设</h3></div>
-                                                            <button onClick={() => presetInputRef.current.click()} className="text-xs bg-purple-50 text-purple-600 px-3 py-1.5 rounded-md font-medium hover:bg-purple-100 flex items-center gap-1"><Icon name="Upload" size={14}/> 上传</button>
-                                                            <input type="file" ref={presetInputRef} className="hidden" onChange={(e) => handleFileUpload(e, 'preset')} />
-                                                        </div>
-                                                        <div className="bg-gray-50 rounded-xl border border-gray-200 min-h-[80px] p-2 space-y-2 max-h-[150px] overflow-y-auto">
-                                                            {presetFiles.length === 0 ? <div className="text-center text-gray-400 text-xs py-4">暂无预设</div> : presetFiles.map((file, i) => (
-                                                                <div key={i} className="flex items-center justify-between bg-white p-2 rounded border border-gray-100 shadow-sm"><div className="flex items-center gap-3"><div className="bg-purple-100 p-1 rounded text-purple-600"><Icon name="FileText" size={14}/></div><span className="text-xs font-medium text-gray-700">{file.name}</span></div><button onClick={() => removeFile(i, 'preset')} className="text-gray-400 hover:text-red-500 p-1"><Icon name="Trash2" size={14}/></button></div>
+                                                        <div className="bg-gray-50 rounded-xl border border-gray-200 min-h-[100px] p-2 space-y-2 max-h-[300px] overflow-y-auto">
+                                                            {memoryFiles.length === 0 ? <div className="h-full flex flex-col items-center justify-center text-gray-400 py-6"><span className="text-xs">暂无记忆 (点击上方"生成今日记忆"或上传)</span></div> : memoryFiles.map((file, i) => (
+                                                                <div key={i} className="flex flex-col bg-white p-2 rounded border border-gray-100 shadow-sm gap-2">
+                                                                    <div className="flex items-center justify-between">
+                                                                        <div className="flex items-center gap-2 overflow-hidden">
+                                                                            <div className="bg-blue-100 p-1 rounded text-blue-600"><Icon name="FileText" size={14}/></div>
+                                                                            <div className="truncate">
+                                                                                <div className="text-xs font-medium text-gray-700 truncate max-w-[120px]">{file.name}</div>
+                                                                                <div className="text-[9px] text-gray-400">{file.date}</div>
+                                                                            </div>
+                                                                        </div>
+                                                                        <div className="flex gap-1">
+                                                                            <button onClick={() => startEditingMemory(i)} className="text-blue-500 hover:text-blue-700 p-1 bg-blue-50 rounded"><Icon name="Edit" size={12}/></button>
+                                                                            <button onClick={() => removeFile(i, 'memory')} className="text-red-500 hover:text-red-700 p-1 bg-red-50 rounded"><Icon name="Trash2" size={12}/></button>
+                                                                        </div>
+                                                                    </div>
+                                                                    {editingMemoryIndex === i ? (
+                                                                        <div className="flex flex-col gap-2 mt-1">
+                                                                            <textarea 
+                                                                                className="w-full text-xs p-2 border rounded h-32 bg-gray-50 focus:outline-blue-500"
+                                                                                value={editingMemoryContent}
+                                                                                onChange={(e) => setEditingMemoryContent(e.target.value)}
+                                                                            ></textarea>
+                                                                            <div className="flex gap-2 justify-end">
+                                                                                <button onClick={cancelMemoryEdit} className="text-xs px-2 py-1 text-gray-500 hover:bg-gray-100 rounded">取消</button>
+                                                                                <button onClick={saveMemoryEdit} className="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-1"><Icon name="Save" size={12}/> 保存</button>
+                                                                            </div>
+                                                                        </div>
+                                                                    ) : (
+                                                                        <div className="text-[10px] text-gray-500 bg-gray-50 p-1.5 rounded max-h-16 overflow-hidden text-ellipsis whitespace-nowrap">
+                                                                            {file.content.slice(0, 100)}...
+                                                                        </div>
+                                                                    )}
+                                                                </div>
                                                             ))}
                                                         </div>
                                                     </div>
@@ -1143,7 +1225,7 @@
                                                             <div>
                                                                 <h3 className="text-sm font-semibold text-gray-800">全量备份导出</h3>
                                                                 <p className="text-xs text-gray-600 mt-1 leading-relaxed">
-                                                                    将导出您所有的设置、API Key、头像、记忆库文件、预设文件以及所有的历史聊天记录为一个 JSON 文件。
+                                                                    将导出您所有的设置、API Key、头像、记忆库文件以及所有的历史聊天记录为一个 JSON 文件。
                                                                     <br/>您可以将此文件发送到其他设备（如手机），即可无缝恢复所有数据。
                                                                 </p>
                                                                 <button onClick={handleCreateBackup} className="mt-3 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
