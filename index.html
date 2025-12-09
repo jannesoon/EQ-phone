@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EQ-chat✨星月舱🌙</title>
+    <title>EQ-chat.星月舱</title>
     <!-- 设置标签页图标 (Favicon) - 紫色星星 -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%238b5cf6' stroke='%238b5cf6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z'/></svg>">
     
@@ -159,6 +159,7 @@
             
             const [editingSessionId, setEditingSessionId] = useState(null);
             const [editTitle, setEditTitle] = useState('');
+            const [enableSearch, setEnableSearch] = useState(false); // 联网搜索状态
 
             // 记忆编辑状态
             const [editingMemoryIndex, setEditingMemoryIndex] = useState(null);
@@ -624,7 +625,7 @@
                 setIsArchiving(true);
                 showToast("正在生成记忆摘要...");
                 try {
-                    const summaryPrompt = "请阅读以上所有对话。请以第一人称视角（我），称用户为“她”，总结这次对话中的关键信息。重点关注：1. 用户提到的个人喜好、习惯、生活状态。 2. 双方达成的重要共识或约定。 3. 用户的情感状态。 请输出为一段简洁的文本，作为“长期记忆”存档。不要包含寒暄。尽量客观，可附自己的总结经验。尽量简练";
+                    const summaryPrompt = "请阅读以上所有对话。请以第三人称客观视角，总结这次对话中的关键信息。重点关注：1. 用户提到的个人喜好、习惯、生活状态。 2. 双方达成的重要共识或约定。 3. 用户的情感状态。 请输出为一段简洁的文本，作为“长期记忆”存档。不要包含寒暄。";
                     let payload, url, headers;
                     const baseUrl = config.baseUrl.replace(/\/$/, '');
                     const modelName = config.model || 'gemini-1.5-flash';
@@ -725,6 +726,14 @@
                         if (currentParts.length === 0) currentParts.push({ text: "..." });
                         contents.push({ role: 'user', parts: currentParts });
                         payload = { contents };
+                        
+                        // Check if Google Search is enabled
+                        if (enableSearch) {
+                             // Google Search Tool
+                             // Note: 'tools' is sibling to 'contents'
+                             payload.tools = [{ google_search: {} }];
+                        }
+                        
                         if (systemPrompt.trim()) payload.system_instruction = { parts: [{ text: systemPrompt }] };
                     }
                     const response = await fetch(url, { method: 'POST', headers: headers, body: JSON.stringify(payload) });
@@ -794,8 +803,15 @@
                         contextHistory.forEach(m => {
                             msgs.push({ role: m.role === 'model' ? 'assistant' : 'user', content: m.content });
                         });
+                        
+                        // Append search instruction if enabled (OpenAI Mode Hack)
+                        let textToSend = input;
+                        if (enableSearch) {
+                             textToSend += "\n(请联网搜索实时信息)";
+                        }
+
                         const currentMsgContent = [];
-                        if (input.trim()) currentMsgContent.push({ type: "text", text: input });
+                        if (textToSend.trim()) currentMsgContent.push({ type: "text", text: textToSend });
                         if (currentAttachment) {
                             currentMsgContent.push({
                                 type: "image_url",
@@ -824,6 +840,12 @@
                         }
                         contents.push({ role: 'user', parts: currentParts });
                         payload = { contents };
+                        
+                        // Google Search Tool
+                        if (enableSearch) {
+                             payload.tools = [{ google_search: {} }];
+                        }
+
                         if (systemPrompt.trim()) { payload.system_instruction = { parts: [{ text: systemPrompt }] }; }
                     }
 
@@ -924,7 +946,7 @@
                             <div className="flex items-center gap-3">
                                 <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-600"><Icon name="Menu" size={20} /></button>
                                 <div className="flex flex-col">
-                                    <span className="text-lg font-medium text-gray-800 tracking-tight leading-tight">✨星月舱v3.6 🌙💫氛围升级版</span>
+                                    <span className="text-lg font-medium text-gray-800 tracking-tight leading-tight">星月舱v3.7</span>
                                     <span className="text-[10px] text-gray-400 leading-tight">模型: {config.model} | 记忆: {memoryFiles.length} | 模式: {config.apiType === 'openai' ? 'OpenAI兼容' : '原生'}</span>
                                 </div>
                             </div>
@@ -1020,6 +1042,15 @@
                                     <button onClick={triggerImageUpload} className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-200 rounded-full transition-colors mb-1 mr-1">
                                         <Icon name="Image" size={20} />
                                     </button>
+                                    
+                                    <button 
+                                        onClick={() => setEnableSearch(!enableSearch)} 
+                                        className={`p-2 rounded-full transition-colors mb-1 mr-1 ${enableSearch ? 'text-blue-600 bg-blue-50' : 'text-gray-400 hover:text-gray-700 hover:bg-gray-200'}`}
+                                        title="联网搜索"
+                                    >
+                                        <Icon name="Globe" size={20} />
+                                    </button>
+
                                     <input type="file" ref={chatImageInputRef} style={{display: 'none'}} accept="image/*" onChange={handleChatImageSelect}/>
                                     
                                     <textarea value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={handleKeyDown} placeholder="星月交辉✨......" className="bg-transparent border-0 focus:ring-0 text-gray-800 flex-1 resize-none py-3 max-h-32 min-h-[44px] outline-none placeholder:text-gray-400 text-base" rows={1}></textarea>
