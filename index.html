@@ -358,7 +358,7 @@
                 setEditingMemoryContent('');
             };
 
-            // --- 语音合成逻辑 (TTS V3.2 修复版) ---
+            // --- 语音合成逻辑 ---
             const handleTTS = async (text, index) => {
                 if (audioPlayer && playingMsgIndex === index) {
                     audioPlayer.pause();
@@ -513,18 +513,39 @@
                 });
             };
 
-            const handleExport = () => {
-                if (messages.length === 0) return;
-                const exportObj = { timestamp: new Date().toISOString(), history: messages };
-                const blob = new Blob([JSON.stringify(exportObj, null, 2)], { type: 'application/json' });
+            // --- 导出聊天记录为 TXT ---
+            const handleExportTxt = () => {
+                if (messages.length === 0) {
+                    showToast("没有可导出的聊天记录");
+                    return;
+                }
+
+                // 构造 TXT 内容
+                let txtContent = `===========================================\n`;
+                txtContent += `星月舱聊天记录导出\n`;
+                txtContent += `导出时间: ${new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })}\n`;
+                txtContent += `===========================================\n\n`;
+
+                messages.forEach(msg => {
+                    const roleName = msg.role === 'user' ? (config.userName || '你') : (config.aiName || '星月舱 AI');
+                    const time = msg.timestamp || '未知时间';
+                    // 清理图片 Base64，只保留 [图片] 占位符
+                    let cleanContent = msg.content.replace(/!\[.*?\]\(data:image.*?\)/g, '[图片]');
+                    
+                    txtContent += `[${time}] ${roleName}:\n${cleanContent}\n\n`;
+                    txtContent += `-------------------------------------------\n\n`;
+                });
+
+                const blob = new Blob([txtContent], { type: 'text/plain;charset=utf-8' });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = `gemini-chat-${new Date().toISOString().slice(0, 10)}.json`;
+                a.download = `xingyue-chat-log-${new Date().toISOString().slice(0, 10)}.txt`;
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);
                 URL.revokeObjectURL(url);
+                showToast("聊天记录已导出为 TXT");
             };
 
             const handleFileUpload = (e, type) => {
@@ -552,7 +573,7 @@
 
             const handleCreateBackup = () => {
                 const backupData = {
-                    version: '3.4',
+                    version: '3.5',
                     timestamp: new Date().toISOString(),
                     config: config,
                     memories: memoryFiles,
@@ -891,7 +912,6 @@
                             </div>
                         </div>
                         <div className="p-3 border-t border-gray-200">
-                            <button onClick={handleExport} className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-200 w-full text-left text-sm text-gray-700 transition-colors"><Icon name="Download" size={18} /><span>导出记录 JSON</span></button>
                             <button onClick={() => setSettingsOpen(true)} className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-200 w-full text-left text-sm text-gray-700 transition-colors"><Icon name="Settings" size={18} /><span>设置 & 备份</span></button>
                         </div>
                     </div>
@@ -1250,6 +1270,22 @@
                                                     </div>
                                                 </div>
                                             )}
+                                            <div className="border-t border-gray-100 pt-6">
+                                                <div className="bg-gray-50 border border-gray-100 rounded-xl p-4">
+                                                    <div className="flex items-start gap-3">
+                                                        <div className="p-2 bg-gray-200 rounded-lg text-gray-600"><Icon name="FileText" size={24}/></div>
+                                                        <div>
+                                                            <h3 className="text-sm font-semibold text-gray-800">聊天记录导出 (TXT)</h3>
+                                                            <p className="text-xs text-gray-600 mt-1 leading-relaxed">
+                                                                将当前聊天窗口的对话记录导出为易读的文本文件 (.txt)，包含时间戳和角色昵称。
+                                                            </p>
+                                                            <button onClick={handleExportTxt} className="mt-3 px-4 py-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+                                                                <Icon name="Download" size={16}/> 导出当前对话记录
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                     <div className="p-4 border-t border-gray-100 bg-gray-50 flex justify-end gap-3">
