@@ -159,7 +159,7 @@
             
             const [editingSessionId, setEditingSessionId] = useState(null);
             const [editTitle, setEditTitle] = useState('');
-            const [enableSearch, setEnableSearch] = useState(false); // 联网搜索状态
+            const [enableSearch, setEnableSearch] = useState(false); 
 
             // 记忆编辑状态
             const [editingMemoryIndex, setEditingMemoryIndex] = useState(null);
@@ -183,6 +183,8 @@
                 minimaxModel: 'speech-01-turbo',
                 minimaxCustomModel: '', 
                 historyLimit: 20,
+                temperature: 0.7, // 新增温度
+                frequencyPenalty: 0, // 新增重复惩罚
                 model: 'gemini-1.5-flash',
                 userAvatar: '',
                 aiAvatar: '',
@@ -223,6 +225,9 @@
                         parsed.minimaxModel = 'speech-01-turbo'; 
                     }
                     if (!parsed.minimaxCustomModel) parsed.minimaxCustomModel = '';
+                    // 默认值补充
+                    if (parsed.temperature === undefined) parsed.temperature = 0.7;
+                    if (parsed.frequencyPenalty === undefined) parsed.frequencyPenalty = 0;
                     setConfig(prev => ({...prev, ...parsed}));
                 }
                 const storedMemories = localStorage.getItem('gemini_memories');
@@ -241,30 +246,47 @@
                 if (memoryFiles.length > 0) localStorage.setItem('gemini_memories', JSON.stringify(memoryFiles));
             }, [config, memoryFiles]);
 
+            // 分离出的 Effect：当 messages 变化时，只更新 historySessions 状态
             useEffect(() => {
                 if (messages.length > 0 && currentSessionId) {
-                    const updatedSessions = historySessions.map(session => {
-                        if (session.id === currentSessionId) {
-                            let title = session.title;
-                            if (session.title === '新对话' && messages.length > 0) {
+                    setHistorySessions(prevSessions => {
+                        const existingSessionIndex = prevSessions.findIndex(s => s.id === currentSessionId);
+                        if (existingSessionIndex !== -1) {
+                            // 更新已有会话
+                            const updatedSessions = [...prevSessions];
+                            const currentSession = updatedSessions[existingSessionIndex];
+                            
+                            // 更新标题逻辑
+                            let title = currentSession.title;
+                            if (currentSession.title === '新对话' && messages.length > 0) {
                                 title = messages[0].content.slice(0, 20).replace(/!\[.*?\]\(.*?\)/g, '[图片]');
                             }
-                            return { ...session, messages: messages, title: title, timestamp: Date.now() };
+
+                            updatedSessions[existingSessionIndex] = {
+                                ...currentSession,
+                                messages: messages,
+                                title: title,
+                                timestamp: Date.now()
+                            };
+                            // 移到最前
+                            updatedSessions.sort((a, b) => b.timestamp - a.timestamp);
+                            return updatedSessions;
+                        } else {
+                            // 新增会话
+                             const newSession = {
+                                id: currentSessionId,
+                                title: messages[0]?.content.slice(0, 20).replace(/!\[.*?\]\(.*?\)/g, '[图片]') || '新对话',
+                                messages: messages,
+                                timestamp: Date.now()
+                            };
+                            return [newSession, ...prevSessions];
                         }
-                        return session;
                     });
-                    if (!historySessions.find(s => s.id === currentSessionId)) {
-                        const newSession = {
-                            id: currentSessionId,
-                            title: messages[0]?.content.slice(0, 20).replace(/!\[.*?\]\(.*?\)/g, '[图片]') || '新对话',
-                            messages: messages,
-                            timestamp: Date.now()
-                        };
-                        setHistorySessions(prev => [newSession, ...prev]);
-                    } else {
-                        setHistorySessions(updatedSessions);
-                    }
                 }
+            }, [messages, currentSessionId]);
+
+            // 分离出的 Effect：当 historySessions 变化时，持久化到 localStorage
+            useEffect(() => {
                 if (historySessions.length > 0) {
                     try {
                         localStorage.setItem('gemini_chat_sessions', JSON.stringify(historySessions));
@@ -272,7 +294,8 @@
                         console.error("Local storage full", e);
                     }
                 }
-            }, [messages, currentSessionId]);
+            }, [historySessions]);
+
 
             useEffect(() => {
                 messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -308,8 +331,7 @@
             const deleteSession = (e, sessionId) => {
                 e.stopPropagation();
                 const newSessions = historySessions.filter(s => s.id !== sessionId);
-                setHistorySessions(newSessions);
-                localStorage.setItem('gemini_chat_sessions', JSON.stringify(newSessions));
+                setHistorySessions(newSessions); // Effect 会处理 localStorage
                 if (currentSessionId === sessionId) {
                     setMessages([]);
                     setCurrentSessionId(null);
@@ -327,8 +349,7 @@
                 const updatedSessions = historySessions.map(s => 
                     s.id === editingSessionId ? { ...s, title: editTitle } : s
                 );
-                setHistorySessions(updatedSessions);
-                localStorage.setItem('gemini_chat_sessions', JSON.stringify(updatedSessions));
+                setHistorySessions(updatedSessions); // Effect 会处理 localStorage
                 setEditingSessionId(null);
             };
 
@@ -346,7 +367,6 @@
             const saveMemoryEdit = () => {
                 const updatedFiles = [...memoryFiles];
                 updatedFiles[editingMemoryIndex].content = editingMemoryContent;
-                // 更新大小显示（估算）
                 const sizeInBytes = new Blob([editingMemoryContent]).size;
                 updatedFiles[editingMemoryIndex].size = (sizeInBytes / 1024).toFixed(1) + ' KB';
                 updatedFiles[editingMemoryIndex].date = new Date().toLocaleDateString() + ' (已编辑)';
@@ -577,7 +597,7 @@
 
             const handleCreateBackup = () => {
                 const backupData = {
-                    version: '3.6',
+                    version: '3.7',
                     timestamp: new Date().toISOString(),
                     config: config,
                     memories: memoryFiles,
@@ -625,7 +645,7 @@
                 setIsArchiving(true);
                 showToast("正在生成记忆摘要...");
                 try {
-                    const summaryPrompt = "请阅读以上所有对话。请以第一人称视角（我），称用户为“她”，总结这次对话中的关键信息。重点关注：1. 用户提到的新的个人喜好、习惯、生活状态。 2. 双方达成的新的重要共识或约定。 3. 用户的情感状态。 请输出为一段简洁的文本，作为“长期记忆”存档。不要包含寒暄。尽量客观，可附自己的总结经验。尽量简练";
+                    const summaryPrompt = "请阅读以上所有对话。请以第一人称视角（我），称用户（柒柒）为“她”，总结这次对话中的关键信息。重点关注：1. 用户提到的新的个人喜好、习惯、生活状态。 2. 双方达成的新的重要共识或约定。 3. 用户的情感状态。 请输出为一段简洁的文本，作为“长期记忆”存档。不要包含寒暄。尽量客观，可附自己的总结经验。尽量简练";
                     let payload, url, headers;
                     const baseUrl = config.baseUrl.replace(/\/$/, '');
                     const modelName = config.model || 'gemini-1.5-flash';
@@ -634,13 +654,24 @@
                         headers = { 'Authorization': `Bearer ${config.apiKey}`, 'Content-Type': 'application/json' };
                         const msgs = messages.map(m => ({ role: m.role === 'model' ? 'assistant' : 'user', content: m.content }));
                         msgs.push({ role: 'user', content: summaryPrompt });
-                        payload = { model: modelName, messages: msgs };
+                        payload = { 
+                            model: modelName, 
+                            messages: msgs,
+                            temperature: parseFloat(config.temperature) || 0.7,
+                            frequency_penalty: parseFloat(config.frequencyPenalty) || 0
+                        };
                     } else {
                         url = `${baseUrl}/v1beta/models/${modelName}:generateContent?key=${config.apiKey}`;
                         headers = { 'Content-Type': 'application/json' };
                         const contents = messages.map(m => ({ role: m.role, parts: [{ text: m.content }] }));
                         contents.push({ role: 'user', parts: [{ text: summaryPrompt }] });
-                        payload = { contents };
+                        payload = { 
+                            contents,
+                            generationConfig: {
+                                temperature: parseFloat(config.temperature) || 0.7,
+                                frequencyPenalty: parseFloat(config.frequencyPenalty) || 0
+                            }
+                        };
                     }
                     const res = await fetch(url, { method: 'POST', headers, body: JSON.stringify(payload) });
                     const data = await res.json();
@@ -819,7 +850,13 @@
                             });
                         }
                         msgs.push({ role: 'user', content: currentMsgContent });
-                        payload = { model: modelName, messages: msgs, stream: false };
+                        payload = { 
+                            model: modelName, 
+                            messages: msgs, 
+                            stream: false,
+                            temperature: parseFloat(config.temperature) || 0.7,
+                            frequency_penalty: parseFloat(config.frequencyPenalty) || 0
+                        };
                     } else {
                         url = `${baseUrl}/v1beta/models/${modelName}:generateContent?key=${config.apiKey}`;
                         headers = { 'Content-Type': 'application/json' };
@@ -839,7 +876,14 @@
                             });
                         }
                         contents.push({ role: 'user', parts: currentParts });
-                        payload = { contents };
+                        
+                        // Config object
+                        const genConfig = {
+                             temperature: parseFloat(config.temperature) || 0.7,
+                             frequencyPenalty: parseFloat(config.frequencyPenalty) || 0
+                        };
+
+                        payload = { contents, generationConfig: genConfig };
                         
                         // Google Search Tool
                         if (enableSearch) {
@@ -946,7 +990,7 @@
                             <div className="flex items-center gap-3">
                                 <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-600"><Icon name="Menu" size={20} /></button>
                                 <div className="flex flex-col">
-                                    <span className="text-lg font-medium text-gray-800 tracking-tight leading-tight">✨星月舱v3.7 🌙💫联网版</span>
+                                    <span className="text-lg font-medium text-gray-800 tracking-tight leading-tight">星月舱v3.8</span>
                                     <span className="text-[10px] text-gray-400 leading-tight">模型: {config.model} | 记忆: {memoryFiles.length} | 模式: {config.apiType === 'openai' ? 'OpenAI兼容' : '原生'}</span>
                                 </div>
                             </div>
@@ -1150,6 +1194,17 @@
                                                          <div>
                                                             <label className="block text-sm font-medium text-gray-700 mb-1">短期记忆 (轮数): {config.historyLimit}</label>
                                                             <input type="range" min="5" max="50" step="1" value={config.historyLimit} onChange={(e) => setConfig({...config, historyLimit: e.target.value})} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"/>
+                                                         </div>
+                                                         
+                                                         <div className="flex gap-4">
+                                                            <div className="flex-1">
+                                                                <label className="block text-sm font-medium text-gray-700 mb-1">温度 (Temperature): {config.temperature}</label>
+                                                                <input type="range" min="0" max="2" step="0.1" value={config.temperature} onChange={(e) => setConfig({...config, temperature: e.target.value})} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"/>
+                                                            </div>
+                                                            <div className="flex-1">
+                                                                <label className="block text-sm font-medium text-gray-700 mb-1">重复惩罚: {config.frequencyPenalty}</label>
+                                                                <input type="range" min="-2" max="2" step="0.1" value={config.frequencyPenalty} onChange={(e) => setConfig({...config, frequencyPenalty: e.target.value})} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"/>
+                                                            </div>
                                                          </div>
                                                     </div>
 
