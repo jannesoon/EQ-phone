@@ -785,10 +785,16 @@
                 } finally { setIsLoading(false); }
             };
 
-            // 辅助函数：提取 URL
+            // 辅助函数：提取 URL (优化版)
             const extractUrls = (text) => {
-                const urlRegex = /(https?:\/\/[^\s]+)/g;
-                return text.match(urlRegex) || [];
+                // 更精确的 URL 匹配，并自动去除尾部的标点符号
+                const urlRegex = /(https?:\/\/[^\s\u4e00-\u9fa5,，.。;；]+)/g;
+                const matches = text.match(urlRegex);
+                if (!matches) return [];
+                return matches.map(url => {
+                    // 二次清洗，移除可能的尾部标点
+                    return url.replace(/[.,;?!]$/, "");
+                });
             };
 
             const handleSend = async () => {
@@ -802,9 +808,7 @@
 
                 const nowTimestamp = getTimestamp();
                 
-                // 1. 初始 UI 更新：显示用户输入的原始文本
-                // 我们暂时只用原始文本占位，等处理完 URL 后再更新（如果有 URL）
-                // 但为了响应速度，先设置 loading
+                // 1. 初始 UI 更新
                 setIsLoading(true);
                 setError(null);
                 
@@ -815,16 +819,34 @@
                 if (enableSearch) {
                     const urls = extractUrls(input);
                     if (urls.length > 0) {
-                        showToast("正在通过中转读取网页内容...");
+                        // 检查特殊域名
+                        const isRestrictedSite = urls.some(u => 
+                            u.includes('xiaohongshu.com') || 
+                            u.includes('xhslink.com') || 
+                            u.includes('weibo.com') ||
+                            u.includes('instagram.com') ||
+                            u.includes('mp.weixin.qq.com')
+                        );
+
+                        if (isRestrictedSite) {
+                            showToast("小红书/微博/公众号等反爬严格，可能无法读取，建议手动复制正文。", 5000);
+                        } else {
+                            showToast("正在通过中转读取网页内容...");
+                        }
+
                         try {
-                            // 限制读取前 3 个链接，避免过慢
+                            // 限制读取前 3 个链接
                             const fetchPromises = urls.slice(0, 3).map(async (url) => {
                                 try {
-                                    // 使用 jina.ai 作为阅读代理 (转为 Markdown)
                                     const res = await fetch(`https://r.jina.ai/${url}`);
                                     if (res.ok) {
                                         const text = await res.text();
-                                        // 截取长度，避免 token 爆炸
+                                        
+                                        // 检查无效内容 (Jina 有时会返回验证码页面提示)
+                                        if (text.includes("Cloudflare") || text.includes("Verify you are human") || text.length < 50) {
+                                            return `\n> **[读取失败] ${url}**\n> (目标网站反爬拦截，无法获取正文)\n`;
+                                        }
+
                                         const cleanText = text.slice(0, 8000); 
                                         return `\n\n> **[网页快照] ${url}**\n> ${cleanText}\n`;
                                     }
@@ -839,7 +861,7 @@
                             
                             if (webContent.trim()) {
                                 hiddenContext = webContent;
-                                showToast("网页内容读取成功！");
+                                showToast("网页内容读取处理完毕");
                             }
                         } catch (err) {
                             console.error("Link reading error", err);
@@ -900,7 +922,6 @@
                             msgs.push({ role: m.role === 'model' ? 'assistant' : 'user', content: m.content });
                         });
                         
-                        // 移除之前的 input 重复添加逻辑
                         // OpenAI 模式下通常不需要 Google Search Hack，除非是特定的 BaseURL 支持
                         // 但为了兼容，如果开启了联网，且没有 URL 被读取到，我们可以加个提示
                         if (enableSearch && !hiddenContext) {
@@ -1039,7 +1060,7 @@
                             <div className="flex items-center gap-3">
                                 <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-600"><Icon name="Menu" size={20} /></button>
                                 <div className="flex flex-col">
-                                    <span className="text-lg font-medium text-gray-800 tracking-tight leading-tight">✨星月舱v4.0 🌙💫“代理”阅读版</span>
+                                    <span className="text-lg font-medium text-gray-800 tracking-tight leading-tight">✨星月舱v3.8 🌙💫“代理”阅读版</span>
                                     <span className="text-[10px] text-gray-400 leading-tight">模型: {config.model} | 记忆: {memoryFiles.length} | 模式: {config.apiType === 'openai' ? 'OpenAI兼容' : '原生'}</span>
                                 </div>
                             </div>
