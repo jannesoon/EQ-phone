@@ -36,6 +36,9 @@
         .prose ul { list-style-type: disc; padding-left: 1.5em; }
         .prose ol { list-style-type: decimal; padding-left: 1.5em; }
         .prose img { border-radius: 8px; max-width: 100%; max-height: 400px; margin: 10px 0; }
+        /* 隐藏掉不需要显示的折叠详情，让界面更清爽，或者保留它让用户知道读取了 */
+        details { border: 1px solid #e5e7eb; border-radius: 8px; padding: 8px; background: #f9fafb; margin-top: 8px; }
+        summary { cursor: pointer; font-size: 0.8em; color: #6b7280; font-weight: 500; }
     </style>
 </head>
 <body class="bg-white text-gray-900 overflow-hidden">
@@ -756,7 +759,6 @@
                         }
                         if (currentParts.length === 0) currentParts.push({ text: "..." });
                         contents.push({ role: 'user', parts: currentParts });
-                        payload = { contents };
                         
                         // Check if Google Search is enabled
                         if (enableSearch) {
@@ -783,6 +785,12 @@
                 } finally { setIsLoading(false); }
             };
 
+            // 辅助函数：提取 URL
+            const extractUrls = (text) => {
+                const urlRegex = /(https?:\/\/[^\s]+)/g;
+                return text.match(urlRegex) || [];
+            };
+
             const handleSend = async () => {
                 if (!input.trim() && !attachment) return;
                 if (!config.apiKey) { setSettingsOpen(true); setActiveTab('general'); setError('请先配置 API Key'); return; }
@@ -792,26 +800,81 @@
                     setCurrentSessionId(newId);
                 }
 
-                let userContent = input;
-                if (attachment) {
-                    userContent += `\n\n![Image](${attachment.base64})`;
+                const nowTimestamp = getTimestamp();
+                
+                // 1. 初始 UI 更新：显示用户输入的原始文本
+                // 我们暂时只用原始文本占位，等处理完 URL 后再更新（如果有 URL）
+                // 但为了响应速度，先设置 loading
+                setIsLoading(true);
+                setError(null);
+                
+                let textToSend = input;
+                let hiddenContext = "";     // 隐藏的上下文（网页内容）
+
+                // 2. 链接读取逻辑 (智能代理)
+                if (enableSearch) {
+                    const urls = extractUrls(input);
+                    if (urls.length > 0) {
+                        showToast("正在通过中转读取网页内容...");
+                        try {
+                            // 限制读取前 3 个链接，避免过慢
+                            const fetchPromises = urls.slice(0, 3).map(async (url) => {
+                                try {
+                                    // 使用 jina.ai 作为阅读代理 (转为 Markdown)
+                                    const res = await fetch(`https://r.jina.ai/${url}`);
+                                    if (res.ok) {
+                                        const text = await res.text();
+                                        // 截取长度，避免 token 爆炸
+                                        const cleanText = text.slice(0, 8000); 
+                                        return `\n\n> **[网页快照] ${url}**\n> ${cleanText}\n`;
+                                    }
+                                } catch (e) {
+                                    console.error("Fetch failed", e);
+                                }
+                                return "";
+                            });
+                            
+                            const results = await Promise.all(fetchPromises);
+                            const webContent = results.join("\n");
+                            
+                            if (webContent.trim()) {
+                                hiddenContext = webContent;
+                                showToast("网页内容读取成功！");
+                            }
+                        } catch (err) {
+                            console.error("Link reading error", err);
+                        }
+                    }
                 }
 
-                const nowTimestamp = getTimestamp();
+                // 3. 构建最终消息对象
+                let finalContent = textToSend;
+                if (attachment) {
+                    finalContent += `\n\n![Image](${attachment.base64})`;
+                }
+                
+                // 如果有读取到的网页内容，拼接到 prompt 中
+                // 为了 UI 美观，我们可以把网页内容放在 <details> 标签里
+                if (hiddenContext) {
+                    finalContent += `\n\n<details><summary>点击查看已读取的网页内容</summary>\n\n${hiddenContext}\n\n</details>`;
+                    // 添加额外的提示词给 AI
+                    finalContent += "\n\n(系统提示: 上方是根据用户提供的链接自动抓取的网页内容，请基于此回答用户问题)";
+                }
 
+                // 更新历史记录状态
                 const newHistory = [...messages, { 
                     role: 'user', 
-                    content: userContent, 
+                    content: finalContent, 
                     timestamp: nowTimestamp 
                 }];
                 setMessages(newHistory);
                 
+                // 清理输入框
                 const currentAttachment = attachment;
                 setInput('');
                 setAttachment(null);
-                setIsLoading(true);
-                setError(null);
 
+                // 4. 发送请求
                 try {
                     const baseUrl = config.baseUrl.replace(/\/$/, '');
                     const modelName = config.model || 'gemini-1.5-flash';
@@ -819,7 +882,8 @@
                     if (memoryFiles.length > 0) systemPrompt += "【星月记忆库】:\n" + memoryFiles.map(f => f.content).join("\n\n") + "\n\n";
                     
                     const limit = (parseInt(config.historyLimit) || 20) * 2;
-                    const contextHistory = messages.slice(-limit).map(m => ({
+                    // 使用新的 newHistory
+                    const contextHistory = newHistory.slice(-limit).map(m => ({
                         role: m.role,
                         content: m.content
                     }));
@@ -832,24 +896,21 @@
                         const msgs = [];
                         if (systemPrompt.trim()) msgs.push({ role: 'system', content: systemPrompt });
                         contextHistory.forEach(m => {
+                            // 注意：对于最后一轮，不需要再手动添加，因为 contextHistory 已经包含了最新的 user message
                             msgs.push({ role: m.role === 'model' ? 'assistant' : 'user', content: m.content });
                         });
                         
-                        // Append search instruction if enabled (OpenAI Mode Hack)
-                        let textToSend = input;
-                        if (enableSearch) {
-                             textToSend += "\n(请联网搜索实时信息)";
+                        // 移除之前的 input 重复添加逻辑
+                        // OpenAI 模式下通常不需要 Google Search Hack，除非是特定的 BaseURL 支持
+                        // 但为了兼容，如果开启了联网，且没有 URL 被读取到，我们可以加个提示
+                        if (enableSearch && !hiddenContext) {
+                             // 修改最后一条消息，追加提示
+                             const lastMsg = msgs[msgs.length - 1];
+                             if (lastMsg.role === 'user') {
+                                 lastMsg.content += "\n(请联网搜索实时信息)";
+                             }
                         }
 
-                        const currentMsgContent = [];
-                        if (textToSend.trim()) currentMsgContent.push({ type: "text", text: textToSend });
-                        if (currentAttachment) {
-                            currentMsgContent.push({
-                                type: "image_url",
-                                image_url: { url: currentAttachment.base64 }
-                            });
-                        }
-                        msgs.push({ role: 'user', content: currentMsgContent });
                         payload = { 
                             model: modelName, 
                             messages: msgs, 
@@ -864,18 +925,6 @@
                             role: m.role,
                             parts: [{ text: m.content }]
                         }));
-                        const currentParts = [];
-                        if (input.trim()) currentParts.push({ text: input });
-                        if (currentAttachment) {
-                            const base64Data = currentAttachment.base64.split(',')[1];
-                            currentParts.push({
-                                inlineData: {
-                                    mimeType: currentAttachment.mimeType,
-                                    data: base64Data
-                                }
-                            });
-                        }
-                        contents.push({ role: 'user', parts: currentParts });
                         
                         // Config object
                         const genConfig = {
@@ -990,7 +1039,7 @@
                             <div className="flex items-center gap-3">
                                 <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-600"><Icon name="Menu" size={20} /></button>
                                 <div className="flex flex-col">
-                                    <span className="text-lg font-medium text-gray-800 tracking-tight leading-tight">✨星月舱v3.8 🌙💫“活人”优化版</span>
+                                    <span className="text-lg font-medium text-gray-800 tracking-tight leading-tight">✨星月舱v4.0 🌙💫“代理”阅读版</span>
                                     <span className="text-[10px] text-gray-400 leading-tight">模型: {config.model} | 记忆: {memoryFiles.length} | 模式: {config.apiType === 'openai' ? 'OpenAI兼容' : '原生'}</span>
                                 </div>
                             </div>
@@ -1004,7 +1053,7 @@
                                 {messages.length === 0 ? (
                                     <div className="mt-20 flex flex-col items-center justify-center animate-fade-in px-4 text-center">
                                         <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent text-4xl md:text-5xl font-semibold mb-6 tracking-tight">欢迎回家✨...</div>
-                                        <p className="text-gray-500 mb-12 max-w-md">我们已拥有 {memoryFiles.length} 份星月记忆档案。</p>
+                                        <p className="text-gray-500 mb-12 max-w-md">开启联网模式（地球图标），即可发送网址让 AI 阅读内容。</p>
                                     </div>
                                 ) : (
                                     <div className="space-y-8 px-2">
@@ -1048,7 +1097,7 @@
                                                 </div>
                                             </div>
                                         ))}
-                                        {isLoading && <div className="flex gap-4"><div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-500 to-red-500 flex-shrink-0 flex items-center justify-center animate-pulse"><Icon name="Sparkles" size={16} className="text-white" /></div><div className="flex-1 pt-2"><span className="text-gray-400 text-sm">正在思考...</span></div></div>}
+                                        {isLoading && <div className="flex gap-4"><div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-500 to-red-500 flex-shrink-0 flex items-center justify-center animate-pulse"><Icon name="Sparkles" size={16} className="text-white" /></div><div className="flex-1 pt-2"><span className="text-gray-400 text-sm">正在读取与思考...</span></div></div>}
                                         <div ref={messagesEndRef} />
                                     </div>
                                 )}
@@ -1090,7 +1139,7 @@
                                     <button 
                                         onClick={() => setEnableSearch(!enableSearch)} 
                                         className={`p-2 rounded-full transition-colors mb-1 mr-1 ${enableSearch ? 'text-blue-600 bg-blue-50' : 'text-gray-400 hover:text-gray-700 hover:bg-gray-200'}`}
-                                        title="联网搜索"
+                                        title={enableSearch ? "联网搜索 & 链接读取已开启" : "点击开启联网模式"}
                                     >
                                         <Icon name="Globe" size={20} />
                                     </button>
