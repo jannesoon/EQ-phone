@@ -19,10 +19,15 @@
     
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
-        .animate-fade-in { animation: fadeIn 0.3s ease-out forwards; }
+        .animate-fade-in { animation: fadeIn 0.2s ease-out forwards; }
+        .animate-scale-in { animation: scaleIn 0.2s ease-out forwards; }
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes scaleIn {
+            from { opacity: 0; transform: scale(0.9) translateY(10px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
         }
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
@@ -55,7 +60,7 @@
             Settings: () => <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1-1-1.74v-.47a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />,
             Send: () => <path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7z" />,
             User: () => <g><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></g>,
-            Sparkles: () => <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />,
+            Sparkles: () => <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L12 3Z" />,
             X: () => <path d="M18 6 6 18M6 6l12 12" />,
             Image: () => <g><rect width="18" height="18" x="3" y="3" rx="2" ry="2" /><circle cx="9" cy="9" r="2" /><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" /></g>,
             Mic: () => <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3zM19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8" />,
@@ -75,7 +80,8 @@
             StopCircle: () => <g><circle cx="12" cy="12" r="10"></circle><rect x="9" y="9" width="6" height="6"></rect></g>,
             Edit: () => <g><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></g>,
             Check: () => <polyline points="20 6 9 17 4 12"/>,
-            Save: () => <g><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></g>
+            Save: () => <g><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></g>,
+            Clock: () => <g><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></g>
         };
 
         const Icon = ({ name, size = 20, className = "" }) => {
@@ -159,10 +165,12 @@
             const [historySessions, setHistorySessions] = useState([]);
             const [currentSessionId, setCurrentSessionId] = useState(null);
             const [attachment, setAttachment] = useState(null); 
+            const [showAttachMenu, setShowAttachMenu] = useState(false); // 新增：控制附件菜单显示
             
             const [editingSessionId, setEditingSessionId] = useState(null);
             const [editTitle, setEditTitle] = useState('');
-            const [enableSearch, setEnableSearch] = useState(false); 
+            const [enableSearch, setEnableSearch] = useState(false);
+            const [enableTimeAwareness, setEnableTimeAwareness] = useState(false); 
 
             // 记忆编辑状态
             const [editingMemoryIndex, setEditingMemoryIndex] = useState(null);
@@ -727,6 +735,43 @@
                     currentImage = { base64: match[1], mimeType: match[1].split(';')[0].split(':')[1] };
                     currentText = currentText.replace(imageRegex, '').trim(); 
                 }
+                
+                // --- 时间感知逻辑重算 (Regenerate) ---
+                let finalContentForApi = currentText;
+                
+                if (enableTimeAwareness) {
+                    const now = new Date();
+                    const nowStr = now.toLocaleString('zh-CN', { hour12: false });
+                    let diffInfo = "";
+                    
+                    // Regenerate 时，上一条消息应该是 newMessages 倒数第二条（如果存在）
+                    if (newMessages.length > 1) {
+                         const prevMsg = newMessages[newMessages.length - 2];
+                         // 尝试获取时间
+                         let prevTime;
+                         if (prevMsg.timestampRaw) {
+                             prevTime = new Date(prevMsg.timestampRaw);
+                         } else {
+                             // 尝试从字符串解析 (兼容旧数据)
+                             prevTime = new Date(prevMsg.timestamp); 
+                         }
+                         
+                         if (!isNaN(prevTime.getTime())) {
+                             const diffMs = now - prevTime;
+                             const diffMins = Math.floor(diffMs / 60000);
+                             
+                             if (diffMins < 5) diffInfo = " (距离上一条消息仅过去不到 5 分钟)";
+                             else if (diffMins > 60 * 24) diffInfo = ` (距离上一条消息已过去 ${(diffMins/1440).toFixed(1)} 天)`;
+                             else if (diffMins > 60) diffInfo = ` (距离上一条消息已过去 ${(diffMins/60).toFixed(1)} 小时)`;
+                             else diffInfo = ` (距离上一条消息过去了 ${diffMins} 分钟)`;
+                         }
+                    }
+                    
+                    // 将时间提示前置到发给 API 的内容中，但不显示在 UI 上
+                    finalContentForApi = `[系统时间提示]: 当前现实时间是 ${nowStr}${diffInfo}。请感知时间流逝，避免逻辑混乱。\n\n${currentText}`;
+                }
+                // ------------------------------------
+
                 try {
                     const baseUrl = config.baseUrl.replace(/\/$/, '');
                     const modelName = config.model || 'gemini-1.5-flash';
@@ -742,7 +787,7 @@
                         if (systemPrompt.trim()) msgs.push({ role: 'system', content: systemPrompt });
                         contextHistory.forEach(m => msgs.push({ role: m.role === 'model' ? 'assistant' : 'user', content: m.content }));
                         const currentMsgContent = [];
-                        if (currentText) currentMsgContent.push({ type: "text", text: currentText });
+                        if (finalContentForApi) currentMsgContent.push({ type: "text", text: finalContentForApi });
                         if (currentImage) currentMsgContent.push({ type: "image_url", image_url: { url: currentImage.base64 } });
                         if (currentMsgContent.length === 0) currentMsgContent.push({ type: "text", text: "..." });
                         msgs.push({ role: 'user', content: currentMsgContent });
@@ -752,7 +797,7 @@
                         headers = { 'Content-Type': 'application/json' };
                         const contents = contextHistory.map(m => ({ role: m.role, parts: [{ text: m.content }] }));
                         const currentParts = [];
-                        if (currentText) currentParts.push({ text: currentText });
+                        if (finalContentForApi) currentParts.push({ text: finalContentForApi });
                         if (currentImage) {
                             const base64Data = currentImage.base64.split(',')[1];
                             currentParts.push({ inlineData: { mimeType: currentImage.mimeType, data: base64Data } });
@@ -778,10 +823,10 @@
                     let aiText = '';
                     if (config.apiType === 'openai') aiText = data.choices?.[0]?.message?.content || "无回复";
                     else aiText = data.candidates?.[0]?.content?.parts?.[0]?.text || "无回复";
-                    setMessages(prev => [...prev, { role: 'model', content: aiText, timestamp: getTimestamp() }]);
+                    setMessages(prev => [...prev, { role: 'model', content: aiText, timestamp: getTimestamp(), timestampRaw: Date.now() }]);
                 } catch (err) {
                     setError(err.message);
-                    setMessages(prev => [...prev, { role: 'model', content: `错误: ${err.message}`, timestamp: getTimestamp() }]);
+                    setMessages(prev => [...prev, { role: 'model', content: `错误: ${err.message}`, timestamp: getTimestamp(), timestampRaw: Date.now() }]);
                 } finally { setIsLoading(false); }
             };
 
@@ -806,11 +851,13 @@
                     setCurrentSessionId(newId);
                 }
 
-                const nowTimestamp = getTimestamp();
+                const now = new Date(); // Capture now for raw timestamp
+                const nowTimestampStr = getTimestamp();
                 
                 // 1. 初始 UI 更新
                 setIsLoading(true);
                 setError(null);
+                setShowAttachMenu(false); // 发送时自动关闭菜单
                 
                 let textToSend = input;
                 let hiddenContext = "";     // 隐藏的上下文（网页内容）
@@ -869,28 +916,63 @@
                     }
                 }
 
-                // 3. 构建最终消息对象
+                // 3. 构建最终消息对象 (UI 显示用)
                 let finalContent = textToSend;
                 if (attachment) {
                     finalContent += `\n\n![Image](${attachment.base64})`;
                 }
                 
                 // 如果有读取到的网页内容，拼接到 prompt 中
-                // 为了 UI 美观，我们可以把网页内容放在 <details> 标签里
                 if (hiddenContext) {
                     finalContent += `\n\n<details><summary>点击查看已读取的网页内容</summary>\n\n${hiddenContext}\n\n</details>`;
-                    // 添加额外的提示词给 AI
                     finalContent += "\n\n(系统提示: 上方是根据用户提供的链接自动抓取的网页内容，请基于此回答用户问题)";
                 }
 
-                // 更新历史记录状态
+                // 更新历史记录状态 (这里加入 timestampRaw 以便下次计算时间差)
                 const newHistory = [...messages, { 
                     role: 'user', 
                     content: finalContent, 
-                    timestamp: nowTimestamp 
+                    timestamp: nowTimestampStr,
+                    timestampRaw: now.getTime() // 保存精确时间戳
                 }];
                 setMessages(newHistory);
                 
+                // --- 时间感知逻辑 (核心新增) ---
+                let finalContentForApi = finalContent; // 默认发给 API 的内容等于 UI 内容
+
+                if (enableTimeAwareness) {
+                    const nowStr = now.toLocaleString('zh-CN', { hour12: false });
+                    let diffInfo = "";
+                    
+                    // 获取上一条消息（注意：newHistory 已经包含了当前消息，所以是倒数第二条）
+                    if (newHistory.length > 1) {
+                         const prevMsg = newHistory[newHistory.length - 2];
+                         // 尝试获取时间
+                         let prevTime;
+                         if (prevMsg.timestampRaw) {
+                             prevTime = new Date(prevMsg.timestampRaw);
+                         } else {
+                             // 尝试从字符串解析 (兼容旧数据)
+                             prevTime = new Date(prevMsg.timestamp); 
+                         }
+                         
+                         // 只有当时间有效时才计算
+                         if (!isNaN(prevTime.getTime())) {
+                             const diffMs = now.getTime() - prevTime.getTime();
+                             const diffMins = Math.floor(diffMs / 60000);
+                             
+                             if (diffMins < 5) diffInfo = " (距离上一条消息仅过去不到 5 分钟)";
+                             else if (diffMins > 60 * 24) diffInfo = ` (距离上一条消息已过去 ${(diffMins/1440).toFixed(1)} 天)`;
+                             else if (diffMins > 60) diffInfo = ` (距离上一条消息已过去 ${(diffMins/60).toFixed(1)} 小时)`;
+                             else diffInfo = ` (距离上一条消息过去了 ${diffMins} 分钟)`;
+                         }
+                    }
+                    
+                    // 将时间提示前置到发给 API 的内容中，但不显示在 UI 上
+                    finalContentForApi = `[系统时间提示]: 当前现实时间是 ${nowStr}${diffInfo}。请感知时间流逝，避免逻辑混乱。\n\n${finalContent}`;
+                }
+                // -----------------------------
+
                 // 清理输入框
                 const currentAttachment = attachment;
                 setInput('');
@@ -904,11 +986,15 @@
                     if (memoryFiles.length > 0) systemPrompt += "【星月记忆库】:\n" + memoryFiles.map(f => f.content).join("\n\n") + "\n\n";
                     
                     const limit = (parseInt(config.historyLimit) || 20) * 2;
-                    // 使用新的 newHistory
-                    const contextHistory = newHistory.slice(-limit).map(m => ({
-                        role: m.role,
-                        content: m.content
-                    }));
+                    // 使用新的 newHistory, 但要小心：
+                    // contextHistory 里的最后一条消息（即当前用户消息）的内容需要被替换为 finalContentForApi
+                    const contextHistory = newHistory.slice(-limit).map((m, idx, arr) => {
+                        // 如果是最后一条消息（当前发送的），且启用了时间感知，则使用带时间提示的版本
+                        if (idx === arr.length - 1 && enableTimeAwareness) {
+                            return { role: m.role, content: finalContentForApi };
+                        }
+                        return { role: m.role, content: m.content };
+                    });
 
                     let url, headers, payload;
 
@@ -918,14 +1004,11 @@
                         const msgs = [];
                         if (systemPrompt.trim()) msgs.push({ role: 'system', content: systemPrompt });
                         contextHistory.forEach(m => {
-                            // 注意：对于最后一轮，不需要再手动添加，因为 contextHistory 已经包含了最新的 user message
+                            // 自动映射最后一条的内容
                             msgs.push({ role: m.role === 'model' ? 'assistant' : 'user', content: m.content });
                         });
                         
-                        // OpenAI 模式下通常不需要 Google Search Hack，除非是特定的 BaseURL 支持
-                        // 但为了兼容，如果开启了联网，且没有 URL 被读取到，我们可以加个提示
                         if (enableSearch && !hiddenContext) {
-                             // 修改最后一条消息，追加提示
                              const lastMsg = msgs[msgs.length - 1];
                              if (lastMsg.role === 'user') {
                                  lastMsg.content += "\n(请联网搜索实时信息)";
@@ -973,14 +1056,16 @@
                     if (config.apiType === 'openai') { aiText = data.choices?.[0]?.message?.content || "无回复"; } 
                     else { aiText = data.candidates?.[0]?.content?.parts?.[0]?.text || "无回复"; }
                     
+                    // 只有 AI 回复时也记录时间戳，才能让下次对话计算时间差
                     setMessages(prev => [...prev, { 
                         role: 'model', 
                         content: aiText,
-                        timestamp: getTimestamp()
+                        timestamp: getTimestamp(),
+                        timestampRaw: Date.now() 
                     }]);
                 } catch (err) {
                     setError(err.message);
-                    setMessages(prev => [...prev, { role: 'model', content: `错误: ${err.message}`, timestamp: getTimestamp() }]);
+                    setMessages(prev => [...prev, { role: 'model', content: `错误: ${err.message}`, timestamp: getTimestamp(), timestampRaw: Date.now() }]);
                 } finally {
                     setIsLoading(false);
                 }
@@ -1060,7 +1145,7 @@
                             <div className="flex items-center gap-3">
                                 <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-600"><Icon name="Menu" size={20} /></button>
                                 <div className="flex flex-col">
-                                    <span className="text-lg font-medium text-gray-800 tracking-tight leading-tight">✨星月舱v3.8 🌙💫“代理”阅读版</span>
+                                    <span className="text-lg font-medium text-gray-800 tracking-tight leading-tight">✨星月舱v3.9 🌙💫“附件”集成版</span>
                                     <span className="text-[10px] text-gray-400 leading-tight">模型: {config.model} | 记忆: {memoryFiles.length} | 模式: {config.apiType === 'openai' ? 'OpenAI兼容' : '原生'}</span>
                                 </div>
                             </div>
@@ -1074,7 +1159,7 @@
                                 {messages.length === 0 ? (
                                     <div className="mt-20 flex flex-col items-center justify-center animate-fade-in px-4 text-center">
                                         <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent text-4xl md:text-5xl font-semibold mb-6 tracking-tight">欢迎回家✨...</div>
-                                        <p className="text-gray-500 mb-12 max-w-md">开启联网模式（地球图标），即可发送网址让 AI 阅读内容。</p>
+                                        <p className="text-gray-500 mb-12 max-w-md">开启联网模式（点击+号），即可发送网址让 AI 阅读内容。</p>
                                     </div>
                                 ) : (
                                     <div className="space-y-8 px-2">
@@ -1152,17 +1237,54 @@
                                     </div>
                                 )}
 
-                                <div className="bg-gray-100 hover:bg-gray-200/70 focus-within:bg-white focus-within:shadow-md focus-within:ring-1 focus-within:ring-gray-300 rounded-[24px] flex items-end p-2 pl-4 pr-3 transition-all duration-200">
-                                    <button onClick={triggerImageUpload} className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-200 rounded-full transition-colors mb-1 mr-1">
-                                        <Icon name="Image" size={20} />
-                                    </button>
+                                <div className="bg-gray-100 hover:bg-gray-200/70 focus-within:bg-white focus-within:shadow-md focus-within:ring-1 focus-within:ring-gray-300 rounded-[24px] flex items-end p-2 pl-4 pr-3 transition-all duration-200 relative">
                                     
+                                    {/* 附件菜单 (弹出层) */}
+                                    {showAttachMenu && (
+                                        <div className="absolute bottom-full left-0 mb-3 ml-2 bg-white rounded-xl shadow-xl border border-gray-100 p-2 min-w-[150px] animate-scale-in z-20 flex flex-col gap-1 origin-bottom-left">
+                                            <button 
+                                                onClick={() => { triggerImageUpload(); setShowAttachMenu(false); }}
+                                                className="flex items-center gap-3 px-3 py-2.5 hover:bg-purple-50 rounded-lg text-sm text-gray-700 transition-colors w-full text-left group"
+                                            >
+                                                <div className="w-8 h-8 flex items-center justify-center bg-purple-100 text-purple-600 rounded-lg group-hover:bg-purple-200 transition-colors"><Icon name="Image" size={18}/></div>
+                                                <span>上传图片</span>
+                                            </button>
+                                            
+                                            <button 
+                                                onClick={() => setEnableSearch(!enableSearch)} 
+                                                className="flex items-center gap-3 px-3 py-2.5 hover:bg-blue-50 rounded-lg text-sm text-gray-700 transition-colors w-full text-left group"
+                                            >
+                                                <div className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${enableSearch ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-400 group-hover:bg-gray-200'}`}>
+                                                    <Icon name="Globe" size={18}/>
+                                                </div>
+                                                <div className="flex flex-col leading-none gap-1">
+                                                    <span>联网搜索</span>
+                                                    <span className={`text-[10px] ${enableSearch ? 'text-blue-500' : 'text-gray-400'}`}>{enableSearch ? '已开启' : '已关闭'}</span>
+                                                </div>
+                                            </button>
+
+                                            <button 
+                                                onClick={() => setEnableTimeAwareness(!enableTimeAwareness)} 
+                                                className="flex items-center gap-3 px-3 py-2.5 hover:bg-orange-50 rounded-lg text-sm text-gray-700 transition-colors w-full text-left group"
+                                            >
+                                                <div className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${enableTimeAwareness ? 'bg-orange-100 text-orange-600' : 'bg-gray-100 text-gray-400 group-hover:bg-gray-200'}`}>
+                                                    <Icon name="Clock" size={18}/>
+                                                </div>
+                                                <div className="flex flex-col leading-none gap-1">
+                                                    <span>时间感知</span>
+                                                    <span className={`text-[10px] ${enableTimeAwareness ? 'text-orange-500' : 'text-gray-400'}`}>{enableTimeAwareness ? '已开启' : '已关闭'}</span>
+                                                </div>
+                                            </button>
+                                        </div>
+                                    )}
+
+                                    {/* +号按钮 */}
                                     <button 
-                                        onClick={() => setEnableSearch(!enableSearch)} 
-                                        className={`p-2 rounded-full transition-colors mb-1 mr-1 ${enableSearch ? 'text-blue-600 bg-blue-50' : 'text-gray-400 hover:text-gray-700 hover:bg-gray-200'}`}
-                                        title={enableSearch ? "联网搜索 & 链接读取已开启" : "点击开启联网模式"}
+                                        onClick={() => setShowAttachMenu(!showAttachMenu)}
+                                        className={`p-2 rounded-full transition-all duration-300 mb-1 mr-2 flex-shrink-0 ${showAttachMenu ? 'bg-gray-300 text-gray-800 rotate-45' : 'text-gray-400 hover:text-gray-700 hover:bg-gray-200'}`}
+                                        title="更多功能"
                                     >
-                                        <Icon name="Globe" size={20} />
+                                        <Icon name="Plus" size={24} />
                                     </button>
 
                                     <input type="file" ref={chatImageInputRef} style={{display: 'none'}} accept="image/*" onChange={handleChatImageSelect}/>
