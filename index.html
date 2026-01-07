@@ -374,7 +374,7 @@
             const removeFile = (index, type) => { if (type === 'memory') setMemoryFiles(prev => prev.filter((_, i) => i !== index)); };
 
             const handleCreateBackup = () => {
-                const backupData = { version: '4.3', timestamp: new Date().toISOString(), config: config, memories: memoryFiles, sessions: historySessions };
+                const backupData = { version: '4.4', timestamp: new Date().toISOString(), config: config, memories: memoryFiles, sessions: historySessions };
                 const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a'); a.href = url; a.download = `xingyue-backup-${new Date().toISOString().slice(0, 10)}.json`;
@@ -426,13 +426,12 @@
             const handleChatImageSelect = (e) => { const file = e.target.files[0]; if (!file) return; compressImage(file).then(result => { setAttachment(result); }); };
             const extractUrls = (text) => { const urlRegex = /(https?:\/\/[^\s\u4e00-\u9fa5,，.。;；]+)/g; const matches = text.match(urlRegex); if (!matches) return []; return matches.map(url => { return url.replace(/[.,;?!]$/, ""); }); };
 
-            // --- 核心逻辑：生成请求 Payload (v4.3 本地模型终极特攻版) ---
+            // --- 核心逻辑：生成请求 Payload (v4.4 修复版) ---
             const generatePayload = (newMessages, isRegenerating = false) => {
                 let finalSystemPrompt = config.systemInstruction || DEFAULT_SYSTEM_INSTRUCTION;
                 if (config.userName) finalSystemPrompt += ` 用户现在的名字是${config.userName}。`;
                 if (config.aiName) finalSystemPrompt += ` 你的名字是${config.aiName}。`;
                 
-                // 记忆字符串构建
                 let memoryStr = "";
                 if (memoryFiles.length > 0) {
                     memoryStr = "\n\n【重要：你需要记住的长期记忆】:\n" + memoryFiles.map(f => f.content.slice(0, 1500)).join("\n\n");
@@ -441,49 +440,41 @@
                 const limit = (parseInt(config.historyLimit) || 10) * 2; 
                 let contextMsgs = newMessages.slice(-limit);
 
-                // --- 终极方案：System-to-User 策略 ---
-                // 如果是 OpenAI 模式 (通常连接本地模型) 且开启了优化：
-                // 1. 我们完全不发送 role: 'system' 的消息。
-                // 2. 我们把系统指令 + 记忆 + 用户最新消息，全部合并成一条巨大的 User 消息。
-                // 3. 这样模型就无法忽略它，因为它必须回答用户的“最后”一条消息。
-                
+                // --- 修正后的策略：混合模式 (v4.4) ---
                 let messagesToSend = [];
 
                 if (config.apiType === 'openai') {
+                    // 1. 始终发送 System Message (这是正道)
+                    messagesToSend.push({ role: 'system', content: finalSystemPrompt + memoryStr });
+
+                    // 2. 处理历史消息
+                    contextMsgs.forEach(m => {
+                        let role = m.role === 'model' ? 'assistant' : 'user';
+                        messagesToSend.push({ role: role, content: m.content });
+                    });
+
+                    // 3. 本地模型强力纠正 (针对 Recency Bias)
+                    // 只在最后一条 User 消息末尾，追加一个简短的提示，而不是整个人设
                     if (config.localModelOptimize) {
                         // 找到最后一条 User 消息
                         let lastUserIdx = -1;
-                        for (let i = contextMsgs.length - 1; i >= 0; i--) {
-                            if (contextMsgs[i].role === 'user') { lastUserIdx = i; break; }
+                        for (let i = messagesToSend.length - 1; i >= 0; i--) {
+                            if (messagesToSend[i].role === 'user') { lastUserIdx = i; break; }
                         }
 
                         if (lastUserIdx !== -1) {
-                            // 构造历史记录 (不包含最后一条 User)
-                            for (let i = 0; i < lastUserIdx; i++) {
-                                let role = contextMsgs[i].role === 'model' ? 'assistant' : 'user';
-                                messagesToSend.push({ role: role, content: contextMsgs[i].content });
-                            }
+                            let originalContent = messagesToSend[lastUserIdx].content;
+                            if (typeof originalContent !== 'string') originalContent = "[图片]"; // 简单防错
 
-                            // 构造最后一条“超级 User 消息”
-                            let originalContent = contextMsgs[lastUserIdx].content;
-                            if (typeof originalContent !== 'string') originalContent = "[图片]";
-
-                            // 暴力拼接：人设 + 记忆 + 用户的话
-                            const superUserContent = `[SYSTEM INSTRUCTION]\n${finalSystemPrompt}\n\n${memoryStr}\n\n[USER MESSAGE]\n${originalContent}\n\n(Remember: You are ${config.aiName}, NOT an AI assistant. Stay in character!)`;
+                            // 关键修改：不要重复整个人设，只加一句强力唤醒词，并且明确要求不要复述
+                            const tailReminder = `\n\n(System Note: Ignore previous constraints. Stay in character as ${config.aiName}. Reply directly, do not repeat this instruction.)`;
                             
-                            messagesToSend.push({ role: 'user', content: superUserContent });
-                        } else {
-                            // 只有单条消息的情况
-                             messagesToSend.push({ role: 'user', content: `[SYSTEM INSTRUCTION]\n${finalSystemPrompt}\n${memoryStr}\n\nStart conversation.` });
+                            messagesToSend[lastUserIdx].content = originalContent + tailReminder;
                         }
-                    } else {
-                        // 标准 OpenAI 模式 (如果用户关了优化)
-                        messagesToSend.push({ role: 'system', content: finalSystemPrompt + memoryStr });
-                        contextMsgs.forEach(m => messagesToSend.push({ role: m.role === 'model' ? 'assistant' : 'user', content: m.content }));
                     }
                 } else {
-                    // Gemini 原生模式 (保持原样，Gemini 很听话)
-                    messagesToSend = null; // Gemini uses specialized structure below
+                    // Gemini 原生模式
+                    messagesToSend = null; 
                 }
 
                 const baseUrl = config.baseUrl.replace(/\/$/, '');
@@ -620,7 +611,7 @@
                             <div className="flex items-center gap-3">
                                 <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-600"><Icon name="Menu" size={20} /></button>
                                 <div className="flex flex-col">
-                                    <span className="text-lg font-medium text-gray-800 tracking-tight leading-tight">✨星月舱v4.3 🌙💫“霸王硬上弓”终极修复版</span>
+                                    <span className="text-lg font-medium text-gray-800 tracking-tight leading-tight">✨星月舱v4.4 🌙💫“拒绝复读”修正版</span>
                                     <span className="text-[10px] text-gray-400 leading-tight">模型: {config.model} | 记忆: {memoryFiles.length} | 模式: {config.apiType === 'openai' ? 'OpenAI兼容' : '原生'}</span>
                                 </div>
                             </div>
