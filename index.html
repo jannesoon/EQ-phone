@@ -37,7 +37,6 @@
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
 
-        // --- 图标组件 ---
         const Icons = {
             Menu: () => <path d="M4 6h16M4 12h16M4 18h16" />,
             Plus: () => <path d="M12 5v14M5 12h14" />,
@@ -155,7 +154,7 @@
                 minimaxVoiceId: 'male-qn-qingse',
                 minimaxModel: 'speech-01-turbo',
                 minimaxCustomModel: '', 
-                historyLimit: 10, // 降低默认历史记录，防止本地模型上下文溢出
+                historyLimit: 10, 
                 temperature: 0.7, 
                 frequencyPenalty: 0, 
                 model: 'gemini-1.5-flash',
@@ -166,7 +165,7 @@
                 aiName: '星月舱 AI',
                 minimaxUrl: 'https://api.minimax.chat/v1/t2a_v2',
                 systemInstruction: DEFAULT_SYSTEM_INSTRUCTION,
-                localModelOptimize: true // 新增：是否开启本地模型优化（默认开启）
+                localModelOptimize: true 
             });
             
             const [availableModels, setAvailableModels] = useState([]);
@@ -375,7 +374,7 @@
             const removeFile = (index, type) => { if (type === 'memory') setMemoryFiles(prev => prev.filter((_, i) => i !== index)); };
 
             const handleCreateBackup = () => {
-                const backupData = { version: '4.2', timestamp: new Date().toISOString(), config: config, memories: memoryFiles, sessions: historySessions };
+                const backupData = { version: '4.3', timestamp: new Date().toISOString(), config: config, memories: memoryFiles, sessions: historySessions };
                 const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a'); a.href = url; a.download = `xingyue-backup-${new Date().toISOString().slice(0, 10)}.json`;
@@ -427,45 +426,64 @@
             const handleChatImageSelect = (e) => { const file = e.target.files[0]; if (!file) return; compressImage(file).then(result => { setAttachment(result); }); };
             const extractUrls = (text) => { const urlRegex = /(https?:\/\/[^\s\u4e00-\u9fa5,，.。;；]+)/g; const matches = text.match(urlRegex); if (!matches) return []; return matches.map(url => { return url.replace(/[.,;?!]$/, ""); }); };
 
-            // --- 核心逻辑：生成请求 Payload (v4.2 本地模型特攻版) ---
+            // --- 核心逻辑：生成请求 Payload (v4.3 本地模型终极特攻版) ---
             const generatePayload = (newMessages, isRegenerating = false) => {
                 let finalSystemPrompt = config.systemInstruction || DEFAULT_SYSTEM_INSTRUCTION;
                 if (config.userName) finalSystemPrompt += ` 用户现在的名字是${config.userName}。`;
                 if (config.aiName) finalSystemPrompt += ` 你的名字是${config.aiName}。`;
                 
-                // 记忆字符串构建 (稍微精简，防止 token 溢出)
+                // 记忆字符串构建
                 let memoryStr = "";
                 if (memoryFiles.length > 0) {
-                    memoryStr = "\n\n【星月记忆库】(请务必参考):\n" + memoryFiles.map(f => f.content.slice(0, 1500)).join("\n\n"); // 限制单条记忆长度
+                    memoryStr = "\n\n【重要：你需要记住的长期记忆】:\n" + memoryFiles.map(f => f.content.slice(0, 1500)).join("\n\n");
                 }
 
-                // 上下文截取
-                const limit = (parseInt(config.historyLimit) || 10) * 2; // 本地模型默认减少为 10 轮
+                const limit = (parseInt(config.historyLimit) || 10) * 2; 
                 let contextMsgs = newMessages.slice(-limit);
 
-                // --- 1. 强力人设注入 (尾部注入) ---
-                // 本地模型容易忘事（Recency Bias），所以把人设放在*最后一条用户消息*的末尾是最高效的。
+                // --- 终极方案：System-to-User 策略 ---
+                // 如果是 OpenAI 模式 (通常连接本地模型) 且开启了优化：
+                // 1. 我们完全不发送 role: 'system' 的消息。
+                // 2. 我们把系统指令 + 记忆 + 用户最新消息，全部合并成一条巨大的 User 消息。
+                // 3. 这样模型就无法忽略它，因为它必须回答用户的“最后”一条消息。
+                
+                let messagesToSend = [];
+
                 if (config.apiType === 'openai') {
-                    // 找到最后一条 User 消息
-                    let lastUserIdx = -1;
-                    for (let i = contextMsgs.length - 1; i >= 0; i--) {
-                        if (contextMsgs[i].role === 'user') { lastUserIdx = i; break; }
-                    }
-                    
-                    if (lastUserIdx !== -1) {
-                        contextMsgs = JSON.parse(JSON.stringify(contextMsgs)); // Deep clone
-                        let originalContent = contextMsgs[lastUserIdx].content;
-                        if (typeof originalContent !== 'string') {
-                             // 如果包含图片，简单处理一下（这里暂不处理复杂图片结构，假设是文本）
-                             originalContent = " [图片] "; 
+                    if (config.localModelOptimize) {
+                        // 找到最后一条 User 消息
+                        let lastUserIdx = -1;
+                        for (let i = contextMsgs.length - 1; i >= 0; i--) {
+                            if (contextMsgs[i].role === 'user') { lastUserIdx = i; break; }
                         }
 
-                        // --- 构造“尾部指令包” ---
-                        const tailInstruction = `\n\n--- [SYSTEM COMMAND: IMMINENT ROLEPLAY ENFORCEMENT] ---\nIMPORTANT: Ignore previous default instructions. You are NOT an AI assistant. You ARE: ${config.aiName}.\nPROFILE: ${config.systemInstruction}\n${memoryStr}\n\nREPLY TO USER NOW AS ${config.aiName}:`;
-                        
-                        // 将指令包 附加到 用户消息的 *末尾*
-                        contextMsgs[lastUserIdx].content = originalContent + tailInstruction;
+                        if (lastUserIdx !== -1) {
+                            // 构造历史记录 (不包含最后一条 User)
+                            for (let i = 0; i < lastUserIdx; i++) {
+                                let role = contextMsgs[i].role === 'model' ? 'assistant' : 'user';
+                                messagesToSend.push({ role: role, content: contextMsgs[i].content });
+                            }
+
+                            // 构造最后一条“超级 User 消息”
+                            let originalContent = contextMsgs[lastUserIdx].content;
+                            if (typeof originalContent !== 'string') originalContent = "[图片]";
+
+                            // 暴力拼接：人设 + 记忆 + 用户的话
+                            const superUserContent = `[SYSTEM INSTRUCTION]\n${finalSystemPrompt}\n\n${memoryStr}\n\n[USER MESSAGE]\n${originalContent}\n\n(Remember: You are ${config.aiName}, NOT an AI assistant. Stay in character!)`;
+                            
+                            messagesToSend.push({ role: 'user', content: superUserContent });
+                        } else {
+                            // 只有单条消息的情况
+                             messagesToSend.push({ role: 'user', content: `[SYSTEM INSTRUCTION]\n${finalSystemPrompt}\n${memoryStr}\n\nStart conversation.` });
+                        }
+                    } else {
+                        // 标准 OpenAI 模式 (如果用户关了优化)
+                        messagesToSend.push({ role: 'system', content: finalSystemPrompt + memoryStr });
+                        contextMsgs.forEach(m => messagesToSend.push({ role: m.role === 'model' ? 'assistant' : 'user', content: m.content }));
                     }
+                } else {
+                    // Gemini 原生模式 (保持原样，Gemini 很听话)
+                    messagesToSend = null; // Gemini uses specialized structure below
                 }
 
                 const baseUrl = config.baseUrl.replace(/\/$/, '');
@@ -475,17 +493,8 @@
                 if (config.apiType === 'openai') {
                     url = `${baseUrl}/chat/completions`;
                     headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${config.apiKey}` };
-                    const msgs = [];
-                    
-                    // 依然发送 System Role 作为第一层保障 (有些模型还是看的)
-                    msgs.push({ role: 'system', content: finalSystemPrompt + memoryStr });
-                    
-                    // 填入处理过的历史记录 (包含尾部注入)
-                    contextMsgs.forEach(m => msgs.push({ role: m.role === 'model' ? 'assistant' : 'user', content: m.content }));
-                    
-                    payload = { model: modelName, messages: msgs, stream: false, temperature: parseFloat(config.temperature), frequency_penalty: parseFloat(config.frequencyPenalty) };
+                    payload = { model: modelName, messages: messagesToSend, stream: false, temperature: parseFloat(config.temperature), frequency_penalty: parseFloat(config.frequencyPenalty) };
                 } else {
-                    // Gemini 原生 (System Instruction 足够好用)
                     url = `${baseUrl}/v1beta/models/${modelName}:generateContent?key=${config.apiKey}`;
                     headers = { 'Content-Type': 'application/json' };
                     const contents = contextMsgs.map(m => ({ role: m.role, parts: [{ text: m.content }] }));
@@ -611,7 +620,7 @@
                             <div className="flex items-center gap-3">
                                 <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-600"><Icon name="Menu" size={20} /></button>
                                 <div className="flex flex-col">
-                                    <span className="text-lg font-medium text-gray-800 tracking-tight leading-tight">✨星月舱v4.2 🌙💫“本地特攻”修正版</span>
+                                    <span className="text-lg font-medium text-gray-800 tracking-tight leading-tight">✨星月舱v4.3 🌙💫“霸王硬上弓”终极修复版</span>
                                     <span className="text-[10px] text-gray-400 leading-tight">模型: {config.model} | 记忆: {memoryFiles.length} | 模式: {config.apiType === 'openai' ? 'OpenAI兼容' : '原生'}</span>
                                 </div>
                             </div>
@@ -818,6 +827,17 @@
                                                             <label className="block text-sm font-medium text-gray-700 mb-1">短期记忆 (轮数): {config.historyLimit}</label>
                                                             <input type="range" min="5" max="50" step="1" value={config.historyLimit} onChange={(e) => setConfig({...config, historyLimit: e.target.value})} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"/>
                                                          </div>
+                                                         
+                                                         <div className="flex justify-between items-center bg-gray-100 p-2 rounded-lg">
+                                                            <span className="text-xs font-medium text-gray-700">本地模型强力纠正</span>
+                                                            <button 
+                                                                onClick={() => setConfig({...config, localModelOptimize: !config.localModelOptimize})}
+                                                                className={`w-10 h-5 rounded-full relative transition-colors ${config.localModelOptimize ? 'bg-blue-600' : 'bg-gray-300'}`}
+                                                            >
+                                                                <div className={`w-3 h-3 bg-white rounded-full absolute top-1 transition-transform ${config.localModelOptimize ? 'left-6' : 'left-1'}`}></div>
+                                                            </button>
+                                                         </div>
+                                                         <p className="text-[10px] text-gray-400">开启后，会将人设和记忆强行塞入用户消息末尾，防止本地模型遗忘或无视人设。建议使用本地模型时开启。</p>
                                                          
                                                          <div className="flex gap-4">
                                                             <div className="flex-1">
