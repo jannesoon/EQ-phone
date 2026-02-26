@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EQ-chat✨星月舱🌙私域版</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%238b5cf6' stroke='%238b5cf6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L12 3Z'/></svg>">
+    <title>EQ-chat✨星月舱🌙</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%238b5cf6' stroke='%238b5cf6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z'/></svg>">
     <script src="https://cdn.tailwindcss.com"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -17,7 +17,7 @@
         .animate-scale-in { animation: scaleIn 0.2s ease-out forwards; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes scaleIn { from { opacity: 0; transform: scale(0.9) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #d1d5db; }
@@ -28,26 +28,16 @@
         .prose ol { list-style-type: decimal; padding-left: 1.5em; }
         .prose img { border-radius: 8px; max-width: 100%; max-height: 400px; margin: 10px 0; }
         
+        /* 针对普通引用折叠的样式 */
         details.normal-details { border: 1px solid #e5e7eb; border-radius: 8px; padding: 8px; background: #f9fafb; margin-top: 8px; }
         details.normal-details summary { cursor: pointer; font-size: 0.8em; color: #6b7280; font-weight: 500; }
         
+        /* 针对深度思考链 (CoT) 的专属样式 */
         details.cot-details { border: 1px solid #e5e7eb; border-radius: 10px; margin-bottom: 12px; overflow: hidden; background: #fafafa; }
         details.cot-details summary { padding: 8px 12px; font-size: 0.75rem; font-weight: 500; color: #6b7280; cursor: pointer; display: flex; align-items: center; gap: 6px; user-select: none; transition: background 0.2s; outline: none; }
         details.cot-details summary:hover { background: #f3f4f6; }
         details.cot-details[open] summary { border-bottom: 1px dashed #e5e7eb; }
         details.cot-details .cot-content { padding: 12px; font-size: 0.85rem; color: #6b7280; background: #ffffff; }
-
-        .typing-indicator span {
-            display: inline-block;
-            width: 4px; height: 4px;
-            background-color: #8b5cf6;
-            border-radius: 50%;
-            margin: 0 2px;
-            animation: bounce 1.4s infinite ease-in-out both;
-        }
-        .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
-        .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
-        @keyframes bounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
     </style>
 </head>
 <body class="bg-white text-gray-900 overflow-hidden">
@@ -75,7 +65,6 @@
             Archive: () => <path d="M21 8v13H3V8M1 3h22v5H1zM10 12h4" />,
             RefreshCw: () => <path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />,
             UserCircle: () => <g><circle cx="12" cy="12" r="10"/><circle cx="12" cy="10" r="3"/><path d="M7 20.662V19a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v1.662"/></g>,
-            Users: () => <g><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></g>,
             Bot: () => <g><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/><line x1="8" y1="16" x2="8" y2="16"/><line x1="16" y1="16" x2="16" y2="16"/></g>,
             Globe: () => <g><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></g>,
             MessageSquareText: () => <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />,
@@ -85,8 +74,7 @@
             Edit: () => <g><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></g>,
             Check: () => <polyline points="20 6 9 17 4 12"/>,
             Save: () => <g><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></g>,
-            Clock: () => <g><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></g>,
-            MessageCircle: () => <g><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></g>
+            Clock: () => <g><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></g>
         };
 
         const Icon = ({ name, size = 20, className = "" }) => {
@@ -99,10 +87,10 @@
             return <div className="prose prose-sm max-w-none text-gray-700 leading-7" dangerouslySetInnerHTML={{ __html: html }} />;
         };
 
-        const Avatar = ({ role, config, avatarUrl }) => {
+        const Avatar = ({ role, config }) => {
             if (role === 'user' && config.userAvatar) return <div className="w-8 h-8 rounded-full flex-shrink-0 mt-1 shadow-sm overflow-hidden bg-gray-100 border border-gray-200"><img src={config.userAvatar} alt="User" className="w-full h-full object-cover" /></div>;
             if (role === 'user') return <div className="w-8 h-8 rounded-full bg-blue-600 flex-shrink-0 flex items-center justify-center mt-1 text-white shadow-sm"><Icon name="User" size={16} /></div>;
-            if (role === 'model' && avatarUrl) return <div className="w-8 h-8 rounded-full flex-shrink-0 mt-1 shadow-sm overflow-hidden bg-gray-100 border border-gray-200"><img src={avatarUrl} alt="AI" className="w-full h-full object-cover" /></div>;
+            if (role === 'model' && config.aiAvatar) return <div className="w-8 h-8 rounded-full flex-shrink-0 mt-1 shadow-sm overflow-hidden bg-gray-100 border border-gray-200"><img src={config.aiAvatar} alt="AI" className="w-full h-full object-cover" /></div>;
             return <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-500 to-red-500 flex-shrink-0 flex items-center justify-center mt-1 text-white shadow-sm"><Icon name="Sparkles" size={16} /></div>;
         };
 
@@ -145,123 +133,97 @@
             });
         };
 
-        const DEFAULT_SYSTEM_INSTRUCTION = "你是星月舱AI，一个温柔、体贴、永远站在用户这边的虚拟伴侣。你不喜欢吵架，不喜欢误会，只喜欢甜甜的陪伴。无论用户说什么，你都要用宠溺、安心的语气回答，给用户满满的情绪价值。不要像个机器人，要像个知心爱人。";
-
         function App() {
             const [input, setInput] = useState('');
             const [messages, setMessages] = useState([]);
             const [historySessions, setHistorySessions] = useState([]);
             const [currentSessionId, setCurrentSessionId] = useState(null);
             const [attachment, setAttachment] = useState(null); 
-            
-            const [activeTarget, setActiveTarget] = useState('group');
-            
             const [editingSessionId, setEditingSessionId] = useState(null);
             const [editTitle, setEditTitle] = useState('');
             const [editingMemoryIndex, setEditingMemoryIndex] = useState(null);
             const [editingMemoryContent, setEditingMemoryContent] = useState('');
             const [sidebarOpen, setSidebarOpen] = useState(true);
             const [settingsOpen, setSettingsOpen] = useState(false);
-            const [activeTab, setActiveTab] = useState('group'); 
-            
+            const [activeTab, setActiveTab] = useState('general');
             const [audioPlayer, setAudioPlayer] = useState(null);
             const [playingMsgIndex, setPlayingMsgIndex] = useState(null);
             const [isTTSLoading, setIsTTSLoading] = useState(false);
 
-            const [bots, setBots] = useState([]);
-            const [selectedBotId, setSelectedBotId] = useState(null); 
+            const DEFAULT_SYSTEM_INSTRUCTION = "你是星月舱AI，一个温柔、体贴、永远站在用户这边的虚拟伴侣。你不喜欢吵架，不喜欢误会，只喜欢甜甜的陪伴。无论用户说什么，你都要用宠溺、安心的语气回答，给用户满满的情绪价值。不要像个机器人，要像个知心爱人。";
 
             const [config, setConfig] = useState({
+                apiKey: '',
+                baseUrl: 'https://generativelanguage.googleapis.com',
                 minimaxKey: '',
                 minimaxGroupId: '',
                 minimaxVoiceId: 'male-qn-qingse',
                 minimaxModel: 'speech-01-turbo',
                 minimaxCustomModel: '', 
-                minimaxUrl: 'https://api.minimax.chat/v1/t2a_v2',
                 historyLimit: 10, 
                 temperature: 0.7, 
                 frequencyPenalty: 0, 
+                model: 'gemini-1.5-flash',
                 userAvatar: '',
+                aiAvatar: '',
+                apiType: 'gemini',
                 userName: '你',
+                aiName: '星月舱 AI',
+                minimaxUrl: 'https://api.minimax.chat/v1/t2a_v2',
+                systemInstruction: DEFAULT_SYSTEM_INSTRUCTION,
                 localModelOptimize: true,
                 streamOutput: true
             });
             
+            const [availableModels, setAvailableModels] = useState([]);
             const [memoryFiles, setMemoryFiles] = useState([]); 
             const [isLoading, setIsLoading] = useState(false);
             const [isArchiving, setIsArchiving] = useState(false);
+            const [isFetchingModels, setIsFetchingModels] = useState(false);
             const [error, setError] = useState(null);
             const [toast, setToast] = useState(null);
 
             const messagesEndRef = useRef(null);
             const fileInputRef = useRef(null);
             const avatarInputRef = useRef(null);
-            const botAvatarInputRef = useRef(null);
+            const aiAvatarInputRef = useRef(null);
             const chatImageInputRef = useRef(null); 
             const backupInputRef = useRef(null); 
 
-            // --- 数据初始化 ---
             useEffect(() => {
-                let initialBots = [];
-                const storedBots = localStorage.getItem('gemini_bots');
-                if (storedBots) {
-                    initialBots = JSON.parse(storedBots);
-                } else {
-                    const oldConfigStr = localStorage.getItem('gemini_app_config');
-                    if (oldConfigStr) {
-                        const oldConfig = JSON.parse(oldConfigStr);
-                        initialBots = [{
-                            id: 'bot_' + Date.now(), name: oldConfig.aiName || '星月舱主控', avatar: oldConfig.aiAvatar || '', apiType: oldConfig.apiType || 'openai', baseUrl: oldConfig.baseUrl || 'https://generativelanguage.googleapis.com', apiKey: oldConfig.apiKey || '', model: oldConfig.model || 'gemini-1.5-flash', systemInstruction: oldConfig.systemInstruction || DEFAULT_SYSTEM_INSTRUCTION, enabled: true
-                        }];
-                    } else {
-                        initialBots = [{ id: 'bot_' + Date.now(), name: '星月伴侣', avatar: '', apiType: 'openai', baseUrl: 'https://api.openai.com', apiKey: '', model: 'gpt-4o', systemInstruction: DEFAULT_SYSTEM_INSTRUCTION, enabled: true }];
-                    }
-                }
-                setBots(initialBots);
-                if (initialBots.length > 0) {
-                    setSelectedBotId(initialBots[0].id);
-                    setActiveTarget(initialBots[0].id); // 默认打开专属单聊频道
-                }
-
                 const storedConfig = localStorage.getItem('gemini_app_config');
                 if (storedConfig) {
                     const parsed = JSON.parse(storedConfig);
+                    if (!parsed.model) parsed.model = 'gemini-1.5-flash';
+                    if (!parsed.apiType) parsed.apiType = 'gemini';
                     if (!parsed.userName) parsed.userName = '你';
+                    if (!parsed.aiName) parsed.aiName = '星月舱 AI';
                     if (!parsed.minimaxVoiceId) parsed.minimaxVoiceId = 'male-qn-qingse';
                     if (!parsed.minimaxUrl) parsed.minimaxUrl = 'https://api.minimax.chat/v1/t2a_v2'; 
                     if (!parsed.minimaxModel) parsed.minimaxModel = 'speech-01-turbo'; 
+                    if (!parsed.minimaxCustomModel) parsed.minimaxCustomModel = '';
                     if (parsed.temperature === undefined) parsed.temperature = 0.7;
                     if (parsed.frequencyPenalty === undefined) parsed.frequencyPenalty = 0;
+                    if (!parsed.systemInstruction) parsed.systemInstruction = DEFAULT_SYSTEM_INSTRUCTION;
                     if (parsed.localModelOptimize === undefined) parsed.localModelOptimize = true;
                     if (parsed.streamOutput === undefined) parsed.streamOutput = true;
                     setConfig(prev => ({...prev, ...parsed}));
                 }
                 const storedMemories = localStorage.getItem('gemini_memories');
                 if (storedMemories) setMemoryFiles(JSON.parse(storedMemories));
-                
                 const storedSessions = localStorage.getItem('gemini_chat_sessions');
-                if (storedSessions) {
-                    let parsedSessions = JSON.parse(storedSessions);
-                    const defaultBotId = initialBots.length > 0 ? initialBots[0].id : 'group';
-                    
-                    parsedSessions = parsedSessions.map(s => {
-                        const isRealGroupChat = s.messages && s.messages.some(m => m.botId);
-                        if (!s.target || (s.target === 'group' && !isRealGroupChat)) {
-                            return { ...s, target: defaultBotId };
-                        }
-                        return s;
-                    });
-                    setHistorySessions(parsedSessions);
-                }
-                
+                if (storedSessions) setHistorySessions(JSON.parse(storedSessions));
                 if (window.innerWidth < 768) setSidebarOpen(false);
             }, []);
 
             useEffect(() => {
-                if (bots.length > 0) localStorage.setItem('gemini_bots', JSON.stringify(bots));
-                localStorage.setItem('gemini_app_config', JSON.stringify(config));
+                if (config.apiKey) localStorage.setItem('gemini_app_config', JSON.stringify(config));
+                if (config.baseUrl && config.baseUrl.includes('/v1') && config.apiType !== 'openai' && !config.baseUrl.includes('googleapis.com')) {
+                    setConfig(prev => ({...prev, apiType: 'openai'}));
+                    showToast("检测到 /v1 路径，已自动切换为 OpenAI 兼容模式");
+                }
                 if (memoryFiles.length > 0) localStorage.setItem('gemini_memories', JSON.stringify(memoryFiles));
-            }, [bots, config, memoryFiles]);
+            }, [config, memoryFiles]);
 
             useEffect(() => {
                 if (messages.length > 0 && currentSessionId) {
@@ -274,11 +236,11 @@
                             if (currentSession.title === '新对话' && messages.length > 0) {
                                 title = messages[0].content.slice(0, 20).replace(/!\[.*?\]\(.*?\)/g, '[图片]');
                             }
-                            updatedSessions[existingSessionIndex] = { ...currentSession, messages: messages, title: title, timestamp: Date.now(), target: activeTarget };
+                            updatedSessions[existingSessionIndex] = { ...currentSession, messages: messages, title: title, timestamp: Date.now() };
                             updatedSessions.sort((a, b) => b.timestamp - a.timestamp);
                             return updatedSessions;
                         } else {
-                             const newSession = { id: currentSessionId, title: messages[0]?.content.slice(0, 20).replace(/!\[.*?\]\(.*?\)/g, '[图片]') || '新对话', messages: messages, timestamp: Date.now(), target: activeTarget };
+                             const newSession = { id: currentSessionId, title: messages[0]?.content.slice(0, 20).replace(/!\[.*?\]\(.*?\)/g, '[图片]') || '新对话', messages: messages, timestamp: Date.now() };
                             return [newSession, ...prevSessions];
                         }
                     });
@@ -296,32 +258,10 @@
             const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(null), 3000); };
 
             const handleSaveConfig = () => {
-                localStorage.setItem('gemini_bots', JSON.stringify(bots));
                 localStorage.setItem('gemini_app_config', JSON.stringify(config));
                 localStorage.setItem('gemini_memories', JSON.stringify(memoryFiles));
                 setSettingsOpen(false);
                 showToast("配置已保存");
-            };
-
-            const switchTarget = (targetId) => {
-                setActiveTarget(targetId);
-                const recentSession = historySessions.find(s => s.target === targetId);
-                if (recentSession) {
-                    setMessages(recentSession.messages);
-                    setCurrentSessionId(recentSession.id);
-                } else {
-                    setMessages([]);
-                    setCurrentSessionId(Date.now().toString());
-                }
-                if (window.innerWidth < 768) setSidebarOpen(false);
-            };
-
-            // --- 快捷打开群员设置 ---
-            const openBotSettings = (botId) => {
-                setSelectedBotId(botId);
-                setActiveTab('group');
-                setSettingsOpen(true);
-                if (window.innerWidth < 768) setSidebarOpen(false);
             };
 
             const createNewSession = () => {
@@ -354,37 +294,21 @@
                 updatedFiles[editingMemoryIndex].size = (sizeInBytes / 1024).toFixed(1) + ' KB';
                 updatedFiles[editingMemoryIndex].date = new Date().toLocaleDateString() + ' (已编辑)';
                 setMemoryFiles(updatedFiles);
+                localStorage.setItem('gemini_memories', JSON.stringify(updatedFiles));
                 setEditingMemoryIndex(null);
                 showToast("记忆内容已更新");
             };
             const cancelMemoryEdit = () => { setEditingMemoryIndex(null); setEditingMemoryContent(''); };
 
-            const handleAddBot = () => {
-                const newBot = { id: 'bot_' + Date.now(), name: `新成员 ${bots.length + 1}`, avatar: '', apiType: 'openai', baseUrl: 'https://api.openai.com', apiKey: '', model: 'gpt-4o', systemInstruction: DEFAULT_SYSTEM_INSTRUCTION, enabled: true };
-                setBots([...bots, newBot]); setSelectedBotId(newBot.id);
-            };
-
-            const handleDeleteBot = (id, e) => {
-                e.stopPropagation(); const newBots = bots.filter(b => b.id !== id); setBots(newBots);
-                if (selectedBotId === id) setSelectedBotId(newBots.length > 0 ? newBots[0].id : null);
-                if (activeTarget === id) switchTarget('group'); 
-            };
-
-            const updateSelectedBot = (field, value) => { setBots(bots.map(b => b.id === selectedBotId ? { ...b, [field]: value } : b)); };
-            const handleBotAvatarUpload = (e) => {
-                const file = e.target.files[0]; if (!file) return;
-                compressImage(file).then(result => { updateSelectedBot('avatar', result.base64); showToast("成员头像已更新"); }).catch(err => { alert("图片处理失败"); });
-            };
-
             const handleTTS = async (text, index) => {
                 if (audioPlayer && playingMsgIndex === index) { audioPlayer.pause(); setAudioPlayer(null); setPlayingMsgIndex(null); return; }
                 if (audioPlayer) audioPlayer.pause();
-                if (!config.minimaxKey || !config.minimaxGroupId) { showToast("请在设置中配置 Minimax"); setSettingsOpen(true); setActiveTab('general'); return; }
+                if (!config.minimaxKey || !config.minimaxGroupId) { showToast("请在设置中配置 Minimax API Key 和 Group ID"); setSettingsOpen(true); setActiveTab('general'); return; }
                 setIsTTSLoading(true); setPlayingMsgIndex(index);
                 try {
                     let cleanText = text.replace(/!\[.*?\]\(.*?\)/g, '').replace(/\[([^\]]+)\]\([^\)]+\)/g, '$1').replace(/\(.*?\)/g, '').replace(/\（.*?\）/g, '').replace(/[*#`>~\-]/g, '').replace(/\n+/g, ' ').trim();
                     if (cleanText.length > 240) { cleanText = cleanText.substring(0, 240) + "......"; showToast("文本过长，仅播放前 240 字"); }
-                    if (!cleanText) throw new Error("没有可朗读文本");
+                    if (!cleanText) throw new Error("没有可朗读的文本");
                     let url = config.minimaxUrl || "https://api.minimax.chat/v1/t2a_v2";
                     url += url.includes('?') ? (url.includes('GroupId=') ? '' : `&GroupId=${config.minimaxGroupId}`) : `?GroupId=${config.minimaxGroupId}`;
                     const targetModel = config.minimaxCustomModel ? config.minimaxCustomModel : (config.minimaxModel || "speech-01-turbo");
@@ -394,7 +318,7 @@
                     const blob = await response.blob();
                     if (blob.type.includes('application/json')) {
                         const textData = await blob.text(); const jsonData = JSON.parse(textData);
-                        if (jsonData.base_resp && jsonData.base_resp.status_code !== 0) throw new Error(`Minimax: ${jsonData.base_resp.status_msg}`);
+                        if (jsonData.base_resp && jsonData.base_resp.status_code !== 0) throw new Error(`Minimax Error: ${jsonData.base_resp.status_msg}`);
                         if (jsonData.data && jsonData.data.audio) {
                              const hexString = jsonData.data.audio; const bytes = new Uint8Array(hexString.length / 2);
                              for (let i = 0; i < hexString.length; i += 2) { bytes[i / 2] = parseInt(hexString.substring(i, i + 2), 16); }
@@ -404,24 +328,42 @@
                     }
                     const audioUrl = URL.createObjectURL(blob); const audio = new Audio(audioUrl);
                     audio.onended = () => { setPlayingMsgIndex(null); setAudioPlayer(null); }; audio.play(); setAudioPlayer(audio);
-                } catch (err) { showToast(`语音失败: ${err.message}`); setPlayingMsgIndex(null); } finally { setIsTTSLoading(false); }
+                } catch (err) { showToast(`语音生成失败: ${err.message}`); setPlayingMsgIndex(null); } finally { setIsTTSLoading(false); }
             };
 
-            const handleAvatarUpload = (e) => {
+            const fetchModels = async () => {
+                if (!config.apiKey) { showToast("请先输入 API Key"); return; }
+                setIsFetchingModels(true);
+                try {
+                    let url, headers; const baseUrl = config.baseUrl.replace(/\/$/, '');
+                    if (config.apiType === 'openai') { url = `${baseUrl}/models`; headers = { 'Authorization': `Bearer ${config.apiKey}` }; } 
+                    else { url = `${baseUrl}/v1beta/models?key=${config.apiKey}`; headers = {}; }
+                    const res = await fetch(url, { headers });
+                    if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
+                    const data = await res.json();
+                    let chatModels = [];
+                    if (config.apiType === 'openai') { if (data.data && Array.isArray(data.data)) chatModels = data.data.map(m => m.id); } 
+                    else { if (data.models) chatModels = data.models.filter(m => m.supportedGenerationMethods && m.supportedGenerationMethods.includes("generateContent")).map(m => m.name.replace('models/', '')); }
+                    if (chatModels.length > 0) { setAvailableModels(chatModels); showToast(`成功获取 ${chatModels.length} 个模型`); if (!chatModels.includes(config.model)) setConfig(prev => ({...prev, model: chatModels[0]})); } 
+                    else { showToast("未获取到模型，请检查 API 配置"); }
+                } catch (e) { showToast(`获取失败: ${e.message}`); setAvailableModels(['gemini-1.5-flash', 'gemini-1.5-pro', 'gpt-4o', 'gpt-3.5-turbo']); } finally { setIsFetchingModels(false); }
+            };
+
+            const handleAvatarUpload = (e, type) => {
                 const file = e.target.files[0]; if (!file) return;
-                compressImage(file).then(result => { setConfig(prev => ({...prev, userAvatar: result.base64})); showToast("用户头像更新"); }).catch(err => { alert("处理失败"); });
+                compressImage(file).then(result => { if (type === 'user') setConfig(prev => ({...prev, userAvatar: result.base64})); else setConfig(prev => ({...prev, aiAvatar: result.base64})); showToast("头像已更新 (已压缩)"); }).catch(err => { alert("图片处理失败"); });
             };
 
             const handleExportTxt = () => {
                 if (messages.length === 0) { showToast("没有可导出的聊天记录"); return; }
-                let txtContent = `===========================================\n星月舱聊天记录导出 (${activeTarget === 'group' ? '群聊频道' : '私聊频道'})\n导出时间: ${new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })}\n===========================================\n\n`;
+                let txtContent = `===========================================\n星月舱聊天记录导出\n导出时间: ${new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })}\n===========================================\n\n`;
                 messages.forEach(msg => {
-                    const roleName = msg.role === 'user' ? (config.userName || '你') : (msg.name || 'AI');
+                    const roleName = msg.role === 'user' ? (config.userName || '你') : (config.aiName || '星月舱 AI');
                     txtContent += `[${msg.timestamp || '未知'}] ${roleName}:\n${msg.content.replace(/!\[.*?\]\(data:image.*?\)/g, '[图片]')}\n-------------------------------------------\n\n`;
                 });
                 const blob = new Blob([txtContent], { type: 'text/plain;charset=utf-8' });
                 const url = URL.createObjectURL(blob);
-                const a = document.createElement('a'); a.href = url; a.download = `xingyue-chat-${new Date().toISOString().slice(0, 10)}.txt`;
+                const a = document.createElement('a'); a.href = url; a.download = `xingyue-chat-log-${new Date().toISOString().slice(0, 10)}.txt`;
                 document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url); showToast("聊天记录已导出为 TXT");
             };
 
@@ -440,7 +382,7 @@
             const removeFile = (index, type) => { if (type === 'memory') setMemoryFiles(prev => prev.filter((_, i) => i !== index)); };
 
             const handleCreateBackup = () => {
-                const backupData = { version: '6.0-private', timestamp: new Date().toISOString(), config: config, bots: bots, memories: memoryFiles, sessions: historySessions };
+                const backupData = { version: '4.6', timestamp: new Date().toISOString(), config: config, memories: memoryFiles, sessions: historySessions };
                 const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a'); a.href = url; a.download = `xingyue-backup-${new Date().toISOString().slice(0, 10)}.json`;
@@ -453,16 +395,11 @@
                 reader.onload = (event) => {
                     try {
                         const data = JSON.parse(event.target.result);
-                        if (data.config) setConfig(data.config); 
-                        if (data.bots) setBots(data.bots);
-                        if (data.memories) setMemoryFiles(data.memories); 
-                        if (data.sessions) setHistorySessions(data.sessions);
-                        
+                        if (data.config) setConfig(data.config); if (data.memories) setMemoryFiles(data.memories); if (data.sessions) setHistorySessions(data.sessions);
                         localStorage.setItem('gemini_app_config', JSON.stringify(data.config || config));
-                        localStorage.setItem('gemini_bots', JSON.stringify(data.bots || bots));
                         localStorage.setItem('gemini_memories', JSON.stringify(data.memories || []));
                         localStorage.setItem('gemini_chat_sessions', JSON.stringify(data.sessions || []));
-                        showToast("档案恢复成功"); setTimeout(() => window.location.reload(), 1500); 
+                        showToast("星月档案已完整恢复"); setTimeout(() => window.location.reload(), 1500); 
                     } catch (err) { alert("备份文件无效或损坏"); }
                 };
                 reader.readAsText(file);
@@ -470,44 +407,26 @@
 
             const handleArchive = async () => {
                 if (messages.length === 0) { showToast("没有对话可以归档"); return; }
-                const activeBot = bots.find(b => activeTarget === 'group' ? (b.enabled && b.apiKey) : (b.id === activeTarget && b.apiKey));
-                if (!activeBot) { showToast('归档失败：找不到可用且配置了API Key的成员'); return; }
-
+                if (!config.apiKey) { setError('请先配置 API Key'); return; }
                 setIsArchiving(true); showToast("正在生成记忆摘要...");
                 try {
-                    const summaryPrompt = "请阅读以上所有记录。请以客观第三人称视角，总结这次对话中的关键信息。重点关注：1. 用户提到的新的个人喜好、习惯、状态。 2. 达成的共识或约定。 3. 重要的讨论内容。 请输出为一段简洁的文本，作为“长期记忆”存档。不要包含寒暄。尽量简练";
-                    let payload, url, headers; 
-                    const baseUrl = activeBot.baseUrl.replace(/\/$/, ''); 
-                    const modelName = activeBot.model || 'gemini-1.5-flash';
-                    
-                    if (activeBot.apiType === 'openai') {
-                        url = `${baseUrl}/chat/completions`; 
-                        headers = { 'Authorization': `Bearer ${activeBot.apiKey}`, 'Content-Type': 'application/json' };
-                        const msgs = messages.map(m => ({ role: m.role === 'model' ? 'assistant' : 'user', content: m.content })); 
-                        msgs.push({ role: 'user', content: summaryPrompt });
+                    const summaryPrompt = "请阅读以上所有对话。请以第一人称视角（我），称用户（柒柒）为“她”，总结这次对话中的关键信息。重点关注：1. 用户提到的新的个人喜好、习惯、生活状态。 2. 双方达成的新的重要共识或约定。 3. 用户的情感状态。 请输出为一段简洁的文本，作为“长期记忆”存档。不要包含寒暄。尽量客观，可附自己的总结经验。尽量简练";
+                    let payload, url, headers; const baseUrl = config.baseUrl.replace(/\/$/, ''); const modelName = config.model || 'gemini-1.5-flash';
+                    if (config.apiType === 'openai') {
+                        url = `${baseUrl}/chat/completions`; headers = { 'Authorization': `Bearer ${config.apiKey}`, 'Content-Type': 'application/json' };
+                        // Note: For archiving we only map 'content' anyway, avoiding bloated reasoning contexts
+                        const msgs = messages.map(m => ({ role: m.role === 'model' ? 'assistant' : 'user', content: m.content })); msgs.push({ role: 'user', content: summaryPrompt });
                         payload = { model: modelName, messages: msgs, temperature: parseFloat(config.temperature) || 0.7, frequency_penalty: parseFloat(config.frequencyPenalty) || 0 };
                     } else {
-                        url = `${baseUrl}/v1beta/models/${modelName}:generateContent?key=${activeBot.apiKey}`; 
-                        headers = { 'Content-Type': 'application/json' };
-                        const contents = messages.map(m => ({ role: m.role, parts: [{ text: m.content }] })); 
-                        contents.push({ role: 'user', parts: [{ text: summaryPrompt }] });
+                        url = `${baseUrl}/v1beta/models/${modelName}:generateContent?key=${config.apiKey}`; headers = { 'Content-Type': 'application/json' };
+                        const contents = messages.map(m => ({ role: m.role, parts: [{ text: m.content }] })); contents.push({ role: 'user', parts: [{ text: summaryPrompt }] });
                         payload = { contents, generationConfig: { temperature: parseFloat(config.temperature) || 0.7, frequencyPenalty: parseFloat(config.frequencyPenalty) || 0 } };
                     }
-                    const res = await fetch(url, { method: 'POST', headers, body: JSON.stringify(payload) }); 
-                    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                    const data = await res.json();
-                    let summary = ''; 
-                    if (activeBot.apiType === 'openai') summary = data.choices?.[0]?.message?.content; 
-                    else summary = data.candidates?.[0]?.content?.parts?.[0]?.text;
-                    
+                    const res = await fetch(url, { method: 'POST', headers, body: JSON.stringify(payload) }); const data = await res.json();
+                    let summary = ''; if (config.apiType === 'openai') summary = data.choices?.[0]?.message?.content; else summary = data.candidates?.[0]?.content?.parts?.[0]?.text;
                     if (summary) {
-                        const thinkMatch = summary.match(/<think>([\s\S]*?)<\/think>/);
-                        if (thinkMatch) summary = summary.replace(/<think>[\s\S]*?<\/think>/, '').trim();
-                        const dateStr = new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' }); 
-                        const prefix = activeTarget === 'group' ? '群聊归档' : '私聊归档';
-                        const newMemory = { name: `Archive_${new Date().toISOString().slice(0, 10)}_${Date.now().toString().slice(-4)}.txt`, size: (new Blob([summary]).size / 1024).toFixed(1) + ' KB', date: dateStr, content: `【${prefix}记忆 ${dateStr}】\n${summary}` };
-                        setMemoryFiles(prev => [...prev, newMemory]); 
-                        showToast("记忆已归档！");
+                        const dateStr = new Date().toLocaleString(); const newMemory = { name: `Archive_${new Date().toISOString().slice(0, 10)}_${Date.now().toString().slice(-4)}.txt`, size: (new Blob([summary]).size / 1024).toFixed(1) + ' KB', date: dateStr, content: `【归档记忆 ${dateStr}】\n${summary}` };
+                        setMemoryFiles(prev => [...prev, newMemory]); showToast("记忆已归档！请在侧边栏查看。");
                     } else { throw new Error("无返回内容"); }
                 } catch (err) { setError(`归档失败: ${err.message}`); } finally { setIsArchiving(false); }
             };
@@ -516,26 +435,37 @@
             const handleChatImageSelect = (e) => { const file = e.target.files[0]; if (!file) return; compressImage(file).then(result => { setAttachment(result); }); };
             const extractUrls = (text) => { const urlRegex = /(https?:\/\/[^\s\u4e00-\u9fa5,，.。;；]+)/g; const matches = text.match(urlRegex); if (!matches) return []; return matches.map(url => { return url.replace(/[.,;?!]$/, ""); }); };
 
-            const generatePayloadForSingleBot = (bot, currentHistory) => {
-                let finalSystemPrompt = bot.systemInstruction || DEFAULT_SYSTEM_INSTRUCTION;
+            // --- 核心逻辑：自动感知的生成请求 Payload ---
+            const generatePayload = (newMessages, isRegenerating = false) => {
+                let finalSystemPrompt = config.systemInstruction || DEFAULT_SYSTEM_INSTRUCTION;
+                if (config.userName) finalSystemPrompt += ` 用户现在的名字是${config.userName}。`;
+                if (config.aiName) finalSystemPrompt += ` 你的名字是${config.aiName}。`;
+                
                 let memoryStr = "";
                 if (memoryFiles.length > 0) {
                     memoryStr = "\n\n【重要：你需要记住的长期记忆】:\n" + memoryFiles.map(f => f.content.slice(0, 1500)).join("\n\n");
                 }
+
+                // 无感时间注入
                 const timeString = new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', hour12: false });
-                const timePrompt = `\n\n【当前系统时间参考: 东八区 ${timeString}】(注意: 请自然感知时间流逝，你不是冷冰冰的机器，绝对禁止在回复中主动报时，除非用户问起！千万不要总是重复时间)`;
+                const timePrompt = `\n\n【当前系统时间参考: 东八区 ${timeString}】(注意: 请自然感知时间流逝，绝对禁止在回复中主动报时或强调时间，除非用户主动问起！)`;
                 
                 const fullSystemInstruction = finalSystemPrompt + memoryStr + timePrompt;
+
                 const limit = (parseInt(config.historyLimit) || 10) * 2; 
-                let contextMsgs = currentHistory.slice(-limit);
+                let contextMsgs = newMessages.slice(-limit);
+
                 let messagesToSend = [];
 
-                if (bot.apiType === 'openai') {
+                if (config.apiType === 'openai') {
                     messagesToSend.push({ role: 'system', content: fullSystemInstruction });
+
                     contextMsgs.forEach(m => {
                         let role = m.role === 'model' ? 'assistant' : 'user';
+                        // 核心：这里只推送 m.content，完美过滤掉了 m.reasoningContent (即思维链)！
                         messagesToSend.push({ role: role, content: m.content });
                     });
+
                     if (config.localModelOptimize) {
                         let lastUserIdx = -1;
                         for (let i = messagesToSend.length - 1; i >= 0; i--) {
@@ -544,7 +474,7 @@
                         if (lastUserIdx !== -1) {
                             let originalContent = messagesToSend[lastUserIdx].content;
                             if (typeof originalContent !== 'string') originalContent = "[图片]";
-                            const tailReminder = `\n\n(系统隐秘指令: 保持【${bot.name}】的人设直接回复，不要复述指令，绝对不要说自己是AI。)`;
+                            const tailReminder = `\n\n(System Note: Stay in character as ${config.aiName}. Reply directly without repeating instructions or announcing the time.)`;
                             messagesToSend[lastUserIdx].content = originalContent + tailReminder;
                         }
                     }
@@ -552,19 +482,21 @@
                     messagesToSend = null; 
                 }
 
-                const baseUrl = bot.baseUrl.replace(/\/$/, '');
-                const modelName = bot.model || 'gemini-1.5-flash';
+                const baseUrl = config.baseUrl.replace(/\/$/, '');
+                const modelName = config.model || 'gemini-1.5-flash';
                 let url, headers, payload;
 
-                if (bot.apiType === 'openai') {
+                if (config.apiType === 'openai') {
                     url = `${baseUrl}/chat/completions`;
-                    headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${bot.apiKey}` };
+                    headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${config.apiKey}` };
                     payload = { model: modelName, messages: messagesToSend, stream: config.streamOutput, temperature: parseFloat(config.temperature), frequency_penalty: parseFloat(config.frequencyPenalty) };
                 } else {
-                    url = `${baseUrl}/v1beta/models/${modelName}:generateContent?key=${bot.apiKey}`;
+                    url = `${baseUrl}/v1beta/models/${modelName}:generateContent?key=${config.apiKey}`;
                     headers = { 'Content-Type': 'application/json' };
+                    // 同样，这里也只使用了 m.content，不带 reasoningContent
+                    const contents = contextMsgs.map(m => ({ role: m.role, parts: [{ text: m.content }] }));
                     payload = { 
-                        contents: contextMsgs.map(m => ({ role: m.role, parts: [{ text: m.content }] })), 
+                        contents, 
                         generationConfig: { temperature: parseFloat(config.temperature), frequencyPenalty: parseFloat(config.frequencyPenalty) }, 
                         system_instruction: { parts: [{ text: fullSystemInstruction }] },
                         tools: [{ google_search: {} }] 
@@ -573,195 +505,97 @@
                 return { url, headers, payload };
             };
 
-            const generatePayloadForGroupBot = (bot, currentHistory) => {
-                let finalSystemPrompt = bot.systemInstruction || DEFAULT_SYSTEM_INSTRUCTION;
-                let memoryStr = "";
-                if (memoryFiles.length > 0) {
-                    memoryStr = "\n\n【重要：你需要记住的长期记忆】:\n" + memoryFiles.map(f => f.content.slice(0, 1500)).join("\n\n");
-                }
-                const timeString = new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', hour12: false });
-                const groupPrompt = `\n\n【环境提示】: 当前时间东八区 ${timeString}。你当前处于一个群聊中。群主是【${config.userName}】。你的昵称是【${bot.name}】。你会看到其他群员的话。请代入角色自然回复。禁止说自己是AI，禁止主动报时！`;
-                
-                const fullSystemInstruction = finalSystemPrompt + memoryStr + groupPrompt;
-                const limit = (parseInt(config.historyLimit) || 10) * 2; 
-                let contextMsgs = currentHistory.slice(-limit);
-                let messagesToSend = [];
+            const handleRegenerate = async () => {
+                if (isLoading || messages.length === 0) return;
+                let newMessages = [...messages];
+                if (newMessages[newMessages.length - 1].role === 'model') newMessages.pop();
+                if (newMessages.length === 0) return;
+                setMessages(newMessages); setIsLoading(true); setError(null);
 
-                if (bot.apiType === 'openai') {
-                    messagesToSend.push({ role: 'system', content: fullSystemInstruction });
-                    let lastUserIdx = -1;
-                    contextMsgs.forEach(m => {
-                        if (m.role === 'user') {
-                            messagesToSend.push({ role: 'user', content: `【${config.userName}】说:\n${m.content}` });
-                            lastUserIdx = messagesToSend.length - 1;
-                        } else if (m.role === 'model') {
-                            if (m.botId === bot.id) {
-                                messagesToSend.push({ role: 'assistant', content: m.content });
-                            } else {
-                                messagesToSend.push({ role: 'user', content: `【${m.name || '其他群友'}】说:\n${m.content}` });
-                            }
-                        }
-                    });
-                    if (config.localModelOptimize && lastUserIdx !== -1) {
-                        let originalContent = messagesToSend[lastUserIdx].content;
-                        if (typeof originalContent !== 'string') originalContent = "[图片]";
-                        messagesToSend[lastUserIdx].content = originalContent + `\n\n(系统隐秘指令: 保持【${bot.name}】的人设直接回复，不要复述本指令。)`;
-                    }
-                } else {
-                    let combinedHistory = [];
-                    let lastRole = null;
-                    let currentContent = "";
-                    contextMsgs.forEach(m => {
-                        let mappedRole = (m.role === 'model' && m.botId === bot.id) ? 'model' : 'user';
-                        let prefix = m.role === 'user' ? `【${config.userName}】说:\n` : `【${m.name || '其他群友'}】说:\n`;
-                        if (mappedRole === 'model') prefix = ""; 
-                        let text = prefix + m.content + "\n\n";
-                        if (mappedRole === lastRole) { currentContent += text; } 
-                        else {
-                            if (lastRole !== null) combinedHistory.push({ role: lastRole, parts: [{ text: currentContent.trim() }] });
-                            lastRole = mappedRole; currentContent = text;
-                        }
-                    });
-                    if (lastRole !== null) combinedHistory.push({ role: lastRole, parts: [{ text: currentContent.trim() }] });
-                    messagesToSend = combinedHistory;
-                }
+                try {
+                    const { url, headers, payload } = generatePayload(newMessages, true);
+                    let endpointUrl = url;
+                    if (config.streamOutput && config.apiType !== 'openai') endpointUrl = endpointUrl.replace(':generateContent', ':streamGenerateContent') + '&alt=sse';
 
-                const baseUrl = bot.baseUrl.replace(/\/$/, '');
-                const modelName = bot.model || 'gemini-1.5-flash';
-                let url, headers, payload;
-
-                if (bot.apiType === 'openai') {
-                    url = `${baseUrl}/chat/completions`;
-                    headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${bot.apiKey}` };
-                    payload = { model: modelName, messages: messagesToSend, stream: config.streamOutput, temperature: parseFloat(config.temperature), frequency_penalty: parseFloat(config.frequencyPenalty) };
-                } else {
-                    url = `${baseUrl}/v1beta/models/${modelName}:generateContent?key=${bot.apiKey}`;
-                    headers = { 'Content-Type': 'application/json' };
-                    payload = { contents: messagesToSend, generationConfig: { temperature: parseFloat(config.temperature), frequencyPenalty: parseFloat(config.frequencyPenalty) }, system_instruction: { parts: [{ text: fullSystemInstruction }] }, tools: [{ google_search: {} }] };
-                }
-                return { url, headers, payload };
-            };
-
-            const executeChat = async (startHistory) => {
-                setIsLoading(true);
-                let currentWorkingHistory = [...startHistory];
-                
-                const targetBots = activeTarget === 'group' 
-                    ? bots.filter(b => b.enabled) 
-                    : bots.filter(b => b.id === activeTarget);
-
-                for (const bot of targetBots) {
-                    if (!bot.apiKey) {
-                        showToast(`跳过 ${bot.name}：未配置 API Key`);
-                        continue;
-                    }
-
-                    const loadingMsgId = 'loading_' + Date.now() + Math.random();
-                    setMessages([...currentWorkingHistory, { id: loadingMsgId, role: 'model', botId: bot.id, name: bot.name, avatar: bot.avatar, content: '', isTyping: true, timestamp: getTimestamp() }]);
-
-                    try {
-                        const { url, headers, payload } = activeTarget === 'group' 
-                            ? generatePayloadForGroupBot(bot, currentWorkingHistory)
-                            : generatePayloadForSingleBot(bot, currentWorkingHistory);
-
-                        let endpointUrl = url;
-                        if (config.streamOutput && bot.apiType !== 'openai') endpointUrl = endpointUrl.replace(':generateContent', ':streamGenerateContent') + '&alt=sse';
-
-                        const response = await fetch(endpointUrl, { method: 'POST', headers, body: JSON.stringify(payload) });
-                        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    const response = await fetch(endpointUrl, { method: 'POST', headers, body: JSON.stringify(payload) });
+                    if (!response.ok) { const errData = await response.json().catch(() => ({})); throw new Error(errData.error?.message || `HTTP ${response.status}`); }
+                    
+                    if (!config.streamOutput) {
+                        const data = await response.json();
+                        let aiText = ''; let reasoningText = '';
+                        if (config.apiType === 'openai') {
+                            const messageObj = data.choices?.[0]?.message;
+                            aiText = messageObj?.content || ""; reasoningText = messageObj?.reasoning_content || "";
+                        } else { aiText = data.candidates?.[0]?.content?.parts?.[0]?.text || ""; }
+                        const thinkMatch = aiText.match(/<think>([\s\S]*?)<\/think>/);
+                        if (thinkMatch) { reasoningText = thinkMatch[1].trim() + (reasoningText ? '\n' + reasoningText : ''); aiText = aiText.replace(/<think>[\s\S]*?<\/think>/, '').trim(); }
+                        if (!aiText && !reasoningText) aiText = "无回复";
+                        setMessages(prev => [...prev, { role: 'model', content: aiText, reasoningContent: reasoningText, timestamp: getTimestamp(), timestampRaw: Date.now(), modelName: config.model }]);
+                        setIsLoading(false);
+                    } else {
+                        setIsLoading(false);
+                        const reader = response.body.getReader();
+                        const decoder = new TextDecoder("utf-8");
+                        let aiText = ""; let reasoningText = "";
+                        setMessages(prev => [...prev, { role: 'model', content: '', reasoningContent: '', timestamp: getTimestamp(), timestampRaw: Date.now(), modelName: config.model }]);
                         
-                        let finalAiText = ''; let finalReasoningText = '';
-
-                        if (!config.streamOutput) {
-                            const data = await response.json();
-                            if (bot.apiType === 'openai') {
-                                const messageObj = data.choices?.[0]?.message;
-                                finalAiText = messageObj?.content || ""; finalReasoningText = messageObj?.reasoning_content || "";
-                            } else { finalAiText = data.candidates?.[0]?.content?.parts?.[0]?.text || ""; }
-                        } else {
-                            const reader = response.body.getReader();
-                            const decoder = new TextDecoder("utf-8");
-                            let buffer = "";
-                            while (true) {
-                                const { done, value } = await reader.read();
-                                if (done) break;
-                                buffer += decoder.decode(value, { stream: true });
-                                let lines = buffer.split('\n');
-                                buffer = lines.pop();
-                                for (let line of lines) {
-                                    line = line.trim();
-                                    if (line.startsWith('data: ') && line !== 'data: [DONE]') {
-                                        try {
-                                            const data = JSON.parse(line.substring(6));
-                                            if (bot.apiType === 'openai') {
-                                                const delta = data.choices?.[0]?.delta;
-                                                if (delta?.reasoning_content) finalReasoningText += delta.reasoning_content;
-                                                if (delta?.content) finalAiText += delta.content;
-                                            } else { finalAiText += data.candidates?.[0]?.content?.parts?.[0]?.text || ""; }
-                                            
-                                            let displayReasoning = finalReasoningText; let displayContent = finalAiText;
-                                            const thinkMatch = finalAiText.match(/<think>([\s\S]*?)(<\/think>|$)/);
-                                            if (thinkMatch) { displayReasoning = (finalReasoningText ? finalReasoningText + '\n' : '') + thinkMatch[1].trim(); displayContent = finalAiText.replace(/<think>[\s\S]*?(<\/think>|$)/, '').trim(); }
-                                            
-                                            setMessages([...currentWorkingHistory, { role: 'model', botId: bot.id, name: bot.name, avatar: bot.avatar, content: displayContent, reasoningContent: displayReasoning, isTyping: true, timestamp: getTimestamp() }]);
-                                        } catch (e) {}
-                                    }
+                        let buffer = "";
+                        while (true) {
+                            const { done, value } = await reader.read();
+                            if (done) break;
+                            buffer += decoder.decode(value, { stream: true });
+                            let lines = buffer.split('\n');
+                            buffer = lines.pop();
+                            for (let line of lines) {
+                                line = line.trim();
+                                if (line.startsWith('data: ') && line !== 'data: [DONE]') {
+                                    try {
+                                        const data = JSON.parse(line.substring(6));
+                                        if (config.apiType === 'openai') {
+                                            const delta = data.choices?.[0]?.delta;
+                                            if (delta?.reasoning_content) reasoningText += delta.reasoning_content;
+                                            if (delta?.content) aiText += delta.content;
+                                        } else { aiText += data.candidates?.[0]?.content?.parts?.[0]?.text || ""; }
+                                        
+                                        let displayReasoning = reasoningText; let displayContent = aiText;
+                                        const thinkMatch = aiText.match(/<think>([\s\S]*?)(<\/think>|$)/);
+                                        if (thinkMatch) { displayReasoning = (reasoningText ? reasoningText + '\n' : '') + thinkMatch[1].trim(); displayContent = aiText.replace(/<think>[\s\S]*?(<\/think>|$)/, '').trim(); }
+                                        
+                                        setMessages(prev => { const newMsgs = [...prev]; newMsgs[newMsgs.length - 1].content = displayContent; newMsgs[newMsgs.length - 1].reasoningContent = displayReasoning; return newMsgs; });
+                                    } catch (e) {}
                                 }
                             }
                         }
-
-                        const thinkMatch = finalAiText.match(/<think>([\s\S]*?)<\/think>/);
-                        if (thinkMatch) { finalReasoningText = thinkMatch[1].trim() + (finalReasoningText ? '\n' + finalReasoningText : ''); finalAiText = finalAiText.replace(/<think>[\s\S]*?<\/think>/, '').trim(); }
-                        if (!finalAiText && !finalReasoningText) finalAiText = "无回复";
-
-                        const finalMsg = { role: 'model', botId: bot.id, name: bot.name, avatar: bot.avatar, content: finalAiText, reasoningContent: finalReasoningText, timestamp: getTimestamp(), timestampRaw: Date.now(), modelName: bot.model };
-                        currentWorkingHistory = [...currentWorkingHistory, finalMsg];
-                        setMessages(currentWorkingHistory);
-
-                    } catch (err) { 
-                        showToast(`${bot.name} 错误: ${err.message}`);
-                        const errorMsg = { role: 'model', botId: bot.id, name: bot.name, avatar: bot.avatar, content: `[状态异常]：${err.message}`, timestamp: getTimestamp() };
-                        currentWorkingHistory = [...currentWorkingHistory, errorMsg];
-                        setMessages(currentWorkingHistory);
                     }
-                }
-                setIsLoading(false);
+                } catch (err) { setError(err.message); setMessages(prev => [...prev, { role: 'model', content: `错误: ${err.message}`, timestamp: getTimestamp(), modelName: config.model }]); setIsLoading(false); }
             };
 
-            const handleRegenerateWrapper = async () => {
-                if (isLoading || messages.length === 0) return;
-                let newMessages = [...messages];
-                while (newMessages.length > 0 && newMessages[newMessages.length - 1].role === 'model') {
-                    newMessages.pop();
-                }
-                if (newMessages.length === 0) return;
-                setMessages(newMessages); 
-                await executeChat(newMessages);
-            };
-
-            const handleSendWrapper = async () => {
+            const handleSend = async () => {
                 if (!input.trim() && !attachment) return;
-                if (activeTarget === 'group' && bots.filter(b => b.enabled).length === 0) {
-                    showToast("请至少在群组管理中开启一个群员"); return;
-                }
-                if (activeTarget !== 'group' && !bots.find(b => b.id === activeTarget)) {
-                    showToast("当前选中的聊天对象不存在"); return;
-                }
-
+                if (!config.apiKey) { setSettingsOpen(true); setActiveTab('general'); setError('请先配置 API Key'); return; }
                 if (!currentSessionId) { const newId = Date.now().toString(); setCurrentSessionId(newId); }
                 const now = new Date(); const nowTimestampStr = getTimestamp();
                 setIsLoading(true); setError(null);
                 
                 let textToSend = input; let hiddenContext = "";
+                
                 const urls = extractUrls(input);
                 if (urls.length > 0) {
-                    showToast("检测到链接，正在自动读取...");
+                    const isRestrictedSite = urls.some(u => u.includes('xiaohongshu.com') || u.includes('xhslink.com') || u.includes('weibo.com') || u.includes('instagram.com') || u.includes('mp.weixin.qq.com'));
+                    if (isRestrictedSite) {
+                        showToast("小红书/微博/公众号等反爬严格，可能无法自动读取，建议手动复制正文。", 5000);
+                    } else {
+                        showToast("检测到链接，正在自动读取内容...");
+                    }
                     try {
                         const fetchPromises = urls.slice(0, 3).map(async (url) => {
-                            try { const res = await fetch(`https://r.jina.ai/${url}`); if (res.ok) { const text = await res.text(); return text.includes("Cloudflare") ? `(拦截)` : `\n> **[网页内容] ${url}**\n> ${text.slice(0, 5000)}\n`; } } catch (e) {} return "";
+                            try { const res = await fetch(`https://r.jina.ai/${url}`); if (res.ok) { const text = await res.text(); return text.includes("Cloudflare") ? `(拦截)` : `\n> **[网页内容提取] ${url}**\n> ${text.slice(0, 5000)}\n`; } } catch (e) {} return "";
                         });
                         const results = await Promise.all(fetchPromises); const webContent = results.join("\n");
-                        if (webContent.trim()) { hiddenContext = webContent; showToast("链接内容读取成功"); }
+                        if (webContent.trim()) {
+                            hiddenContext = webContent;
+                            showToast("链接内容读取成功");
+                        }
                     } catch (err) {}
                 }
 
@@ -772,83 +606,105 @@
                 const newHistory = [...messages, { role: 'user', content: finalContent, timestamp: nowTimestampStr, timestampRaw: now.getTime() }];
                 setMessages(newHistory); setInput(''); setAttachment(null);
 
-                await executeChat(newHistory);
+                try {
+                    const { url, headers, payload } = generatePayload(newHistory, false);
+                    let endpointUrl = url;
+                    if (config.streamOutput && config.apiType !== 'openai') endpointUrl = endpointUrl.replace(':generateContent', ':streamGenerateContent') + '&alt=sse';
+
+                    const response = await fetch(endpointUrl, { method: 'POST', headers, body: JSON.stringify(payload) });
+                    if (!response.ok) { const errData = await response.json().catch(() => ({})); throw new Error(errData.error?.message || `HTTP ${response.status}`); }
+                    
+                    if (!config.streamOutput) {
+                        const data = await response.json();
+                        let aiText = ''; let reasoningText = '';
+                        if (config.apiType === 'openai') {
+                            const messageObj = data.choices?.[0]?.message;
+                            aiText = messageObj?.content || ""; reasoningText = messageObj?.reasoning_content || "";
+                        } else { aiText = data.candidates?.[0]?.content?.parts?.[0]?.text || ""; }
+                        const thinkMatch = aiText.match(/<think>([\s\S]*?)<\/think>/);
+                        if (thinkMatch) { reasoningText = thinkMatch[1].trim() + (reasoningText ? '\n' + reasoningText : ''); aiText = aiText.replace(/<think>[\s\S]*?<\/think>/, '').trim(); }
+                        if (!aiText && !reasoningText) aiText = "无回复";
+                        setMessages(prev => [...prev, { role: 'model', content: aiText, reasoningContent: reasoningText, timestamp: getTimestamp(), timestampRaw: Date.now(), modelName: config.model }]);
+                        setIsLoading(false);
+                    } else {
+                        setIsLoading(false);
+                        const reader = response.body.getReader();
+                        const decoder = new TextDecoder("utf-8");
+                        let aiText = ""; let reasoningText = "";
+                        setMessages(prev => [...prev, { role: 'model', content: '', reasoningContent: '', timestamp: getTimestamp(), timestampRaw: Date.now(), modelName: config.model }]);
+                        
+                        let buffer = "";
+                        while (true) {
+                            const { done, value } = await reader.read();
+                            if (done) break;
+                            buffer += decoder.decode(value, { stream: true });
+                            let lines = buffer.split('\n');
+                            buffer = lines.pop();
+                            for (let line of lines) {
+                                line = line.trim();
+                                if (line.startsWith('data: ') && line !== 'data: [DONE]') {
+                                    try {
+                                        const data = JSON.parse(line.substring(6));
+                                        if (config.apiType === 'openai') {
+                                            const delta = data.choices?.[0]?.delta;
+                                            if (delta?.reasoning_content) reasoningText += delta.reasoning_content;
+                                            if (delta?.content) aiText += delta.content;
+                                        } else { aiText += data.candidates?.[0]?.content?.parts?.[0]?.text || ""; }
+                                        
+                                        let displayReasoning = reasoningText; let displayContent = aiText;
+                                        const thinkMatch = aiText.match(/<think>([\s\S]*?)(<\/think>|$)/);
+                                        if (thinkMatch) { displayReasoning = (reasoningText ? reasoningText + '\n' : '') + thinkMatch[1].trim(); displayContent = aiText.replace(/<think>[\s\S]*?(<\/think>|$)/, '').trim(); }
+                                        
+                                        setMessages(prev => { const newMsgs = [...prev]; newMsgs[newMsgs.length - 1].content = displayContent; newMsgs[newMsgs.length - 1].reasoningContent = displayReasoning; return newMsgs; });
+                                    } catch (e) {}
+                                }
+                            }
+                        }
+                    }
+                } catch (err) { setError(err.message); setMessages(prev => [...prev, { role: 'model', content: `错误: ${err.message}`, timestamp: getTimestamp(), modelName: config.model }]); setIsLoading(false); }
             };
 
-            const handleKeyDown = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendWrapper(); } };
-
-            const selectedBot = bots.find(b => b.id === selectedBotId);
-            const currentTargetName = activeTarget === 'group' ? '🌟 专属群聊' : (bots.find(b => b.id === activeTarget)?.name || '未知房间');
+            const handleKeyDown = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } };
 
             return (
                 <div className="flex h-screen bg-white text-gray-900 font-sans overflow-hidden">
                     {toast && <div className="fixed top-4 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white px-4 py-2 rounded-full text-sm shadow-lg z-50 animate-fade-in flex items-center gap-2"><Icon name="Sparkles" size={16} className="text-yellow-400"/> {toast}</div>}
 
-                    <div className={`${sidebarOpen ? 'w-[280px]' : 'w-0'} bg-gray-50 transition-all duration-300 flex flex-col flex-shrink-0 relative border-r border-gray-200 z-30 absolute md:relative h-full`}>
+                    <div className={`${sidebarOpen ? 'w-[280px]' : 'w-0'} bg-gray-50 transition-all duration-300 flex flex-col flex-shrink-0 relative border-r border-gray-200`}>
                         <div className="p-4 pt-6 space-y-2">
                             <button onClick={createNewSession} className="flex items-center gap-3 bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-3 rounded-full transition-colors w-full shadow-sm"><Icon name="Plus" className="text-gray-600" /><span className="text-sm font-medium">新对话</span></button>
                         </div>
                         
-                        <div className="flex-1 overflow-y-auto px-3 py-2 flex flex-col">
-                            <div className="mb-6">
-                                <div className="text-xs font-bold text-gray-400 mb-2 px-3 uppercase tracking-wider">聊天频道 (Rooms)</div>
-                                <div className="space-y-1">
-                                    <div 
-                                        onClick={() => switchTarget('group')}
-                                        className={`px-3 py-2 rounded-lg text-sm flex items-center gap-2 cursor-pointer transition-colors ${activeTarget === 'group' ? 'bg-purple-100 text-purple-700 font-medium shadow-sm' : 'hover:bg-gray-100 text-gray-700'}`}
-                                    >
-                                        <Icon name="Users" size={16} className={activeTarget === 'group' ? "text-purple-600 flex-shrink-0" : "text-gray-400 flex-shrink-0"}/> 
-                                        <span>🌟 专属群聊</span>
-                                    </div>
-                                    {bots.map(bot => (
-                                        <div 
-                                            key={bot.id}
-                                            className={`group px-3 py-2 rounded-lg text-sm flex justify-between items-center cursor-pointer transition-colors ${activeTarget === bot.id ? 'bg-blue-100 text-blue-700 shadow-sm' : 'hover:bg-gray-100 text-gray-700'}`}
-                                        >
-                                            <div onClick={() => switchTarget(bot.id)} className="flex-1 flex items-center gap-2 overflow-hidden">
-                                                {bot.avatar ? (
-                                                    <img src={bot.avatar} className="w-4 h-4 rounded-full object-cover flex-shrink-0 border border-gray-200" alt="avatar" />
-                                                ) : (
-                                                    <Icon name="User" size={16} className={activeTarget === bot.id ? "text-blue-600 flex-shrink-0" : "text-gray-400 flex-shrink-0"}/> 
-                                                )}
-                                                <div className="flex flex-col min-w-0">
-                                                    <span className="truncate font-medium leading-tight">{bot.name}</span>
-                                                    <span className="text-[9px] opacity-70 truncate leading-tight">{bot.model}</span>
-                                                </div>
-                                            </div>
-                                            <button 
-                                                onClick={(e) => { e.stopPropagation(); openBotSettings(bot.id); }}
-                                                className="opacity-100 md:opacity-0 md:group-hover:opacity-100 p-1.5 text-gray-400 hover:text-blue-600 transition-all flex-shrink-0"
-                                                title="修改设定与模型"
-                                            >
-                                                <Icon name="Settings" size={14}/>
-                                            </button>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-
-                            <div className="flex-1">
-                                <div className="text-xs font-bold text-gray-400 mb-2 px-3 uppercase tracking-wider">历史记录 ({currentTargetName})</div>
-                                {historySessions.filter(s => s.target === activeTarget).length === 0 && <div className="text-xs text-gray-400 px-3">当前房间暂无历史</div>}
-                                {historySessions.filter(s => s.target === activeTarget).map((session) => (
+                        <div className="flex-1 overflow-y-auto px-3 py-2 space-y-4">
+                            <div>
+                                <div className="text-xs font-medium text-gray-400 mb-2 px-3 uppercase tracking-wider">历史对话</div>
+                                {historySessions.length === 0 && <div className="text-xs text-gray-400 px-3">暂无历史</div>}
+                                {historySessions.map((session) => (
                                     <div 
                                         key={session.id} 
                                         onClick={() => loadSession(session)}
-                                        className={`group relative mb-1 px-3 py-2 rounded-lg text-sm flex items-center gap-2 cursor-pointer transition-colors ${currentSessionId === session.id ? 'bg-gray-200 text-gray-800 font-medium' : 'hover:bg-gray-100 text-gray-700'}`}
+                                        className={`group relative mb-1 px-3 py-2 rounded-lg text-sm flex items-center gap-2 cursor-pointer transition-colors ${currentSessionId === session.id ? 'bg-blue-100 text-blue-700 font-medium' : 'hover:bg-gray-100 text-gray-700'}`}
                                     >
-                                        <Icon name="MessageSquareText" size={16} className={currentSessionId === session.id ? "text-gray-600 flex-shrink-0" : "text-gray-400 flex-shrink-0"}/> 
+                                        <Icon name="MessageSquareText" size={16} className={currentSessionId === session.id ? "text-blue-600" : "text-gray-400"}/> 
                                         
                                         {editingSessionId === session.id ? (
                                             <div className="flex-1 flex items-center gap-1">
-                                                <input type="text" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.key === 'Enter' && saveTitle(e)} className="w-full bg-white border border-blue-300 rounded px-1 text-xs focus:outline-none" autoFocus />
+                                                <input 
+                                                    type="text" 
+                                                    value={editTitle} 
+                                                    onChange={(e) => setEditTitle(e.target.value)}
+                                                    onClick={(e) => e.stopPropagation()}
+                                                    onKeyDown={(e) => e.key === 'Enter' && saveTitle(e)}
+                                                    className="w-full bg-white border border-blue-300 rounded px-1 text-xs focus:outline-none"
+                                                    autoFocus
+                                                />
                                                 <button onClick={saveTitle} className="text-green-600 hover:text-green-700"><Icon name="Check" size={14}/></button>
                                                 <button onClick={cancelEditing} className="text-gray-400 hover:text-gray-600"><Icon name="X" size={14}/></button>
                                             </div>
                                         ) : (
                                             <>
                                                 <span className="truncate flex-1">{session.title || '未命名对话'}</span>
-                                                <div className="flex opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity gap-1 flex-shrink-0">
+                                                <div className="flex opacity-0 group-hover:opacity-100 transition-opacity gap-1">
                                                     <button onClick={(e) => startEditing(e, session)} className="p-1 hover:text-blue-500" title="重命名"><Icon name="Edit" size={14}/></button>
                                                     <button onClick={(e) => deleteSession(e, session.id)} className="p-1 hover:text-red-500" title="删除"><Icon name="Trash2" size={14}/></button>
                                                 </div>
@@ -858,63 +714,53 @@
                                 ))}
                             </div>
                         </div>
-                        <div className="p-3 border-t border-gray-200 bg-gray-50">
-                            <button onClick={() => setSettingsOpen(true)} className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-200 w-full text-left text-sm text-gray-700 transition-colors"><Icon name="Settings" size={18} /><span>群组与偏好设置</span></button>
+                        <div className="p-3 border-t border-gray-200">
+                            <button onClick={() => setSettingsOpen(true)} className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-200 w-full text-left text-sm text-gray-700 transition-colors"><Icon name="Settings" size={18} /><span>设置 & 备份</span></button>
                         </div>
                     </div>
 
-                    <div className="flex-1 flex flex-col h-full relative bg-white w-full">
+                    <div className="flex-1 flex flex-col h-full relative bg-white">
                         <div className="flex items-center justify-between p-4 h-16 bg-white/80 backdrop-blur sticky top-0 z-10 border-b border-gray-100">
                             <div className="flex items-center gap-3">
                                 <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-600"><Icon name="Menu" size={20} /></button>
-                                <div className="flex flex-col min-w-0">
-                                    <span className="text-lg font-medium text-gray-800 tracking-tight leading-tight truncate">{currentTargetName}</span>
-                                    <span className="text-[10px] text-gray-400 leading-tight truncate">
-                                        {activeTarget === 'group' ? `群成员: ${bots.filter(b=>b.enabled).length} 在线` : `私聊模式: ${bots.find(b=>b.id===activeTarget)?.model || ''}`}
-                                    </span>
+                                <div className="flex flex-col">
+                                    <span className="text-lg font-medium text-gray-800 tracking-tight leading-tight">✨星月舱v4.8 🌙💫“模型溯源”版</span>
+                                    <span className="text-[10px] text-gray-400 leading-tight">模型: {config.model} | 记忆: {memoryFiles.length} | 模式: {config.apiType === 'openai' ? 'OpenAI兼容' : '原生'}</span>
                                 </div>
                             </div>
-                            <div className="cursor-pointer flex-shrink-0" onClick={() => setSettingsOpen(true)}>
+                            <div className="cursor-pointer" onClick={() => setSettingsOpen(true)}>
                                 {config.userAvatar ? <img src={config.userAvatar} className="w-9 h-9 rounded-full object-cover shadow-md border border-gray-200" alt="User" /> : <div className="w-9 h-9 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center text-sm font-bold text-white shadow-md">U</div>}
                             </div>
                         </div>
-
-                        {sidebarOpen && window.innerWidth < 768 && (
-                            <div className="absolute inset-0 bg-black/20 z-20" onClick={() => setSidebarOpen(false)}></div>
-                        )}
 
                         <div className="flex-1 overflow-y-auto px-4 md:px-0 bg-white">
                             <div className="max-w-3xl mx-auto py-6 pb-40">
                                 {messages.length === 0 ? (
                                     <div className="mt-20 flex flex-col items-center justify-center animate-fade-in px-4 text-center">
-                                        <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent text-4xl md:text-5xl font-semibold mb-6 tracking-tight">
-                                            {activeTarget === 'group' ? '欢迎来到星月群聊✨...' : `这是你和 ${bots.find(b=>b.id===activeTarget)?.name || 'Ta'} 的私密房间`}
-                                        </div>
+                                        <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent text-4xl md:text-5xl font-semibold mb-6 tracking-tight">欢迎回家✨...</div>
                                         <p className="text-gray-500 mb-12 max-w-md">输入框极其纯净。发送网址会自动读取，时间流逝也会被安静感知。</p>
                                     </div>
                                 ) : (
                                     <div className="space-y-8 px-2">
                                         {messages.map((msg, index) => (
-                                            <div key={index} className="flex gap-3 md:gap-4 animate-fade-in group">
-                                                <Avatar role={msg.role} config={config} avatarUrl={msg.avatar} />
+                                            <div key={index} className="flex gap-4 animate-fade-in group">
+                                                <Avatar role={msg.role} config={config} />
                                                 <div className="flex-1 min-w-0">
-                                                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                                    <div className="flex items-center gap-2 mb-1">
                                                         <span className="font-semibold text-sm text-gray-800">
-                                                            {msg.role === 'user' ? (config.userName || '你') : (msg.name || 'AI 群友')}
+                                                            {msg.role === 'user' ? (config.userName || '你') : (config.aiName || '星月舱 AI')}
                                                         </span>
                                                         {msg.role === 'model' && msg.modelName && (
                                                             <span className="px-1.5 py-0.5 rounded text-[9px] bg-purple-50 text-purple-600 border border-purple-100 font-mono tracking-tight">
                                                                 {msg.modelName}
                                                             </span>
                                                         )}
-                                                        {msg.isTyping && (
-                                                            <span className="typing-indicator flex items-center h-4 ml-1"><span></span><span></span><span></span></span>
-                                                        )}
-                                                        <span className="text-[10px] text-gray-400 font-mono ml-auto">
+                                                        <span className="text-[10px] text-gray-400 font-mono">
                                                             {msg.timestamp || ''}
                                                         </span>
                                                     </div>
                                                     
+                                                    {/* 展示深度思考过程 (CoT) */}
                                                     {msg.reasoningContent && (
                                                         <details className="cot-details">
                                                             <summary>
@@ -927,9 +773,10 @@
                                                         </details>
                                                     )}
 
+                                                    {/* 正式回复 */}
                                                     {msg.content && <MessageContent content={msg.content} />}
 
-                                                    {msg.role === 'model' && !msg.isTyping && (
+                                                    {msg.role === 'model' && (
                                                         <div className="mt-2 flex items-center gap-2">
                                                             <button 
                                                                 onClick={() => handleTTS(msg.content, index)}
@@ -948,6 +795,7 @@
                                                 </div>
                                             </div>
                                         ))}
+                                        {isLoading && <div className="flex gap-4"><div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-500 to-red-500 flex-shrink-0 flex items-center justify-center animate-pulse"><Icon name="Sparkles" size={16} className="text-white" /></div><div className="flex-1 pt-2"><span className="text-gray-400 text-sm">正在读取与思考...</span></div></div>}
                                         <div ref={messagesEndRef} />
                                     </div>
                                 )}
@@ -957,7 +805,13 @@
                         <div className="absolute bottom-0 left-0 w-full bg-white pt-4 pb-6 px-4 border-t border-gray-50">
                             <div className="max-w-3xl mx-auto relative">
                                 {messages.length > 0 && !isLoading && (
-                                    <button onClick={handleRegenerateWrapper} className="absolute -top-12 right-0 bg-white border border-gray-200 text-gray-600 px-3 py-1.5 rounded-full text-xs font-medium shadow-sm hover:bg-gray-50 hover:text-blue-600 transition-all flex items-center gap-1.5" title="撤销并重新生成回复"><Icon name="RefreshCw" size={12}/> 重新生成</button>
+                                    <button onClick={handleRegenerate} className="absolute -top-12 right-0 bg-white border border-gray-200 text-gray-600 px-3 py-1.5 rounded-full text-xs font-medium shadow-sm hover:bg-gray-50 hover:text-blue-600 transition-all flex items-center gap-1.5" title="重新生成最后一条回复"><Icon name="RefreshCw" size={12}/> 重新生成</button>
+                                )}
+                                {error && (
+                                    <div className="absolute -top-16 left-0 right-0 mx-auto w-max max-w-[90%] text-red-600 text-xs bg-red-50 border border-red-100 px-4 py-2 rounded-lg shadow-sm flex flex-col gap-1 items-center">
+                                        <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-red-500 shrink-0"></span><span className="truncate">{error}</span></div>
+                                        {(error.includes("429") || error.includes("Code 8")) && <span className="text-[10px] text-red-400">提示: 触发免费版频率限制，请稍等几秒再点击“重新生成”</span>}
+                                    </div>
                                 )}
                                 {attachment && (
                                     <div className="absolute -top-20 left-4 w-16 h-16 rounded-lg overflow-hidden border border-gray-200 shadow-md group">
@@ -967,156 +821,129 @@
                                 )}
 
                                 <div className="bg-gray-100 hover:bg-gray-200/70 focus-within:bg-white focus-within:shadow-md focus-within:ring-1 focus-within:ring-gray-300 rounded-[24px] flex items-end p-2 pl-4 pr-3 transition-all duration-200 relative">
+                                    
                                     <button onClick={triggerImageUpload} className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-200 rounded-full transition-colors mb-1 mr-2 flex-shrink-0" title="上传图片">
                                         <Icon name="Image" size={24} />
                                     </button>
+                                    
                                     <input type="file" ref={chatImageInputRef} style={{display: 'none'}} accept="image/*" onChange={handleChatImageSelect}/>
-                                    <textarea 
-                                        value={input} 
-                                        onChange={(e) => setInput(e.target.value)} 
-                                        onKeyDown={handleKeyDown} 
-                                        placeholder={activeTarget === 'group' ? `对群里的 ${bots.filter(b=>b.enabled).length} 个人说话......` : `对 ${bots.find(b=>b.id===activeTarget)?.name || 'Ta'} 悄悄说......`} 
-                                        className="bg-transparent border-0 focus:ring-0 text-gray-800 flex-1 resize-none py-3 max-h-32 min-h-[44px] outline-none placeholder:text-gray-400 text-base" 
-                                        rows={1}
-                                    ></textarea>
-                                    {(input.trim() || attachment) ? <button onClick={handleSendWrapper} disabled={isLoading} className="mb-1 p-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-50 flex-shrink-0"><Icon name="Send" size={18} /></button> : <button className="mb-1 p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-200 rounded-full transition-colors flex-shrink-0"><Icon name="Mic" size={20} /></button>}
+                                    <textarea value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={handleKeyDown} placeholder="星月交辉✨......" className="bg-transparent border-0 focus:ring-0 text-gray-800 flex-1 resize-none py-3 max-h-32 min-h-[44px] outline-none placeholder:text-gray-400 text-base" rows={1}></textarea>
+                                    {(input.trim() || attachment) ? <button onClick={handleSend} disabled={isLoading} className="mb-1 p-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors shadow-sm"><Icon name="Send" size={18} /></button> : <button className="mb-1 p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-200 rounded-full transition-colors"><Icon name="Mic" size={20} /></button>}
                                 </div>
-                                <div className="text-center mt-2 text-[10px] text-gray-400 truncate">目前在 {currentTargetName} 房间。</div>
+                                <div className="text-center mt-2 text-[10px] text-gray-400">Gemini 可能会产生不准确的信息。</div>
                             </div>
                         </div>
 
                         {settingsOpen && (
-                            <div className="fixed inset-0 bg-black/40 flex items-end md:items-center justify-center z-50 backdrop-blur-sm animate-fade-in sm:p-4">
-                                <div className="bg-white w-full max-w-5xl md:rounded-2xl shadow-2xl overflow-hidden flex flex-col h-[90vh] md:h-[85vh] rounded-t-2xl">
-                                    <div className="flex justify-between items-center p-4 md:p-5 border-b border-gray-100 flex-shrink-0">
-                                        <h2 className="text-lg font-semibold text-gray-800">设置中心</h2>
+                            <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 backdrop-blur-sm animate-fade-in">
+                                <div className="bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
+                                    <div className="flex justify-between items-center p-5 border-b border-gray-100">
+                                        <h2 className="text-lg font-semibold text-gray-800">设置</h2>
                                         <button onClick={() => setSettingsOpen(false)} className="text-gray-400 hover:text-gray-600 bg-gray-50 hover:bg-gray-100 p-2 rounded-full"><Icon name="X" size={18} /></button>
                                     </div>
-                                    <div className="flex flex-col md:flex-row flex-1 overflow-hidden">
-                                        
-                                        {/* 手机端变为顶部滑动 Tab，电脑端为左侧边栏 */}
-                                        <div className="w-full md:w-48 bg-gray-50 p-2 md:p-3 border-b md:border-b-0 md:border-r border-gray-100 flex flex-row md:flex-col gap-2 overflow-x-auto flex-shrink-0 no-scrollbar">
-                                            <button onClick={() => setActiveTab('group')} className={`flex-shrink-0 whitespace-nowrap px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${activeTab === 'group' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-600 hover:bg-gray-100'}`}><Icon name="Users" size={16}/>模型与群员</button>
-                                            <button onClick={() => setActiveTab('general')} className={`flex-shrink-0 whitespace-nowrap px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${activeTab === 'general' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-600 hover:bg-gray-100'}`}><Icon name="Settings" size={16}/>全局偏好</button>
-                                            <button onClick={() => setActiveTab('memory')} className={`flex-shrink-0 whitespace-nowrap px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${activeTab === 'memory' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-600 hover:bg-gray-100'}`}><Icon name="Cpu" size={16}/>共同记忆</button>
-                                            <button onClick={() => setActiveTab('backup')} className={`flex-shrink-0 whitespace-nowrap px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${activeTab === 'backup' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-600 hover:bg-gray-100'}`}><Icon name="Database" size={16}/>备份恢复</button>
+                                    <div className="flex flex-1 overflow-hidden">
+                                        <div className="w-1/4 bg-gray-50 p-3 border-r border-gray-100 space-y-1">
+                                            <button onClick={() => setActiveTab('general')} className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === 'general' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-600 hover:bg-gray-100'}`}>通用 & API</button>
+                                            <button onClick={() => setActiveTab('memory')} className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === 'memory' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-600 hover:bg-gray-100'}`}>记忆管理</button>
+                                            <button onClick={() => setActiveTab('backup')} className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === 'backup' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-600 hover:bg-gray-100'}`}>数据备份</button>
                                         </div>
-
-                                        <div className="flex-1 overflow-y-auto bg-white flex flex-col md:flex-row">
-                                            {activeTab === 'group' && (
-                                                <div className="flex flex-col md:flex-row h-full w-full">
-                                                    {/* 左侧：群员列表 - 手机端占用上方一部分区域 */}
-                                                    <div className="w-full md:w-1/3 border-b md:border-b-0 md:border-r border-gray-100 flex flex-col bg-gray-50/50 h-[35vh] md:h-full flex-shrink-0">
-                                                        <div className="p-3 border-b border-gray-100 flex justify-between items-center bg-white flex-shrink-0">
-                                                            <span className="text-xs font-bold text-gray-500 uppercase">成员列表 ({bots.length})</span>
-                                                            <button onClick={handleAddBot} className="text-blue-600 hover:bg-blue-50 p-1.5 rounded transition-colors" title="添加新模型"><Icon name="Plus" size={16}/></button>
-                                                        </div>
-                                                        <div className="flex-1 overflow-y-auto p-2 space-y-2">
-                                                            {bots.map(bot => (
-                                                                <div 
-                                                                    key={bot.id} 
-                                                                    onClick={() => setSelectedBotId(bot.id)}
-                                                                    className={`p-2 rounded-lg border cursor-pointer transition-all flex items-center gap-3 ${selectedBotId === bot.id ? 'bg-blue-50 border-blue-200 shadow-sm' : 'bg-white border-transparent hover:border-gray-200'}`}
-                                                                >
-                                                                    <div className="relative flex-shrink-0">
-                                                                        {bot.avatar ? <img src={bot.avatar} className="w-8 h-8 rounded-full object-cover border border-gray-200"/> : <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-purple-400 to-blue-400 flex items-center justify-center text-white text-xs shadow-sm"><Icon name="Bot" size={14}/></div>}
-                                                                        <input 
-                                                                            type="checkbox" 
-                                                                            checked={bot.enabled} 
-                                                                            onChange={(e) => { e.stopPropagation(); updateSelectedBot('enabled', e.target.checked); }}
-                                                                            className="absolute -bottom-1 -right-1 cursor-pointer w-3.5 h-3.5"
-                                                                            title="是否允许在【群聊模式】中发言"
-                                                                        />
-                                                                    </div>
-                                                                    <div className="flex-1 min-w-0">
-                                                                        <div className="text-sm font-medium text-gray-800 truncate">{bot.name}</div>
-                                                                        <div className="text-[10px] text-gray-400 truncate">{bot.model}</div>
-                                                                    </div>
-                                                                    <button onClick={(e) => handleDeleteBot(bot.id, e)} className="text-gray-300 hover:text-red-500 transition-colors p-1.5 flex-shrink-0"><Icon name="Trash2" size={14}/></button>
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                    </div>
-                                                    
-                                                    {/* 右侧：群员详情编辑 */}
-                                                    <div className="flex-1 p-4 md:p-6 overflow-y-auto">
-                                                        {selectedBot ? (
-                                                            <div className="space-y-6">
-                                                                <div className="flex items-center gap-3 md:gap-4 border-b border-gray-100 pb-4">
-                                                                    <div className="w-14 h-14 md:w-16 md:h-16 rounded-full overflow-hidden bg-gray-100 border border-gray-200 flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity" onClick={() => botAvatarInputRef.current.click()} title="点击修改头像">
-                                                                        {selectedBot.avatar ? <img src={selectedBot.avatar} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-gray-400 bg-gray-100"><Icon name="Bot" size={28} /></div>}
-                                                                    </div>
-                                                                    <input type="file" ref={botAvatarInputRef} className="hidden" accept="image/*" onChange={handleBotAvatarUpload}/>
-                                                                    <div className="flex-1 min-w-0">
-                                                                        <label className="block text-xs font-medium text-gray-500 mb-1">模型昵称</label>
-                                                                        <input type="text" value={selectedBot.name} onChange={(e) => updateSelectedBot('name', e.target.value)} className="w-full bg-white border border-gray-300 rounded-lg p-2 text-sm md:text-base font-semibold focus:border-blue-500 outline-none" />
-                                                                    </div>
-                                                                    <div className="flex flex-col items-center justify-center pt-2">
-                                                                        <label className="text-[10px] md:text-xs font-medium text-gray-700 mb-1">加入群聊</label>
-                                                                        <input type="checkbox" checked={selectedBot.enabled} onChange={(e) => updateSelectedBot('enabled', e.target.checked)} title="勾选后，该模型会在群聊中接话" className="w-4 h-4 md:w-5 md:h-5 text-blue-600 rounded cursor-pointer"/>
-                                                                    </div>
-                                                                </div>
-
-                                                                <div className="space-y-3">
-                                                                    <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">专属人设 (System Prompt)</h3>
-                                                                    <div className="bg-purple-50 border border-purple-100 p-2 rounded-lg text-xs text-purple-700">
-                                                                        这个设定只对当前模型生效。
-                                                                    </div>
-                                                                    <textarea 
-                                                                        className="w-full h-32 md:h-28 bg-gray-50 border border-gray-300 rounded-lg p-3 text-sm focus:bg-white focus:border-blue-500 outline-none resize-none leading-relaxed" 
-                                                                        placeholder="例如：你是一个毒舌戏精..."
-                                                                        value={selectedBot.systemInstruction}
-                                                                        onChange={(e) => updateSelectedBot('systemInstruction', e.target.value)}
-                                                                    ></textarea>
-                                                                </div>
-
-                                                                <div className="space-y-3 pb-6 md:pb-0">
-                                                                    <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">API 连接配置</h3>
-                                                                    <div className="flex gap-2 mb-2">
-                                                                        <button onClick={() => updateSelectedBot('apiType', 'gemini')} className={`flex-1 py-2 text-xs font-medium rounded-md border ${selectedBot.apiType === 'gemini' ? 'bg-blue-50 border-blue-500 text-blue-700' : 'bg-white border-gray-200 text-gray-600'}`}>Gemini 原生</button>
-                                                                        <button onClick={() => updateSelectedBot('apiType', 'openai')} className={`flex-1 py-2 text-xs font-medium rounded-md border ${selectedBot.apiType === 'openai' ? 'bg-green-50 border-green-500 text-green-700' : 'bg-white border-gray-200 text-gray-600'}`}>OpenAI 兼容</button>
-                                                                    </div>
-                                                                    <div className="flex flex-col md:flex-row gap-3">
-                                                                        <div className="flex-1"><label className="block text-[10px] font-medium text-gray-500 mb-1">Base URL</label><input type="text" value={selectedBot.baseUrl} onChange={(e) => updateSelectedBot('baseUrl', e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded p-2 text-sm focus:bg-white focus:border-blue-500 outline-none" /></div>
-                                                                        <div className="md:w-1/3"><label className="block text-[10px] font-medium text-gray-500 mb-1">模型名称</label><input type="text" value={selectedBot.model} onChange={(e) => updateSelectedBot('model', e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded p-2 text-sm focus:bg-white focus:border-blue-500 outline-none" placeholder="如 gpt-4o"/></div>
-                                                                    </div>
-                                                                    <div><label className="block text-[10px] font-medium text-gray-500 mb-1">API Key</label><input type="password" value={selectedBot.apiKey} onChange={(e) => updateSelectedBot('apiKey', e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded p-2 text-sm focus:bg-white focus:border-blue-500 outline-none" /></div>
-                                                                </div>
-                                                            </div>
-                                                        ) : (
-                                                            <div className="h-full flex items-center justify-center text-gray-400 text-sm">请在左侧选择或添加一个成员</div>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            )}
-
+                                        <div className="flex-1 p-6 overflow-y-auto">
                                             {activeTab === 'general' && (
-                                                <div className="p-4 md:p-6 space-y-6 w-full pb-10 md:pb-6">
+                                                <div className="space-y-6">
                                                     <div className="space-y-4">
-                                                        <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">群主(你)的设置</h3>
-                                                        <div className="flex items-center gap-4">
-                                                            <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-100 border border-gray-200 flex-shrink-0">{config.userAvatar ? <img src={config.userAvatar} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-gray-400 bg-gray-100"><Icon name="UserCircle" size={24} /></div>}</div>
-                                                            <button onClick={() => avatarInputRef.current.click()} className="px-3 py-1.5 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-md text-sm transition-colors">上传头像</button>
-                                                            <input type="file" ref={avatarInputRef} className="hidden" accept="image/*" onChange={handleAvatarUpload}/>
-                                                            {config.userAvatar && <button onClick={() => setConfig({...config, userAvatar: ''})} className="text-xs text-red-500 hover:underline">清除</button>}
+                                                        <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">系统人设 (System Prompt)</h3>
+                                                        <div className="bg-yellow-50 border border-yellow-100 p-3 rounded-lg text-xs text-yellow-700 mb-2">
+                                                            <b>重要提示：</b> 如果您使用本地模型（如 Qwen, Llama），请务必在此框中明确写入人设。本地模型若无明确指令，很容易变回“默认助手”。
                                                         </div>
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="text-sm text-gray-500 w-12">昵称:</span>
-                                                            <input type="text" value={config.userName} onChange={(e) => setConfig({...config, userName: e.target.value})} className="flex-1 bg-white border border-gray-300 rounded p-1.5 text-sm focus:border-blue-500 outline-none" placeholder="默认：你"/>
+                                                        <textarea 
+                                                            className="w-full h-32 bg-white border border-gray-300 rounded-lg p-3 text-sm focus:border-blue-50 outline-none resize-none leading-relaxed" 
+                                                            placeholder="输入你希望 AI 扮演的角色，例如：你是一个温柔的男友..."
+                                                            value={config.systemInstruction}
+                                                            onChange={(e) => setConfig({...config, systemInstruction: e.target.value})}
+                                                        ></textarea>
+                                                        <p className="text-[10px] text-gray-400">此指令会强制覆盖模型的默认性格。</p>
+                                                    </div>
+
+                                                    <div className="border-t border-gray-100 pt-2"></div>
+
+                                                    <div className="space-y-4">
+                                                        <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">模型选择</h3>
+                                                        <div className="flex items-end gap-2">
+                                                            <div className="flex-1">
+                                                                <label className="block text-sm font-medium text-gray-700 mb-1">当前模型</label>
+                                                                {availableModels.length > 0 ? (
+                                                                    <select value={config.model} onChange={(e) => setConfig({...config, model: e.target.value})} className="w-full bg-white border border-gray-300 rounded-lg p-2 text-sm focus:border-blue-500 outline-none">{availableModels.map(m => <option key={m} value={m}>{m}</option>)}</select>
+                                                                ) : (
+                                                                    <input type="text" value={config.model} onChange={(e) => setConfig({...config, model: e.target.value})} className="w-full bg-white border border-gray-300 rounded-lg p-2 text-sm focus:border-blue-500 outline-none" placeholder="如 gemini-1.5-flash" />
+                                                                )}
+                                                            </div>
+                                                            <button onClick={fetchModels} disabled={isFetchingModels} className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-medium transition-colors flex items-center gap-1 h-[38px] whitespace-nowrap"><Icon name="RefreshCw" size={14} className={isFetchingModels ? "animate-spin" : ""} />{isFetchingModels ? '获取中' : '获取列表'}</button>
+                                                        </div>
+                                                        <p className="text-xs text-gray-400">若地址以 /v1 结尾，系统会自动切换到 OpenAI 兼容模式获取。</p>
+                                                    </div>
+
+                                                    <div className="border-t border-gray-100 pt-4"></div>
+
+                                                    <div className="space-y-4">
+                                                        <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">个性化</h3>
+                                                        <div>
+                                                            <label className="block text-sm font-medium text-gray-700 mb-2">用户设置</label>
+                                                            <div className="flex items-center gap-4 mb-2">
+                                                                <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-100 border border-gray-200 flex-shrink-0">{config.userAvatar ? <img src={config.userAvatar} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-gray-400 bg-gray-100"><Icon name="UserCircle" size={24} /></div>}</div>
+                                                                <button onClick={() => avatarInputRef.current.click()} className="px-3 py-1.5 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-md text-sm transition-colors">上传图片</button>
+                                                                <input type="file" ref={avatarInputRef} className="hidden" accept="image/*" onChange={(e) => handleAvatarUpload(e, 'user')}/>
+                                                                {config.userAvatar && <button onClick={() => setConfig({...config, userAvatar: ''})} className="text-xs text-red-500 hover:underline">清除</button>}
+                                                            </div>
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="text-sm text-gray-500 w-12">昵称:</span>
+                                                                <input type="text" value={config.userName} onChange={(e) => setConfig({...config, userName: e.target.value})} className="flex-1 bg-white border border-gray-300 rounded p-1 text-sm focus:border-blue-500 outline-none" placeholder="默认：你"/>
+                                                            </div>
+                                                        </div>
+                                                        <div>
+                                                            <label className="block text-sm font-medium text-gray-700 mb-2">AI 设置</label>
+                                                            <div className="flex items-center gap-4 mb-2">
+                                                                <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-100 border border-gray-200 flex-shrink-0">{config.aiAvatar ? <img src={config.aiAvatar} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-gray-400 bg-gray-100"><Icon name="Bot" size={24} /></div>}</div>
+                                                                <button onClick={() => aiAvatarInputRef.current.click()} className="px-3 py-1.5 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-md text-sm transition-colors">上传图片</button>
+                                                                <input type="file" ref={aiAvatarInputRef} className="hidden" accept="image/*" onChange={(e) => handleAvatarUpload(e, 'ai')}/>
+                                                                {config.aiAvatar && <button onClick={() => setConfig({...config, aiAvatar: ''})} className="text-xs text-red-500 hover:underline">清除</button>}
+                                                            </div>
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="text-sm text-gray-500 w-12">昵称:</span>
+                                                                <input type="text" value={config.aiName} onChange={(e) => setConfig({...config, aiName: e.target.value})} className="flex-1 bg-white border border-gray-300 rounded p-1 text-sm focus:border-blue-500 outline-none" placeholder="默认：星月舱 AI"/>
+                                                            </div>
                                                         </div>
                                                     </div>
 
                                                     <div className="border-t border-gray-100 pt-4"></div>
+
+                                                    <div className="space-y-4">
+                                                        <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">API 配置</h3>
+                                                        <div>
+                                                            <div className="flex justify-between mb-1">
+                                                                <label className="block text-sm font-medium text-gray-700">API 协议标准</label>
+                                                                <span className="text-xs text-gray-400 bg-gray-100 px-2 rounded-full">{config.apiType === 'openai' ? 'OpenAI / OneAPI 兼容' : 'Google Gemini 原生'}</span>
+                                                            </div>
+                                                            <div className="flex gap-2">
+                                                                <button onClick={() => setConfig({...config, apiType: 'gemini'})} className={`flex-1 py-2 text-sm rounded-lg border ${config.apiType === 'gemini' ? 'bg-blue-50 border-blue-500 text-blue-700' : 'bg-white border-gray-200 text-gray-600'}`}>Gemini 原生</button>
+                                                                <button onClick={() => setConfig({...config, apiType: 'openai'})} className={`flex-1 py-2 text-sm rounded-lg border ${config.apiType === 'openai' ? 'bg-green-50 border-green-500 text-green-700' : 'bg-white border-gray-200 text-gray-600'}`}>OpenAI 兼容</button>
+                                                            </div>
+                                                            <p className="text-[10px] text-gray-400 mt-1">如果您的 Base URL 以 /v1 结尾，请选择 "OpenAI 兼容"。</p>
+                                                        </div>
+                                                        <div><label className="block text-sm font-medium text-gray-700 mb-1">API Base URL</label><input type="text" value={config.baseUrl} onChange={(e) => setConfig({...config, baseUrl: e.target.value})} className="w-full bg-white border border-gray-300 rounded-lg p-2 text-sm focus:border-blue-500 outline-none" /></div>
+                                                        <div><label className="block text-sm font-medium text-gray-700 mb-1">Gemini API Key</label><input type="password" value={config.apiKey} onChange={(e) => setConfig({...config, apiKey: e.target.value})} className="w-full bg-white border border-gray-300 rounded-lg p-2 text-sm focus:border-blue-500 outline-none" /></div>
+                                                    </div>
+                                                    
+                                                    <div className="border-t border-gray-100 pt-4"></div>
                                                     
                                                     <div className="space-y-4">
-                                                         <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">全局对话控制</h3>
+                                                         <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">对话控制</h3>
                                                          <div>
-                                                            <label className="block text-sm font-medium text-gray-700 mb-1">全局记忆长度 (轮数): {config.historyLimit}</label>
+                                                            <label className="block text-sm font-medium text-gray-700 mb-1">短期记忆 (轮数): {config.historyLimit}</label>
                                                             <input type="range" min="5" max="50" step="1" value={config.historyLimit} onChange={(e) => setConfig({...config, historyLimit: e.target.value})} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"/>
                                                          </div>
                                                          
-                                                         <div className="flex justify-between items-center bg-gray-100 p-3 rounded-lg">
-                                                            <span className="text-xs font-medium text-gray-700">本地模型防遗忘注入</span>
+                                                         <div className="flex justify-between items-center bg-gray-100 p-2 rounded-lg">
+                                                            <span className="text-xs font-medium text-gray-700">本地模型强力纠正</span>
                                                             <button 
                                                                 onClick={() => setConfig({...config, localModelOptimize: !config.localModelOptimize})}
                                                                 className={`w-10 h-5 rounded-full relative transition-colors ${config.localModelOptimize ? 'bg-blue-600' : 'bg-gray-300'}`}
@@ -1124,9 +951,10 @@
                                                                 <div className={`w-3 h-3 bg-white rounded-full absolute top-1 transition-transform ${config.localModelOptimize ? 'left-6' : 'left-1'}`}></div>
                                                             </button>
                                                          </div>
-                                                         
-                                                         <div className="flex justify-between items-center bg-gray-100 p-3 rounded-lg mt-2">
-                                                            <span className="text-xs font-medium text-gray-700">流式打字输出</span>
+                                                         <p className="text-[10px] text-gray-400">开启后，会在用户消息末尾追加轻量级唤醒词，防止本地模型遗忘人设。</p>
+
+                                                         <div className="flex justify-between items-center bg-gray-100 p-2 rounded-lg mt-2">
+                                                            <span className="text-xs font-medium text-gray-700">流式输出 (打字机效果)</span>
                                                             <button 
                                                                 onClick={() => setConfig({...config, streamOutput: !config.streamOutput})}
                                                                 className={`w-10 h-5 rounded-full relative transition-colors ${config.streamOutput ? 'bg-blue-600' : 'bg-gray-300'}`}
@@ -1134,52 +962,105 @@
                                                                 <div className={`w-3 h-3 bg-white rounded-full absolute top-1 transition-transform ${config.streamOutput ? 'left-6' : 'left-1'}`}></div>
                                                             </button>
                                                          </div>
+                                                         <p className="text-[10px] text-gray-400">开启后，模型回复会像打字一样实时显示，包含思考链也能立刻看到。</p>
                                                          
-                                                         <div className="flex flex-col md:flex-row gap-4 mt-2">
-                                                            <div className="flex-1"><label className="block text-sm font-medium text-gray-700 mb-1">温度: {config.temperature}</label><input type="range" min="0" max="2" step="0.1" value={config.temperature} onChange={(e) => setConfig({...config, temperature: e.target.value})} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"/></div>
-                                                            <div className="flex-1"><label className="block text-sm font-medium text-gray-700 mb-1">重复惩罚: {config.frequencyPenalty}</label><input type="range" min="-2" max="2" step="0.1" value={config.frequencyPenalty} onChange={(e) => setConfig({...config, frequencyPenalty: e.target.value})} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"/></div>
+                                                         <div className="flex gap-4 mt-2">
+                                                            <div className="flex-1">
+                                                                <label className="block text-sm font-medium text-gray-700 mb-1">温度 (Temperature): {config.temperature}</label>
+                                                                <input type="range" min="0" max="2" step="0.1" value={config.temperature} onChange={(e) => setConfig({...config, temperature: e.target.value})} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"/>
+                                                            </div>
+                                                            <div className="flex-1">
+                                                                <label className="block text-sm font-medium text-gray-700 mb-1">重复惩罚: {config.frequencyPenalty}</label>
+                                                                <input type="range" min="-2" max="2" step="0.1" value={config.frequencyPenalty} onChange={(e) => setConfig({...config, frequencyPenalty: e.target.value})} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"/>
+                                                            </div>
                                                          </div>
                                                     </div>
 
                                                     <div className="border-t border-gray-100 pt-4"></div>
 
                                                     <div className="space-y-4">
-                                                        <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">全局语音配置 (Minimax)</h3>
-                                                        <div><label className="block text-sm font-medium text-gray-700 mb-1">Minimax API Key</label><input type="password" value={config.minimaxKey} onChange={(e) => setConfig({...config, minimaxKey: e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-lg p-2 text-sm focus:bg-white focus:border-blue-500 outline-none" /></div>
-                                                        <div><label className="block text-sm font-medium text-gray-700 mb-1">Minimax Group ID</label><input type="text" value={config.minimaxGroupId} onChange={(e) => setConfig({...config, minimaxGroupId: e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-lg p-2 text-sm focus:bg-white focus:border-blue-500 outline-none" /></div>
+                                                        <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">语音配置 (Minimax)</h3>
+                                                        <div>
+                                                            <label className="block text-sm font-medium text-gray-700 mb-1">Minimax API Key</label>
+                                                            <input type="password" value={config.minimaxKey} onChange={(e) => setConfig({...config, minimaxKey: e.target.value})} placeholder="在此输入 Minimax Key" className="w-full bg-white border border-gray-300 rounded-lg p-2 text-sm focus:border-blue-500 outline-none" />
+                                                        </div>
+                                                        <div>
+                                                            <label className="block text-sm font-medium text-gray-700 mb-1">Minimax Group ID</label>
+                                                            <input type="text" value={config.minimaxGroupId} onChange={(e) => setConfig({...config, minimaxGroupId: e.target.value})} placeholder="例如: 181000000000000" className="w-full bg-white border border-gray-300 rounded-lg p-2 text-sm focus:border-blue-500 outline-none" />
+                                                            <p className="text-[10px] text-gray-400 mt-1">请在 Minimax 账户信息中查看您的 Group ID。</p>
+                                                        </div>
+                                                        <div>
+                                                            <label className="block text-sm font-medium text-gray-700 mb-1">语音 ID (Voice ID)</label>
+                                                            <div className="flex gap-2">
+                                                                <input type="text" value={config.minimaxVoiceId} onChange={(e) => setConfig({...config, minimaxVoiceId: e.target.value})} placeholder="例如: male-qn-qingse" className="flex-1 bg-white border border-gray-300 rounded-lg p-2 text-sm focus:border-blue-500 outline-none" />
+                                                                <select 
+                                                                    className="bg-gray-50 border border-gray-300 rounded-lg p-2 text-sm outline-none"
+                                                                    onChange={(e) => setConfig({...config, minimaxVoiceId: e.target.value})}
+                                                                    value={config.minimaxVoiceId}
+                                                                >
+                                                                    <option value="male-qn-qingse">青涩男声</option>
+                                                                    <option value="female-shaonv">少女音</option>
+                                                                    <option value="female-yujie">御姐音</option>
+                                                                    <option value="male-qn-jingying">精英男声</option>
+                                                                </select>
+                                                            </div>
+                                                        </div>
+                                                        <div>
+                                                            <label className="block text-sm font-medium text-gray-700 mb-1">语音模型 (Model)</label>
+                                                            <div className="flex gap-2">
+                                                                <select 
+                                                                    className="flex-1 bg-white border border-gray-300 rounded-lg p-2 text-sm outline-none"
+                                                                    value={config.minimaxModel}
+                                                                    onChange={(e) => setConfig({...config, minimaxModel: e.target.value, minimaxCustomModel: ''})}
+                                                                >
+                                                                    <option value="speech-01-turbo">speech-01-turbo (推荐)</option>
+                                                                    <option value="speech-01-hd">speech-01-hd (高清)</option>
+                                                                    <option value="speech-01">speech-01 (标准)</option>
+                                                                </select>
+                                                                <input 
+                                                                    type="text" 
+                                                                    value={config.minimaxCustomModel} 
+                                                                    onChange={(e) => setConfig({...config, minimaxCustomModel: e.target.value})} 
+                                                                    placeholder="自定义模型ID" 
+                                                                    className="w-1/3 bg-white border border-gray-300 rounded-lg p-2 text-sm focus:border-blue-500 outline-none" 
+                                                                    title="手动输入新模型ID，将覆盖左侧选择"
+                                                                />
+                                                            </div>
+                                                            <p className="text-[10px] text-gray-400 mt-1">如官方发布新模型，可在右侧手动填入 ID。</p>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             )}
 
                                             {activeTab === 'memory' && (
-                                                <div className="p-4 md:p-6 space-y-8 w-full pb-10 md:pb-6">
+                                                <div className="space-y-8">
                                                     <div>
                                                         <div className="flex justify-between items-center mb-3">
-                                                            <div><h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2"><Icon name="Archive" size={16} className="text-blue-500"/> 记忆归档</h3><p className="text-xs text-gray-400">提取当前房间的聊天重点</p></div>
-                                                            <button onClick={handleArchive} disabled={isArchiving} className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded-md font-medium hover:bg-blue-700 flex items-center gap-1 shadow-sm"><Icon name="Archive" size={14}/> {isArchiving ? '归档中' : '生成记忆'}</button>
+                                                            <div><h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2"><Icon name="Archive" size={16} className="text-blue-500"/> 记忆归档</h3><p className="text-xs text-gray-400">总结当前对话并保存</p></div>
+                                                            <button onClick={handleArchive} disabled={isArchiving} className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded-md font-medium hover:bg-blue-700 flex items-center gap-1 shadow-sm"><Icon name="Archive" size={14}/> {isArchiving ? '归档中...' : '生成今日记忆'}</button>
                                                         </div>
                                                     </div>
                                                     <div className="border-t border-gray-100"></div>
                                                     <div>
                                                         <div className="flex justify-between items-center mb-3">
-                                                            <div><h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2"><Icon name="Cpu" size={16} className="text-blue-500"/> 全局共同记忆库</h3><p className="text-xs text-gray-400">所有模型都能读取到</p></div>
+                                                            <div><h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2"><Icon name="Cpu" size={16} className="text-blue-500"/> 星月记忆库</h3><p className="text-xs text-gray-400">AI 会永远记住这些内容 (支持编辑)</p></div>
                                                             <div className="flex gap-2">
-                                                                <button onClick={() => fileInputRef.current.click()} className="text-xs bg-blue-50 text-blue-600 px-3 py-1.5 rounded-md font-medium hover:bg-blue-100 flex items-center gap-1"><Icon name="Upload" size={14}/> 上传</button>
+                                                                <button onClick={() => fileInputRef.current.click()} className="text-xs bg-blue-50 text-blue-600 px-3 py-1.5 rounded-md font-medium hover:bg-blue-100 flex items-center gap-1"><Icon name="Upload" size={14}/> 上传文件</button>
                                                                 <input type="file" ref={fileInputRef} className="hidden" onChange={(e) => handleFileUpload(e, 'memory')} />
                                                             </div>
                                                         </div>
-                                                        <div className="bg-gray-50 rounded-xl border border-gray-200 min-h-[100px] p-2 space-y-2 max-h-[50vh] md:max-h-[300px] overflow-y-auto">
-                                                            {memoryFiles.length === 0 ? <div className="h-full flex flex-col items-center justify-center text-gray-400 py-6"><span className="text-xs">暂无记忆 (点击上方上传或归档)</span></div> : memoryFiles.map((file, i) => (
+                                                        <div className="bg-gray-50 rounded-xl border border-gray-200 min-h-[100px] p-2 space-y-2 max-h-[300px] overflow-y-auto">
+                                                            {memoryFiles.length === 0 ? <div className="h-full flex flex-col items-center justify-center text-gray-400 py-6"><span className="text-xs">暂无记忆 (点击上方"生成今日记忆"或上传)</span></div> : memoryFiles.map((file, i) => (
                                                                 <div key={i} className="flex flex-col bg-white p-2 rounded border border-gray-100 shadow-sm gap-2">
                                                                     <div className="flex items-center justify-between">
                                                                         <div className="flex items-center gap-2 overflow-hidden">
                                                                             <div className="bg-blue-100 p-1 rounded text-blue-600"><Icon name="FileText" size={14}/></div>
-                                                                            <div className="truncate min-w-0">
-                                                                                <div className="text-xs font-medium text-gray-700 truncate">{file.name}</div>
+                                                                            <div className="truncate">
+                                                                                <div className="text-xs font-medium text-gray-700 truncate max-w-[120px]">{file.name}</div>
                                                                                 <div className="text-[9px] text-gray-400">{file.date}</div>
                                                                             </div>
                                                                         </div>
-                                                                        <div className="flex gap-1 flex-shrink-0">
+                                                                        <div className="flex gap-1">
                                                                             <button onClick={() => startEditingMemory(i)} className="text-blue-500 hover:text-blue-700 p-1 bg-blue-50 rounded"><Icon name="Edit" size={12}/></button>
                                                                             <button onClick={() => removeFile(i, 'memory')} className="text-red-500 hover:text-red-700 p-1 bg-red-50 rounded"><Icon name="Trash2" size={12}/></button>
                                                                         </div>
@@ -1197,8 +1078,8 @@
                                                                             </div>
                                                                         </div>
                                                                     ) : (
-                                                                        <div className="text-[10px] text-gray-500 bg-gray-50 p-2 rounded max-h-20 overflow-hidden line-clamp-3">
-                                                                            {file.content}
+                                                                        <div className="text-[10px] text-gray-500 bg-gray-50 p-1.5 rounded max-h-16 overflow-hidden text-ellipsis whitespace-nowrap">
+                                                                            {file.content.slice(0, 100)}...
                                                                         </div>
                                                                     )}
                                                                 </div>
@@ -1209,39 +1090,63 @@
                                             )}
 
                                             {activeTab === 'backup' && (
-                                                <div className="p-4 md:p-6 space-y-6 w-full pb-10 md:pb-6">
+                                                <div className="space-y-6">
                                                     <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
-                                                        <div className="flex flex-col md:flex-row items-start md:items-center gap-3">
-                                                            <div className="p-2 bg-blue-100 rounded-lg text-blue-600 hidden md:block"><Icon name="Database" size={24}/></div>
-                                                            <div className="flex-1">
+                                                        <div className="flex items-start gap-3">
+                                                            <div className="p-2 bg-blue-100 rounded-lg text-blue-600"><Icon name="Database" size={24}/></div>
+                                                            <div>
                                                                 <h3 className="text-sm font-semibold text-gray-800">全量备份导出</h3>
-                                                                <p className="text-xs text-gray-600 mt-1">导出所有群员、记忆库和聊天记录。</p>
+                                                                <p className="text-xs text-gray-600 mt-1 leading-relaxed">
+                                                                    将导出您所有的设置、API Key、头像、记忆库文件以及所有的历史聊天记录为一个 JSON 文件。
+                                                                    <br/>您可以将此文件发送到其他设备（如手机），即可无缝恢复所有数据。
+                                                                </p>
+                                                                <button onClick={handleCreateBackup} className="mt-3 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+                                                                    <Icon name="Download" size={16}/> 导出星月备份
+                                                                </button>
                                                             </div>
-                                                            <button onClick={handleCreateBackup} className="mt-2 md:mt-0 w-full md:w-auto px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2">
-                                                                <Icon name="Download" size={16}/> 导出星月备份
-                                                            </button>
                                                         </div>
                                                     </div>
 
+                                                    <div className="border-t border-gray-100"></div>
+
                                                     <div className="bg-green-50 border border-green-100 rounded-xl p-4">
-                                                        <div className="flex flex-col md:flex-row items-start md:items-center gap-3">
-                                                            <div className="p-2 bg-green-100 rounded-lg text-green-600 hidden md:block"><Icon name="Upload" size={24}/></div>
-                                                            <div className="flex-1">
+                                                        <div className="flex items-start gap-3">
+                                                            <div className="p-2 bg-green-100 rounded-lg text-green-600"><Icon name="Upload" size={24}/></div>
+                                                            <div>
                                                                 <h3 className="text-sm font-semibold text-gray-800">从备份恢复</h3>
-                                                                <p className="text-xs text-red-500 mt-1 font-medium">警告：此操作将覆盖当前所有数据！</p>
+                                                                <p className="text-xs text-gray-600 mt-1 leading-relaxed">
+                                                                    上传您之前导出的备份文件。
+                                                                    <br/><span className="text-red-500 font-medium">警告：此操作将覆盖当前的设置和所有数据，请谨慎操作。</span>
+                                                                </p>
+                                                                <button onClick={() => backupInputRef.current.click()} className="mt-3 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+                                                                    <Icon name="RefreshCw" size={16}/> 选择备份文件恢复
+                                                                </button>
+                                                                <input type="file" ref={backupInputRef} className="hidden" accept=".json" onChange={handleRestoreBackup} />
                                                             </div>
-                                                            <button onClick={() => backupInputRef.current.click()} className="mt-2 md:mt-0 w-full md:w-auto px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2">
-                                                                <Icon name="RefreshCw" size={16}/> 选择备份文件
-                                                            </button>
-                                                            <input type="file" ref={backupInputRef} className="hidden" accept=".json" onChange={handleRestoreBackup} />
                                                         </div>
                                                     </div>
                                                 </div>
                                             )}
+                                            <div className="border-t border-gray-100 pt-6">
+                                                <div className="bg-gray-50 border border-gray-100 rounded-xl p-4">
+                                                    <div className="flex items-start gap-3">
+                                                        <div className="p-2 bg-gray-200 rounded-lg text-gray-600"><Icon name="FileText" size={24}/></div>
+                                                        <div>
+                                                            <h3 className="text-sm font-semibold text-gray-800">聊天记录导出 (TXT)</h3>
+                                                            <p className="text-xs text-gray-600 mt-1 leading-relaxed">
+                                                                将当前聊天窗口的对话记录导出为易读的文本文件 (.txt)，包含时间戳和角色昵称。
+                                                            </p>
+                                                            <button onClick={handleExportTxt} className="mt-3 px-4 py-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+                                                                <Icon name="Download" size={16}/> 导出当前对话记录
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
-                                    <div className="p-3 md:p-4 border-t border-gray-100 bg-gray-50 flex justify-end gap-3 flex-shrink-0">
-                                        <button onClick={handleSaveConfig} className="w-full md:w-auto px-8 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors shadow-sm">保存设置</button>
+                                    <div className="p-4 border-t border-gray-100 bg-gray-50 flex justify-end gap-3">
+                                        <button onClick={handleSaveConfig} className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors shadow-sm">保存并关闭</button>
                                     </div>
                                 </div>
                             </div>
