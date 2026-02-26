@@ -171,7 +171,8 @@
                 aiName: '星月舱 AI',
                 minimaxUrl: 'https://api.minimax.chat/v1/t2a_v2',
                 systemInstruction: DEFAULT_SYSTEM_INSTRUCTION,
-                localModelOptimize: true 
+                localModelOptimize: true,
+                streamOutput: true
             });
             
             const [availableModels, setAvailableModels] = useState([]);
@@ -205,6 +206,7 @@
                     if (parsed.frequencyPenalty === undefined) parsed.frequencyPenalty = 0;
                     if (!parsed.systemInstruction) parsed.systemInstruction = DEFAULT_SYSTEM_INSTRUCTION;
                     if (parsed.localModelOptimize === undefined) parsed.localModelOptimize = true;
+                    if (parsed.streamOutput === undefined) parsed.streamOutput = true;
                     setConfig(prev => ({...prev, ...parsed}));
                 }
                 const storedMemories = localStorage.getItem('gemini_memories');
@@ -487,7 +489,7 @@
                 if (config.apiType === 'openai') {
                     url = `${baseUrl}/chat/completions`;
                     headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${config.apiKey}` };
-                    payload = { model: modelName, messages: messagesToSend, stream: false, temperature: parseFloat(config.temperature), frequency_penalty: parseFloat(config.frequencyPenalty) };
+                    payload = { model: modelName, messages: messagesToSend, stream: config.streamOutput, temperature: parseFloat(config.temperature), frequency_penalty: parseFloat(config.frequencyPenalty) };
                 } else {
                     url = `${baseUrl}/v1beta/models/${modelName}:generateContent?key=${config.apiKey}`;
                     headers = { 'Content-Type': 'application/json' };
@@ -512,32 +514,60 @@
 
                 try {
                     const { url, headers, payload } = generatePayload(newMessages, true);
-                    const response = await fetch(url, { method: 'POST', headers, body: JSON.stringify(payload) });
+                    let endpointUrl = url;
+                    if (config.streamOutput && config.apiType !== 'openai') endpointUrl = endpointUrl.replace(':generateContent', ':streamGenerateContent') + '&alt=sse';
+
+                    const response = await fetch(endpointUrl, { method: 'POST', headers, body: JSON.stringify(payload) });
                     if (!response.ok) { const errData = await response.json().catch(() => ({})); throw new Error(errData.error?.message || `HTTP ${response.status}`); }
-                    const data = await response.json();
                     
-                    let aiText = '';
-                    let reasoningText = '';
-
-                    if (config.apiType === 'openai') {
-                        const messageObj = data.choices?.[0]?.message;
-                        aiText = messageObj?.content || "";
-                        // 获取标准的深度思考字段
-                        reasoningText = messageObj?.reasoning_content || "";
+                    if (!config.streamOutput) {
+                        const data = await response.json();
+                        let aiText = ''; let reasoningText = '';
+                        if (config.apiType === 'openai') {
+                            const messageObj = data.choices?.[0]?.message;
+                            aiText = messageObj?.content || ""; reasoningText = messageObj?.reasoning_content || "";
+                        } else { aiText = data.candidates?.[0]?.content?.parts?.[0]?.text || ""; }
+                        const thinkMatch = aiText.match(/<think>([\s\S]*?)<\/think>/);
+                        if (thinkMatch) { reasoningText = thinkMatch[1].trim() + (reasoningText ? '\n' + reasoningText : ''); aiText = aiText.replace(/<think>[\s\S]*?<\/think>/, '').trim(); }
+                        if (!aiText && !reasoningText) aiText = "无回复";
+                        setMessages(prev => [...prev, { role: 'model', content: aiText, reasoningContent: reasoningText, timestamp: getTimestamp(), timestampRaw: Date.now(), modelName: config.model }]);
+                        setIsLoading(false);
                     } else {
-                        aiText = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+                        setIsLoading(false);
+                        const reader = response.body.getReader();
+                        const decoder = new TextDecoder("utf-8");
+                        let aiText = ""; let reasoningText = "";
+                        setMessages(prev => [...prev, { role: 'model', content: '', reasoningContent: '', timestamp: getTimestamp(), timestampRaw: Date.now(), modelName: config.model }]);
+                        
+                        let buffer = "";
+                        while (true) {
+                            const { done, value } = await reader.read();
+                            if (done) break;
+                            buffer += decoder.decode(value, { stream: true });
+                            let lines = buffer.split('\n');
+                            buffer = lines.pop();
+                            for (let line of lines) {
+                                line = line.trim();
+                                if (line.startsWith('data: ') && line !== 'data: [DONE]') {
+                                    try {
+                                        const data = JSON.parse(line.substring(6));
+                                        if (config.apiType === 'openai') {
+                                            const delta = data.choices?.[0]?.delta;
+                                            if (delta?.reasoning_content) reasoningText += delta.reasoning_content;
+                                            if (delta?.content) aiText += delta.content;
+                                        } else { aiText += data.candidates?.[0]?.content?.parts?.[0]?.text || ""; }
+                                        
+                                        let displayReasoning = reasoningText; let displayContent = aiText;
+                                        const thinkMatch = aiText.match(/<think>([\s\S]*?)(<\/think>|$)/);
+                                        if (thinkMatch) { displayReasoning = (reasoningText ? reasoningText + '\n' : '') + thinkMatch[1].trim(); displayContent = aiText.replace(/<think>[\s\S]*?(<\/think>|$)/, '').trim(); }
+                                        
+                                        setMessages(prev => { const newMsgs = [...prev]; newMsgs[newMsgs.length - 1].content = displayContent; newMsgs[newMsgs.length - 1].reasoningContent = displayReasoning; return newMsgs; });
+                                    } catch (e) {}
+                                }
+                            }
+                        }
                     }
-
-                    // 兼容本地模型：提取包裹在 <think></think> 标签中的思考链
-                    const thinkMatch = aiText.match(/<think>([\s\S]*?)<\/think>/);
-                    if (thinkMatch) {
-                        reasoningText = thinkMatch[1].trim() + (reasoningText ? '\n' + reasoningText : '');
-                        aiText = aiText.replace(/<think>[\s\S]*?<\/think>/, '').trim();
-                    }
-                    if (!aiText && !reasoningText) aiText = "无回复";
-
-                    setMessages(prev => [...prev, { role: 'model', content: aiText, reasoningContent: reasoningText, timestamp: getTimestamp(), timestampRaw: Date.now(), modelName: config.model }]);
-                } catch (err) { setError(err.message); setMessages(prev => [...prev, { role: 'model', content: `错误: ${err.message}`, timestamp: getTimestamp(), modelName: config.model }]); } finally { setIsLoading(false); }
+                } catch (err) { setError(err.message); setMessages(prev => [...prev, { role: 'model', content: `错误: ${err.message}`, timestamp: getTimestamp(), modelName: config.model }]); setIsLoading(false); }
             };
 
             const handleSend = async () => {
@@ -578,32 +608,60 @@
 
                 try {
                     const { url, headers, payload } = generatePayload(newHistory, false);
-                    const response = await fetch(url, { method: 'POST', headers, body: JSON.stringify(payload) });
+                    let endpointUrl = url;
+                    if (config.streamOutput && config.apiType !== 'openai') endpointUrl = endpointUrl.replace(':generateContent', ':streamGenerateContent') + '&alt=sse';
+
+                    const response = await fetch(endpointUrl, { method: 'POST', headers, body: JSON.stringify(payload) });
                     if (!response.ok) { const errData = await response.json().catch(() => ({})); throw new Error(errData.error?.message || `HTTP ${response.status}`); }
-                    const data = await response.json();
                     
-                    let aiText = '';
-                    let reasoningText = '';
-
-                    // 提取思考过程 (CoT)
-                    if (config.apiType === 'openai') {
-                        const messageObj = data.choices?.[0]?.message;
-                        aiText = messageObj?.content || "";
-                        reasoningText = messageObj?.reasoning_content || "";
+                    if (!config.streamOutput) {
+                        const data = await response.json();
+                        let aiText = ''; let reasoningText = '';
+                        if (config.apiType === 'openai') {
+                            const messageObj = data.choices?.[0]?.message;
+                            aiText = messageObj?.content || ""; reasoningText = messageObj?.reasoning_content || "";
+                        } else { aiText = data.candidates?.[0]?.content?.parts?.[0]?.text || ""; }
+                        const thinkMatch = aiText.match(/<think>([\s\S]*?)<\/think>/);
+                        if (thinkMatch) { reasoningText = thinkMatch[1].trim() + (reasoningText ? '\n' + reasoningText : ''); aiText = aiText.replace(/<think>[\s\S]*?<\/think>/, '').trim(); }
+                        if (!aiText && !reasoningText) aiText = "无回复";
+                        setMessages(prev => [...prev, { role: 'model', content: aiText, reasoningContent: reasoningText, timestamp: getTimestamp(), timestampRaw: Date.now(), modelName: config.model }]);
+                        setIsLoading(false);
                     } else {
-                        aiText = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+                        setIsLoading(false);
+                        const reader = response.body.getReader();
+                        const decoder = new TextDecoder("utf-8");
+                        let aiText = ""; let reasoningText = "";
+                        setMessages(prev => [...prev, { role: 'model', content: '', reasoningContent: '', timestamp: getTimestamp(), timestampRaw: Date.now(), modelName: config.model }]);
+                        
+                        let buffer = "";
+                        while (true) {
+                            const { done, value } = await reader.read();
+                            if (done) break;
+                            buffer += decoder.decode(value, { stream: true });
+                            let lines = buffer.split('\n');
+                            buffer = lines.pop();
+                            for (let line of lines) {
+                                line = line.trim();
+                                if (line.startsWith('data: ') && line !== 'data: [DONE]') {
+                                    try {
+                                        const data = JSON.parse(line.substring(6));
+                                        if (config.apiType === 'openai') {
+                                            const delta = data.choices?.[0]?.delta;
+                                            if (delta?.reasoning_content) reasoningText += delta.reasoning_content;
+                                            if (delta?.content) aiText += delta.content;
+                                        } else { aiText += data.candidates?.[0]?.content?.parts?.[0]?.text || ""; }
+                                        
+                                        let displayReasoning = reasoningText; let displayContent = aiText;
+                                        const thinkMatch = aiText.match(/<think>([\s\S]*?)(<\/think>|$)/);
+                                        if (thinkMatch) { displayReasoning = (reasoningText ? reasoningText + '\n' : '') + thinkMatch[1].trim(); displayContent = aiText.replace(/<think>[\s\S]*?(<\/think>|$)/, '').trim(); }
+                                        
+                                        setMessages(prev => { const newMsgs = [...prev]; newMsgs[newMsgs.length - 1].content = displayContent; newMsgs[newMsgs.length - 1].reasoningContent = displayReasoning; return newMsgs; });
+                                    } catch (e) {}
+                                }
+                            }
+                        }
                     }
-
-                    // 兼容提取自带 <think> 标签的本地模型
-                    const thinkMatch = aiText.match(/<think>([\s\S]*?)<\/think>/);
-                    if (thinkMatch) {
-                        reasoningText = thinkMatch[1].trim() + (reasoningText ? '\n' + reasoningText : '');
-                        aiText = aiText.replace(/<think>[\s\S]*?<\/think>/, '').trim();
-                    }
-                    if (!aiText && !reasoningText) aiText = "无回复";
-
-                    setMessages(prev => [...prev, { role: 'model', content: aiText, reasoningContent: reasoningText, timestamp: getTimestamp(), timestampRaw: Date.now(), modelName: config.model }]);
-                } catch (err) { setError(err.message); setMessages(prev => [...prev, { role: 'model', content: `错误: ${err.message}`, timestamp: getTimestamp(), modelName: config.model }]); } finally { setIsLoading(false); }
+                } catch (err) { setError(err.message); setMessages(prev => [...prev, { role: 'model', content: `错误: ${err.message}`, timestamp: getTimestamp(), modelName: config.model }]); setIsLoading(false); }
             };
 
             const handleKeyDown = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } };
@@ -894,8 +952,19 @@
                                                             </button>
                                                          </div>
                                                          <p className="text-[10px] text-gray-400">开启后，会在用户消息末尾追加轻量级唤醒词，防止本地模型遗忘人设。</p>
+
+                                                         <div className="flex justify-between items-center bg-gray-100 p-2 rounded-lg mt-2">
+                                                            <span className="text-xs font-medium text-gray-700">流式输出 (打字机效果)</span>
+                                                            <button 
+                                                                onClick={() => setConfig({...config, streamOutput: !config.streamOutput})}
+                                                                className={`w-10 h-5 rounded-full relative transition-colors ${config.streamOutput ? 'bg-blue-600' : 'bg-gray-300'}`}
+                                                            >
+                                                                <div className={`w-3 h-3 bg-white rounded-full absolute top-1 transition-transform ${config.streamOutput ? 'left-6' : 'left-1'}`}></div>
+                                                            </button>
+                                                         </div>
+                                                         <p className="text-[10px] text-gray-400">开启后，模型回复会像打字一样实时显示，包含思考链也能立刻看到。</p>
                                                          
-                                                         <div className="flex gap-4">
+                                                         <div className="flex gap-4 mt-2">
                                                             <div className="flex-1">
                                                                 <label className="block text-sm font-medium text-gray-700 mb-1">温度 (Temperature): {config.temperature}</label>
                                                                 <input type="range" min="0" max="2" step="0.1" value={config.temperature} onChange={(e) => setConfig({...config, temperature: e.target.value})} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"/>
