@@ -536,8 +536,8 @@
                     }
                     if (!aiText && !reasoningText) aiText = "无回复";
 
-                    setMessages(prev => [...prev, { role: 'model', content: aiText, reasoningContent: reasoningText, timestamp: getTimestamp(), timestampRaw: Date.now() }]);
-                } catch (err) { setError(err.message); setMessages(prev => [...prev, { role: 'model', content: `错误: ${err.message}`, timestamp: getTimestamp() }]); } finally { setIsLoading(false); }
+                    setMessages(prev => [...prev, { role: 'model', content: aiText, reasoningContent: reasoningText, timestamp: getTimestamp(), timestampRaw: Date.now(), modelName: config.model }]);
+                } catch (err) { setError(err.message); setMessages(prev => [...prev, { role: 'model', content: `错误: ${err.message}`, timestamp: getTimestamp(), modelName: config.model }]); } finally { setIsLoading(false); }
             };
 
             const handleSend = async () => {
@@ -602,8 +602,8 @@
                     }
                     if (!aiText && !reasoningText) aiText = "无回复";
 
-                    setMessages(prev => [...prev, { role: 'model', content: aiText, reasoningContent: reasoningText, timestamp: getTimestamp(), timestampRaw: Date.now() }]);
-                } catch (err) { setError(err.message); setMessages(prev => [...prev, { role: 'model', content: `错误: ${err.message}`, timestamp: getTimestamp() }]); } finally { setIsLoading(false); }
+                    setMessages(prev => [...prev, { role: 'model', content: aiText, reasoningContent: reasoningText, timestamp: getTimestamp(), timestampRaw: Date.now(), modelName: config.model }]);
+                } catch (err) { setError(err.message); setMessages(prev => [...prev, { role: 'model', content: `错误: ${err.message}`, timestamp: getTimestamp(), modelName: config.model }]); } finally { setIsLoading(false); }
             };
 
             const handleKeyDown = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } };
@@ -666,7 +666,7 @@
                             <div className="flex items-center gap-3">
                                 <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-600"><Icon name="Menu" size={20} /></button>
                                 <div className="flex flex-col">
-                                    <span className="text-lg font-medium text-gray-800 tracking-tight leading-tight">✨星月舱v4.6 🌙💫“无感体验+深度思考”版</span>
+                                    <span className="text-lg font-medium text-gray-800 tracking-tight leading-tight">✨星月舱v4.8 🌙💫“模型溯源”版</span>
                                     <span className="text-[10px] text-gray-400 leading-tight">模型: {config.model} | 记忆: {memoryFiles.length} | 模式: {config.apiType === 'openai' ? 'OpenAI兼容' : '原生'}</span>
                                 </div>
                             </div>
@@ -692,6 +692,11 @@
                                                         <span className="font-semibold text-sm text-gray-800">
                                                             {msg.role === 'user' ? (config.userName || '你') : (config.aiName || '星月舱 AI')}
                                                         </span>
+                                                        {msg.role === 'model' && msg.modelName && (
+                                                            <span className="px-1.5 py-0.5 rounded text-[9px] bg-purple-50 text-purple-600 border border-purple-100 font-mono tracking-tight">
+                                                                {msg.modelName}
+                                                            </span>
+                                                        )}
                                                         <span className="text-[10px] text-gray-400 font-mono">
                                                             {msg.timestamp || ''}
                                                         </span>
