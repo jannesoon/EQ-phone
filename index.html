@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EQ-chat✨星月舱🌙私域版</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%238b5cf6' stroke='%238b5cf6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z'/></svg>">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%238b5cf6' stroke='%238b5cf6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L12 3Z'/></svg>">
     <script src="https://cdn.tailwindcss.com"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -17,7 +17,7 @@
         .animate-scale-in { animation: scaleIn 0.2s ease-out forwards; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes scaleIn { from { opacity: 0; transform: scale(0.9) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
-        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #d1d5db; }
@@ -154,7 +154,6 @@
             const [currentSessionId, setCurrentSessionId] = useState(null);
             const [attachment, setAttachment] = useState(null); 
             
-            // --- 核心：当前聊天对象频道 ('group' 或 某个 bot.id) ---
             const [activeTarget, setActiveTarget] = useState('group');
             
             const [editingSessionId, setEditingSessionId] = useState(null);
@@ -242,12 +241,10 @@
                 
                 const storedSessions = localStorage.getItem('gemini_chat_sessions');
                 if (storedSessions) {
-                    // 数据迁移与修复：识别旧版的单聊记录，把它们从群聊里捞出来，放回第一个专属房间
                     let parsedSessions = JSON.parse(storedSessions);
                     const defaultBotId = initialBots.length > 0 ? initialBots[0].id : 'group';
                     
                     parsedSessions = parsedSessions.map(s => {
-                        // 如果记录里没有任何带 botId 的消息，说明它绝对是以前的旧版单聊记录
                         const isRealGroupChat = s.messages && s.messages.some(m => m.botId);
                         if (!s.target || (s.target === 'group' && !isRealGroupChat)) {
                             return { ...s, target: defaultBotId };
@@ -306,7 +303,6 @@
                 showToast("配置已保存");
             };
 
-            // --- 切换聊天频道逻辑 ---
             const switchTarget = (targetId) => {
                 setActiveTarget(targetId);
                 const recentSession = historySessions.find(s => s.target === targetId);
@@ -317,6 +313,14 @@
                     setMessages([]);
                     setCurrentSessionId(Date.now().toString());
                 }
+                if (window.innerWidth < 768) setSidebarOpen(false);
+            };
+
+            // --- 快捷打开群员设置 ---
+            const openBotSettings = (botId) => {
+                setSelectedBotId(botId);
+                setActiveTab('group');
+                setSettingsOpen(true);
                 if (window.innerWidth < 768) setSidebarOpen(false);
             };
 
@@ -363,7 +367,7 @@
             const handleDeleteBot = (id, e) => {
                 e.stopPropagation(); const newBots = bots.filter(b => b.id !== id); setBots(newBots);
                 if (selectedBotId === id) setSelectedBotId(newBots.length > 0 ? newBots[0].id : null);
-                if (activeTarget === id) switchTarget('group'); // 回退到群聊
+                if (activeTarget === id) switchTarget('group'); 
             };
 
             const updateSelectedBot = (field, value) => { setBots(bots.map(b => b.id === selectedBotId ? { ...b, [field]: value } : b)); };
@@ -512,7 +516,6 @@
             const handleChatImageSelect = (e) => { const file = e.target.files[0]; if (!file) return; compressImage(file).then(result => { setAttachment(result); }); };
             const extractUrls = (text) => { const urlRegex = /(https?:\/\/[^\s\u4e00-\u9fa5,，.。;；]+)/g; const matches = text.match(urlRegex); if (!matches) return []; return matches.map(url => { return url.replace(/[.,;?!]$/, ""); }); };
 
-            // --- 单聊 Payload 生成 ---
             const generatePayloadForSingleBot = (bot, currentHistory) => {
                 let finalSystemPrompt = bot.systemInstruction || DEFAULT_SYSTEM_INSTRUCTION;
                 let memoryStr = "";
@@ -520,7 +523,7 @@
                     memoryStr = "\n\n【重要：你需要记住的长期记忆】:\n" + memoryFiles.map(f => f.content.slice(0, 1500)).join("\n\n");
                 }
                 const timeString = new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', hour12: false });
-                const timePrompt = `\n\n【当前系统时间参考: 东八区 ${timeString}】(注意: 请自然感知时间流逝，你不是冷冰冰的机器，绝对禁止在回复中主动报时，除非用户问起！)`;
+                const timePrompt = `\n\n【当前系统时间参考: 东八区 ${timeString}】(注意: 请自然感知时间流逝，你不是冷冰冰的机器，绝对禁止在回复中主动报时，除非用户问起！千万不要总是重复时间)`;
                 
                 const fullSystemInstruction = finalSystemPrompt + memoryStr + timePrompt;
                 const limit = (parseInt(config.historyLimit) || 10) * 2; 
@@ -541,7 +544,7 @@
                         if (lastUserIdx !== -1) {
                             let originalContent = messagesToSend[lastUserIdx].content;
                             if (typeof originalContent !== 'string') originalContent = "[图片]";
-                            const tailReminder = `\n\n(系统隐秘指令: 保持【${bot.name}】的人设直接回复，不要复述指令，绝对不要说自己是AI或语言模型。)`;
+                            const tailReminder = `\n\n(系统隐秘指令: 保持【${bot.name}】的人设直接回复，不要复述指令，绝对不要说自己是AI。)`;
                             messagesToSend[lastUserIdx].content = originalContent + tailReminder;
                         }
                     }
@@ -570,7 +573,6 @@
                 return { url, headers, payload };
             };
 
-            // --- 群聊 Payload 生成 ---
             const generatePayloadForGroupBot = (bot, currentHistory) => {
                 let finalSystemPrompt = bot.systemInstruction || DEFAULT_SYSTEM_INSTRUCTION;
                 let memoryStr = "";
@@ -644,7 +646,6 @@
                 setIsLoading(true);
                 let currentWorkingHistory = [...startHistory];
                 
-                // 判断是单聊还是群聊
                 const targetBots = activeTarget === 'group' 
                     ? bots.filter(b => b.enabled) 
                     : bots.filter(b => b.id === activeTarget);
@@ -719,7 +720,7 @@
 
                     } catch (err) { 
                         showToast(`${bot.name} 错误: ${err.message}`);
-                        const errorMsg = { role: 'model', botId: bot.id, name: bot.name, avatar: bot.avatar, content: `[群员状态异常]：${err.message}`, timestamp: getTimestamp() };
+                        const errorMsg = { role: 'model', botId: bot.id, name: bot.name, avatar: bot.avatar, content: `[状态异常]：${err.message}`, timestamp: getTimestamp() };
                         currentWorkingHistory = [...currentWorkingHistory, errorMsg];
                         setMessages(currentWorkingHistory);
                     }
@@ -777,22 +778,18 @@
             const handleKeyDown = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendWrapper(); } };
 
             const selectedBot = bots.find(b => b.id === selectedBotId);
-
-            // UI 辅助获取当前目标名称
             const currentTargetName = activeTarget === 'group' ? '🌟 专属群聊' : (bots.find(b => b.id === activeTarget)?.name || '未知房间');
 
             return (
                 <div className="flex h-screen bg-white text-gray-900 font-sans overflow-hidden">
                     {toast && <div className="fixed top-4 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white px-4 py-2 rounded-full text-sm shadow-lg z-50 animate-fade-in flex items-center gap-2"><Icon name="Sparkles" size={16} className="text-yellow-400"/> {toast}</div>}
 
-                    <div className={`${sidebarOpen ? 'w-[280px]' : 'w-0'} bg-gray-50 transition-all duration-300 flex flex-col flex-shrink-0 relative border-r border-gray-200`}>
+                    <div className={`${sidebarOpen ? 'w-[280px]' : 'w-0'} bg-gray-50 transition-all duration-300 flex flex-col flex-shrink-0 relative border-r border-gray-200 z-30 absolute md:relative h-full`}>
                         <div className="p-4 pt-6 space-y-2">
                             <button onClick={createNewSession} className="flex items-center gap-3 bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-3 rounded-full transition-colors w-full shadow-sm"><Icon name="Plus" className="text-gray-600" /><span className="text-sm font-medium">新对话</span></button>
                         </div>
                         
                         <div className="flex-1 overflow-y-auto px-3 py-2 flex flex-col">
-                            
-                            {/* --- 新增：聊天频道选择 --- */}
                             <div className="mb-6">
                                 <div className="text-xs font-bold text-gray-400 mb-2 px-3 uppercase tracking-wider">聊天频道 (Rooms)</div>
                                 <div className="space-y-1">
@@ -800,17 +797,28 @@
                                         onClick={() => switchTarget('group')}
                                         className={`px-3 py-2 rounded-lg text-sm flex items-center gap-2 cursor-pointer transition-colors ${activeTarget === 'group' ? 'bg-purple-100 text-purple-700 font-medium shadow-sm' : 'hover:bg-gray-100 text-gray-700'}`}
                                     >
-                                        <Icon name="Users" size={16} className={activeTarget === 'group' ? "text-purple-600" : "text-gray-400"}/> 
+                                        <Icon name="Users" size={16} className={activeTarget === 'group' ? "text-purple-600 flex-shrink-0" : "text-gray-400 flex-shrink-0"}/> 
                                         <span>🌟 专属群聊</span>
                                     </div>
                                     {bots.map(bot => (
                                         <div 
                                             key={bot.id}
-                                            onClick={() => switchTarget(bot.id)}
-                                            className={`px-3 py-2 rounded-lg text-sm flex items-center gap-2 cursor-pointer transition-colors ${activeTarget === bot.id ? 'bg-blue-100 text-blue-700 font-medium shadow-sm' : 'hover:bg-gray-100 text-gray-700'}`}
+                                            className={`group px-3 py-2 rounded-lg text-sm flex justify-between items-center cursor-pointer transition-colors ${activeTarget === bot.id ? 'bg-blue-100 text-blue-700 shadow-sm' : 'hover:bg-gray-100 text-gray-700'}`}
                                         >
-                                            <Icon name="Bot" size={16} className={activeTarget === bot.id ? "text-blue-600" : "text-gray-400"}/> 
-                                            <span className="truncate">{bot.name}</span>
+                                            <div onClick={() => switchTarget(bot.id)} className="flex-1 flex items-center gap-2 overflow-hidden">
+                                                <Icon name="Bot" size={16} className={activeTarget === bot.id ? "text-blue-600 flex-shrink-0" : "text-gray-400 flex-shrink-0"}/> 
+                                                <div className="flex flex-col min-w-0">
+                                                    <span className="truncate font-medium leading-tight">{bot.name}</span>
+                                                    <span className="text-[9px] opacity-70 truncate leading-tight">{bot.model}</span>
+                                                </div>
+                                            </div>
+                                            <button 
+                                                onClick={(e) => { e.stopPropagation(); openBotSettings(bot.id); }}
+                                                className="opacity-0 md:group-hover:opacity-100 p-1.5 text-gray-400 hover:text-blue-600 transition-all flex-shrink-0"
+                                                title="修改设定与模型"
+                                            >
+                                                <Icon name="Settings" size={14}/>
+                                            </button>
                                         </div>
                                     ))}
                                 </div>
@@ -825,26 +833,18 @@
                                         onClick={() => loadSession(session)}
                                         className={`group relative mb-1 px-3 py-2 rounded-lg text-sm flex items-center gap-2 cursor-pointer transition-colors ${currentSessionId === session.id ? 'bg-gray-200 text-gray-800 font-medium' : 'hover:bg-gray-100 text-gray-700'}`}
                                     >
-                                        <Icon name="MessageSquareText" size={16} className={currentSessionId === session.id ? "text-gray-600" : "text-gray-400"}/> 
+                                        <Icon name="MessageSquareText" size={16} className={currentSessionId === session.id ? "text-gray-600 flex-shrink-0" : "text-gray-400 flex-shrink-0"}/> 
                                         
                                         {editingSessionId === session.id ? (
                                             <div className="flex-1 flex items-center gap-1">
-                                                <input 
-                                                    type="text" 
-                                                    value={editTitle} 
-                                                    onChange={(e) => setEditTitle(e.target.value)}
-                                                    onClick={(e) => e.stopPropagation()}
-                                                    onKeyDown={(e) => e.key === 'Enter' && saveTitle(e)}
-                                                    className="w-full bg-white border border-blue-300 rounded px-1 text-xs focus:outline-none"
-                                                    autoFocus
-                                                />
+                                                <input type="text" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.key === 'Enter' && saveTitle(e)} className="w-full bg-white border border-blue-300 rounded px-1 text-xs focus:outline-none" autoFocus />
                                                 <button onClick={saveTitle} className="text-green-600 hover:text-green-700"><Icon name="Check" size={14}/></button>
                                                 <button onClick={cancelEditing} className="text-gray-400 hover:text-gray-600"><Icon name="X" size={14}/></button>
                                             </div>
                                         ) : (
                                             <>
                                                 <span className="truncate flex-1">{session.title || '未命名对话'}</span>
-                                                <div className="flex opacity-0 group-hover:opacity-100 transition-opacity gap-1">
+                                                <div className="flex opacity-0 md:group-hover:opacity-100 transition-opacity gap-1 flex-shrink-0">
                                                     <button onClick={(e) => startEditing(e, session)} className="p-1 hover:text-blue-500" title="重命名"><Icon name="Edit" size={14}/></button>
                                                     <button onClick={(e) => deleteSession(e, session.id)} className="p-1 hover:text-red-500" title="删除"><Icon name="Trash2" size={14}/></button>
                                                 </div>
@@ -854,26 +854,30 @@
                                 ))}
                             </div>
                         </div>
-                        <div className="p-3 border-t border-gray-200">
+                        <div className="p-3 border-t border-gray-200 bg-gray-50">
                             <button onClick={() => setSettingsOpen(true)} className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-200 w-full text-left text-sm text-gray-700 transition-colors"><Icon name="Settings" size={18} /><span>群组与偏好设置</span></button>
                         </div>
                     </div>
 
-                    <div className="flex-1 flex flex-col h-full relative bg-white">
+                    <div className="flex-1 flex flex-col h-full relative bg-white w-full">
                         <div className="flex items-center justify-between p-4 h-16 bg-white/80 backdrop-blur sticky top-0 z-10 border-b border-gray-100">
                             <div className="flex items-center gap-3">
                                 <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-600"><Icon name="Menu" size={20} /></button>
-                                <div className="flex flex-col">
-                                    <span className="text-lg font-medium text-gray-800 tracking-tight leading-tight">{currentTargetName}</span>
-                                    <span className="text-[10px] text-gray-400 leading-tight">
+                                <div className="flex flex-col min-w-0">
+                                    <span className="text-lg font-medium text-gray-800 tracking-tight leading-tight truncate">{currentTargetName}</span>
+                                    <span className="text-[10px] text-gray-400 leading-tight truncate">
                                         {activeTarget === 'group' ? `群成员: ${bots.filter(b=>b.enabled).length} 在线` : `私聊模式: ${bots.find(b=>b.id===activeTarget)?.model || ''}`}
                                     </span>
                                 </div>
                             </div>
-                            <div className="cursor-pointer" onClick={() => setSettingsOpen(true)}>
+                            <div className="cursor-pointer flex-shrink-0" onClick={() => setSettingsOpen(true)}>
                                 {config.userAvatar ? <img src={config.userAvatar} className="w-9 h-9 rounded-full object-cover shadow-md border border-gray-200" alt="User" /> : <div className="w-9 h-9 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center text-sm font-bold text-white shadow-md">U</div>}
                             </div>
                         </div>
+
+                        {sidebarOpen && window.innerWidth < 768 && (
+                            <div className="absolute inset-0 bg-black/20 z-20" onClick={() => setSidebarOpen(false)}></div>
+                        )}
 
                         <div className="flex-1 overflow-y-auto px-4 md:px-0 bg-white">
                             <div className="max-w-3xl mx-auto py-6 pb-40">
@@ -887,10 +891,10 @@
                                 ) : (
                                     <div className="space-y-8 px-2">
                                         {messages.map((msg, index) => (
-                                            <div key={index} className="flex gap-4 animate-fade-in group">
+                                            <div key={index} className="flex gap-3 md:gap-4 animate-fade-in group">
                                                 <Avatar role={msg.role} config={config} avatarUrl={msg.avatar} />
                                                 <div className="flex-1 min-w-0">
-                                                    <div className="flex items-center gap-2 mb-1">
+                                                    <div className="flex items-center gap-2 mb-1 flex-wrap">
                                                         <span className="font-semibold text-sm text-gray-800">
                                                             {msg.role === 'user' ? (config.userName || '你') : (msg.name || 'AI 群友')}
                                                         </span>
@@ -971,34 +975,37 @@
                                         className="bg-transparent border-0 focus:ring-0 text-gray-800 flex-1 resize-none py-3 max-h-32 min-h-[44px] outline-none placeholder:text-gray-400 text-base" 
                                         rows={1}
                                     ></textarea>
-                                    {(input.trim() || attachment) ? <button onClick={handleSendWrapper} disabled={isLoading} className="mb-1 p-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-50"><Icon name="Send" size={18} /></button> : <button className="mb-1 p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-200 rounded-full transition-colors"><Icon name="Mic" size={20} /></button>}
+                                    {(input.trim() || attachment) ? <button onClick={handleSendWrapper} disabled={isLoading} className="mb-1 p-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-50 flex-shrink-0"><Icon name="Send" size={18} /></button> : <button className="mb-1 p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-200 rounded-full transition-colors flex-shrink-0"><Icon name="Mic" size={20} /></button>}
                                 </div>
-                                <div className="text-center mt-2 text-[10px] text-gray-400">目前在 {currentTargetName} 房间。</div>
+                                <div className="text-center mt-2 text-[10px] text-gray-400 truncate">目前在 {currentTargetName} 房间。</div>
                             </div>
                         </div>
 
                         {settingsOpen && (
-                            <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 backdrop-blur-sm animate-fade-in">
-                                <div className="bg-white w-full max-w-5xl rounded-2xl shadow-2xl overflow-hidden flex flex-col h-[90vh]">
-                                    <div className="flex justify-between items-center p-5 border-b border-gray-100">
+                            <div className="fixed inset-0 bg-black/40 flex items-end md:items-center justify-center z-50 backdrop-blur-sm animate-fade-in sm:p-4">
+                                <div className="bg-white w-full max-w-5xl md:rounded-2xl shadow-2xl overflow-hidden flex flex-col h-[90vh] md:h-[85vh] rounded-t-2xl">
+                                    <div className="flex justify-between items-center p-4 md:p-5 border-b border-gray-100 flex-shrink-0">
                                         <h2 className="text-lg font-semibold text-gray-800">设置中心</h2>
                                         <button onClick={() => setSettingsOpen(false)} className="text-gray-400 hover:text-gray-600 bg-gray-50 hover:bg-gray-100 p-2 rounded-full"><Icon name="X" size={18} /></button>
                                     </div>
-                                    <div className="flex flex-1 overflow-hidden">
-                                        <div className="w-48 bg-gray-50 p-3 border-r border-gray-100 space-y-1 flex-shrink-0">
-                                            <button onClick={() => setActiveTab('group')} className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${activeTab === 'group' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-600 hover:bg-gray-100'}`}><Icon name="Users" size={16}/>模型与群员管理</button>
-                                            <button onClick={() => setActiveTab('general')} className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${activeTab === 'general' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-600 hover:bg-gray-100'}`}><Icon name="Settings" size={16}/>全局偏好设置</button>
-                                            <button onClick={() => setActiveTab('memory')} className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${activeTab === 'memory' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-600 hover:bg-gray-100'}`}><Icon name="Cpu" size={16}/>全局共同记忆</button>
-                                            <button onClick={() => setActiveTab('backup')} className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${activeTab === 'backup' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-600 hover:bg-gray-100'}`}><Icon name="Database" size={16}/>数据备份恢复</button>
+                                    <div className="flex flex-col md:flex-row flex-1 overflow-hidden">
+                                        
+                                        {/* 手机端变为顶部滑动 Tab，电脑端为左侧边栏 */}
+                                        <div className="w-full md:w-48 bg-gray-50 p-2 md:p-3 border-b md:border-b-0 md:border-r border-gray-100 flex flex-row md:flex-col gap-2 overflow-x-auto flex-shrink-0 no-scrollbar">
+                                            <button onClick={() => setActiveTab('group')} className={`flex-shrink-0 whitespace-nowrap px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${activeTab === 'group' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-600 hover:bg-gray-100'}`}><Icon name="Users" size={16}/>模型与群员</button>
+                                            <button onClick={() => setActiveTab('general')} className={`flex-shrink-0 whitespace-nowrap px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${activeTab === 'general' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-600 hover:bg-gray-100'}`}><Icon name="Settings" size={16}/>全局偏好</button>
+                                            <button onClick={() => setActiveTab('memory')} className={`flex-shrink-0 whitespace-nowrap px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${activeTab === 'memory' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-600 hover:bg-gray-100'}`}><Icon name="Cpu" size={16}/>共同记忆</button>
+                                            <button onClick={() => setActiveTab('backup')} className={`flex-shrink-0 whitespace-nowrap px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${activeTab === 'backup' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-600 hover:bg-gray-100'}`}><Icon name="Database" size={16}/>备份恢复</button>
                                         </div>
-                                        <div className="flex-1 overflow-y-auto bg-white">
+
+                                        <div className="flex-1 overflow-y-auto bg-white flex flex-col md:flex-row">
                                             {activeTab === 'group' && (
-                                                <div className="flex h-full">
-                                                    {/* 左侧：群员列表 */}
-                                                    <div className="w-1/3 border-r border-gray-100 flex flex-col bg-gray-50/50">
-                                                        <div className="p-3 border-b border-gray-100 flex justify-between items-center bg-white">
-                                                            <span className="text-xs font-bold text-gray-500 uppercase">模型成员列表 ({bots.length})</span>
-                                                            <button onClick={handleAddBot} className="text-blue-600 hover:bg-blue-50 p-1 rounded transition-colors" title="添加新模型"><Icon name="Plus" size={16}/></button>
+                                                <div className="flex flex-col md:flex-row h-full w-full">
+                                                    {/* 左侧：群员列表 - 手机端占用上方一部分区域 */}
+                                                    <div className="w-full md:w-1/3 border-b md:border-b-0 md:border-r border-gray-100 flex flex-col bg-gray-50/50 h-[35vh] md:h-full flex-shrink-0">
+                                                        <div className="p-3 border-b border-gray-100 flex justify-between items-center bg-white flex-shrink-0">
+                                                            <span className="text-xs font-bold text-gray-500 uppercase">成员列表 ({bots.length})</span>
+                                                            <button onClick={handleAddBot} className="text-blue-600 hover:bg-blue-50 p-1.5 rounded transition-colors" title="添加新模型"><Icon name="Plus" size={16}/></button>
                                                         </div>
                                                         <div className="flex-1 overflow-y-auto p-2 space-y-2">
                                                             {bots.map(bot => (
@@ -1007,13 +1014,13 @@
                                                                     onClick={() => setSelectedBotId(bot.id)}
                                                                     className={`p-2 rounded-lg border cursor-pointer transition-all flex items-center gap-3 ${selectedBotId === bot.id ? 'bg-blue-50 border-blue-200 shadow-sm' : 'bg-white border-transparent hover:border-gray-200'}`}
                                                                 >
-                                                                    <div className="relative">
+                                                                    <div className="relative flex-shrink-0">
                                                                         {bot.avatar ? <img src={bot.avatar} className="w-8 h-8 rounded-full object-cover border border-gray-200"/> : <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-purple-400 to-blue-400 flex items-center justify-center text-white text-xs shadow-sm"><Icon name="Bot" size={14}/></div>}
                                                                         <input 
                                                                             type="checkbox" 
                                                                             checked={bot.enabled} 
                                                                             onChange={(e) => { e.stopPropagation(); updateSelectedBot('enabled', e.target.checked); }}
-                                                                            className="absolute -bottom-1 -right-1 cursor-pointer"
+                                                                            className="absolute -bottom-1 -right-1 cursor-pointer w-3.5 h-3.5"
                                                                             title="是否允许在【群聊模式】中发言"
                                                                         />
                                                                     </div>
@@ -1021,57 +1028,55 @@
                                                                         <div className="text-sm font-medium text-gray-800 truncate">{bot.name}</div>
                                                                         <div className="text-[10px] text-gray-400 truncate">{bot.model}</div>
                                                                     </div>
-                                                                    <button onClick={(e) => handleDeleteBot(bot.id, e)} className="text-gray-300 hover:text-red-500 transition-colors p-1"><Icon name="Trash2" size={14}/></button>
+                                                                    <button onClick={(e) => handleDeleteBot(bot.id, e)} className="text-gray-300 hover:text-red-500 transition-colors p-1.5 flex-shrink-0"><Icon name="Trash2" size={14}/></button>
                                                                 </div>
                                                             ))}
                                                         </div>
                                                     </div>
                                                     
                                                     {/* 右侧：群员详情编辑 */}
-                                                    <div className="flex-1 p-6 overflow-y-auto">
+                                                    <div className="flex-1 p-4 md:p-6 overflow-y-auto">
                                                         {selectedBot ? (
                                                             <div className="space-y-6">
-                                                                <div className="flex items-center gap-4 border-b border-gray-100 pb-4">
-                                                                    <div className="w-16 h-16 rounded-full overflow-hidden bg-gray-100 border border-gray-200 flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity" onClick={() => botAvatarInputRef.current.click()} title="点击修改头像">
-                                                                        {selectedBot.avatar ? <img src={selectedBot.avatar} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-gray-400 bg-gray-100"><Icon name="Bot" size={32} /></div>}
+                                                                <div className="flex items-center gap-3 md:gap-4 border-b border-gray-100 pb-4">
+                                                                    <div className="w-14 h-14 md:w-16 md:h-16 rounded-full overflow-hidden bg-gray-100 border border-gray-200 flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity" onClick={() => botAvatarInputRef.current.click()} title="点击修改头像">
+                                                                        {selectedBot.avatar ? <img src={selectedBot.avatar} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-gray-400 bg-gray-100"><Icon name="Bot" size={28} /></div>}
                                                                     </div>
                                                                     <input type="file" ref={botAvatarInputRef} className="hidden" accept="image/*" onChange={handleBotAvatarUpload}/>
-                                                                    <div className="flex-1">
-                                                                        <label className="block text-xs font-medium text-gray-500 mb-1">模型昵称 (Name)</label>
-                                                                        <input type="text" value={selectedBot.name} onChange={(e) => updateSelectedBot('name', e.target.value)} className="w-full bg-white border border-gray-300 rounded-lg p-2 text-base font-semibold focus:border-blue-500 outline-none" />
+                                                                    <div className="flex-1 min-w-0">
+                                                                        <label className="block text-xs font-medium text-gray-500 mb-1">模型昵称</label>
+                                                                        <input type="text" value={selectedBot.name} onChange={(e) => updateSelectedBot('name', e.target.value)} className="w-full bg-white border border-gray-300 rounded-lg p-2 text-sm md:text-base font-semibold focus:border-blue-500 outline-none" />
                                                                     </div>
-                                                                    <div className="flex items-center gap-2 pt-5">
-                                                                        <label className="text-sm font-medium text-gray-700">加入群聊</label>
-                                                                        <input type="checkbox" checked={selectedBot.enabled} onChange={(e) => updateSelectedBot('enabled', e.target.checked)} title="勾选后，该模型会在群聊中接话" className="w-4 h-4 text-blue-600 rounded cursor-pointer"/>
+                                                                    <div className="flex flex-col items-center justify-center pt-2">
+                                                                        <label className="text-[10px] md:text-xs font-medium text-gray-700 mb-1">加入群聊</label>
+                                                                        <input type="checkbox" checked={selectedBot.enabled} onChange={(e) => updateSelectedBot('enabled', e.target.checked)} title="勾选后，该模型会在群聊中接话" className="w-4 h-4 md:w-5 md:h-5 text-blue-600 rounded cursor-pointer"/>
                                                                     </div>
                                                                 </div>
 
-                                                                <div className="space-y-4">
+                                                                <div className="space-y-3">
                                                                     <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">专属人设 (System Prompt)</h3>
                                                                     <div className="bg-purple-50 border border-purple-100 p-2 rounded-lg text-xs text-purple-700">
-                                                                        这个设定只对当前模型生效。如果你要在单聊中体验不同的性格，请在这里填写。
+                                                                        这个设定只对当前模型生效。
                                                                     </div>
                                                                     <textarea 
-                                                                        className="w-full h-32 bg-gray-50 border border-gray-300 rounded-lg p-3 text-sm focus:bg-white focus:border-blue-500 outline-none resize-none leading-relaxed" 
+                                                                        className="w-full h-32 md:h-28 bg-gray-50 border border-gray-300 rounded-lg p-3 text-sm focus:bg-white focus:border-blue-500 outline-none resize-none leading-relaxed" 
                                                                         placeholder="例如：你是一个毒舌戏精..."
                                                                         value={selectedBot.systemInstruction}
                                                                         onChange={(e) => updateSelectedBot('systemInstruction', e.target.value)}
                                                                     ></textarea>
                                                                 </div>
 
-                                                                <div className="space-y-4">
+                                                                <div className="space-y-3 pb-6 md:pb-0">
                                                                     <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">API 连接配置</h3>
-                                                                    <div>
-                                                                        <div className="flex gap-2 mb-2">
-                                                                            <button onClick={() => updateSelectedBot('apiType', 'gemini')} className={`flex-1 py-1.5 text-xs font-medium rounded-md border ${selectedBot.apiType === 'gemini' ? 'bg-blue-50 border-blue-500 text-blue-700' : 'bg-white border-gray-200 text-gray-600'}`}>Gemini 原生</button>
-                                                                            <button onClick={() => updateSelectedBot('apiType', 'openai')} className={`flex-1 py-1.5 text-xs font-medium rounded-md border ${selectedBot.apiType === 'openai' ? 'bg-green-50 border-green-500 text-green-700' : 'bg-white border-gray-200 text-gray-600'}`}>OpenAI 兼容</button>
-                                                                        </div>
+                                                                    <div className="flex gap-2 mb-2">
+                                                                        <button onClick={() => updateSelectedBot('apiType', 'gemini')} className={`flex-1 py-2 text-xs font-medium rounded-md border ${selectedBot.apiType === 'gemini' ? 'bg-blue-50 border-blue-500 text-blue-700' : 'bg-white border-gray-200 text-gray-600'}`}>Gemini 原生</button>
+                                                                        <button onClick={() => updateSelectedBot('apiType', 'openai')} className={`flex-1 py-2 text-xs font-medium rounded-md border ${selectedBot.apiType === 'openai' ? 'bg-green-50 border-green-500 text-green-700' : 'bg-white border-gray-200 text-gray-600'}`}>OpenAI 兼容</button>
                                                                     </div>
-                                                                    <div className="flex gap-3">
-                                                                        <div className="flex-1"><label className="block text-[10px] font-medium text-gray-500 mb-1">Base URL</label><input type="text" value={selectedBot.baseUrl} onChange={(e) => updateSelectedBot('baseUrl', e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded p-1.5 text-sm focus:bg-white focus:border-blue-500 outline-none" /></div>
-                                                                        <div className="w-1/3"><label className="block text-[10px] font-medium text-gray-500 mb-1">模型名称</label><input type="text" value={selectedBot.model} onChange={(e) => updateSelectedBot('model', e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded p-1.5 text-sm focus:bg-white focus:border-blue-500 outline-none" placeholder="如 gpt-4o"/></div>
+                                                                    <div className="flex flex-col md:flex-row gap-3">
+                                                                        <div className="flex-1"><label className="block text-[10px] font-medium text-gray-500 mb-1">Base URL</label><input type="text" value={selectedBot.baseUrl} onChange={(e) => updateSelectedBot('baseUrl', e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded p-2 text-sm focus:bg-white focus:border-blue-500 outline-none" /></div>
+                                                                        <div className="md:w-1/3"><label className="block text-[10px] font-medium text-gray-500 mb-1">模型名称</label><input type="text" value={selectedBot.model} onChange={(e) => updateSelectedBot('model', e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded p-2 text-sm focus:bg-white focus:border-blue-500 outline-none" placeholder="如 gpt-4o"/></div>
                                                                     </div>
-                                                                    <div><label className="block text-[10px] font-medium text-gray-500 mb-1">API Key</label><input type="password" value={selectedBot.apiKey} onChange={(e) => updateSelectedBot('apiKey', e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded p-1.5 text-sm focus:bg-white focus:border-blue-500 outline-none" /></div>
+                                                                    <div><label className="block text-[10px] font-medium text-gray-500 mb-1">API Key</label><input type="password" value={selectedBot.apiKey} onChange={(e) => updateSelectedBot('apiKey', e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded p-2 text-sm focus:bg-white focus:border-blue-500 outline-none" /></div>
                                                                 </div>
                                                             </div>
                                                         ) : (
@@ -1082,7 +1087,7 @@
                                             )}
 
                                             {activeTab === 'general' && (
-                                                <div className="p-6 space-y-6">
+                                                <div className="p-4 md:p-6 space-y-6 w-full pb-10 md:pb-6">
                                                     <div className="space-y-4">
                                                         <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">群主(你)的设置</h3>
                                                         <div className="flex items-center gap-4">
@@ -1106,7 +1111,7 @@
                                                             <input type="range" min="5" max="50" step="1" value={config.historyLimit} onChange={(e) => setConfig({...config, historyLimit: e.target.value})} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"/>
                                                          </div>
                                                          
-                                                         <div className="flex justify-between items-center bg-gray-100 p-2 rounded-lg">
+                                                         <div className="flex justify-between items-center bg-gray-100 p-3 rounded-lg">
                                                             <span className="text-xs font-medium text-gray-700">本地模型防遗忘注入</span>
                                                             <button 
                                                                 onClick={() => setConfig({...config, localModelOptimize: !config.localModelOptimize})}
@@ -1116,8 +1121,8 @@
                                                             </button>
                                                          </div>
                                                          
-                                                         <div className="flex justify-between items-center bg-gray-100 p-2 rounded-lg mt-2">
-                                                            <span className="text-xs font-medium text-gray-700">流式打字输出 (对所有群员生效)</span>
+                                                         <div className="flex justify-between items-center bg-gray-100 p-3 rounded-lg mt-2">
+                                                            <span className="text-xs font-medium text-gray-700">流式打字输出</span>
                                                             <button 
                                                                 onClick={() => setConfig({...config, streamOutput: !config.streamOutput})}
                                                                 className={`w-10 h-5 rounded-full relative transition-colors ${config.streamOutput ? 'bg-blue-600' : 'bg-gray-300'}`}
@@ -1126,7 +1131,7 @@
                                                             </button>
                                                          </div>
                                                          
-                                                         <div className="flex gap-4 mt-2">
+                                                         <div className="flex flex-col md:flex-row gap-4 mt-2">
                                                             <div className="flex-1"><label className="block text-sm font-medium text-gray-700 mb-1">温度: {config.temperature}</label><input type="range" min="0" max="2" step="0.1" value={config.temperature} onChange={(e) => setConfig({...config, temperature: e.target.value})} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"/></div>
                                                             <div className="flex-1"><label className="block text-sm font-medium text-gray-700 mb-1">重复惩罚: {config.frequencyPenalty}</label><input type="range" min="-2" max="2" step="0.1" value={config.frequencyPenalty} onChange={(e) => setConfig({...config, frequencyPenalty: e.target.value})} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"/></div>
                                                          </div>
@@ -1136,48 +1141,41 @@
 
                                                     <div className="space-y-4">
                                                         <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">全局语音配置 (Minimax)</h3>
-                                                        <div><label className="block text-sm font-medium text-gray-700 mb-1">Minimax API Key</label><input type="password" value={config.minimaxKey} onChange={(e) => setConfig({...config, minimaxKey: e.target.value})} className="w-full bg-white border border-gray-300 rounded-lg p-2 text-sm focus:border-blue-50 outline-none" /></div>
-                                                        <div><label className="block text-sm font-medium text-gray-700 mb-1">Minimax Group ID</label><input type="text" value={config.minimaxGroupId} onChange={(e) => setConfig({...config, minimaxGroupId: e.target.value})} className="w-full bg-white border border-gray-300 rounded-lg p-2 text-sm focus:border-blue-500 outline-none" /></div>
-                                                        <div>
-                                                            <label className="block text-sm font-medium text-gray-700 mb-1">语音 ID</label>
-                                                            <div className="flex gap-2">
-                                                                <input type="text" value={config.minimaxVoiceId} onChange={(e) => setConfig({...config, minimaxVoiceId: e.target.value})} className="flex-1 bg-white border border-gray-300 rounded-lg p-2 text-sm focus:border-blue-500 outline-none" />
-                                                                <select className="bg-gray-50 border border-gray-300 rounded-lg p-2 text-sm outline-none" onChange={(e) => setConfig({...config, minimaxVoiceId: e.target.value})} value={config.minimaxVoiceId}><option value="male-qn-qingse">青涩男声</option><option value="female-shaonv">少女音</option><option value="female-yujie">御姐音</option><option value="male-qn-jingying">精英男声</option></select>
-                                                            </div>
-                                                        </div>
+                                                        <div><label className="block text-sm font-medium text-gray-700 mb-1">Minimax API Key</label><input type="password" value={config.minimaxKey} onChange={(e) => setConfig({...config, minimaxKey: e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-lg p-2 text-sm focus:bg-white focus:border-blue-500 outline-none" /></div>
+                                                        <div><label className="block text-sm font-medium text-gray-700 mb-1">Minimax Group ID</label><input type="text" value={config.minimaxGroupId} onChange={(e) => setConfig({...config, minimaxGroupId: e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-lg p-2 text-sm focus:bg-white focus:border-blue-500 outline-none" /></div>
                                                     </div>
                                                 </div>
                                             )}
 
                                             {activeTab === 'memory' && (
-                                                <div className="p-6 space-y-8">
+                                                <div className="p-4 md:p-6 space-y-8 w-full pb-10 md:pb-6">
                                                     <div>
                                                         <div className="flex justify-between items-center mb-3">
-                                                            <div><h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2"><Icon name="Archive" size={16} className="text-blue-500"/> 记忆归档</h3><p className="text-xs text-gray-400">提取当前房间的聊天重点并保存给所有人</p></div>
-                                                            <button onClick={handleArchive} disabled={isArchiving} className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded-md font-medium hover:bg-blue-700 flex items-center gap-1 shadow-sm"><Icon name="Archive" size={14}/> {isArchiving ? '归档中...' : '生成今日记忆'}</button>
+                                                            <div><h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2"><Icon name="Archive" size={16} className="text-blue-500"/> 记忆归档</h3><p className="text-xs text-gray-400">提取当前房间的聊天重点</p></div>
+                                                            <button onClick={handleArchive} disabled={isArchiving} className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded-md font-medium hover:bg-blue-700 flex items-center gap-1 shadow-sm"><Icon name="Archive" size={14}/> {isArchiving ? '归档中' : '生成记忆'}</button>
                                                         </div>
                                                     </div>
                                                     <div className="border-t border-gray-100"></div>
                                                     <div>
                                                         <div className="flex justify-between items-center mb-3">
-                                                            <div><h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2"><Icon name="Cpu" size={16} className="text-blue-500"/> 全局共同记忆库</h3><p className="text-xs text-gray-400">不管是单聊还是群聊，模型都能读取到</p></div>
+                                                            <div><h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2"><Icon name="Cpu" size={16} className="text-blue-500"/> 全局共同记忆库</h3><p className="text-xs text-gray-400">所有模型都能读取到</p></div>
                                                             <div className="flex gap-2">
-                                                                <button onClick={() => fileInputRef.current.click()} className="text-xs bg-blue-50 text-blue-600 px-3 py-1.5 rounded-md font-medium hover:bg-blue-100 flex items-center gap-1"><Icon name="Upload" size={14}/> 上传文件</button>
+                                                                <button onClick={() => fileInputRef.current.click()} className="text-xs bg-blue-50 text-blue-600 px-3 py-1.5 rounded-md font-medium hover:bg-blue-100 flex items-center gap-1"><Icon name="Upload" size={14}/> 上传</button>
                                                                 <input type="file" ref={fileInputRef} className="hidden" onChange={(e) => handleFileUpload(e, 'memory')} />
                                                             </div>
                                                         </div>
-                                                        <div className="bg-gray-50 rounded-xl border border-gray-200 min-h-[100px] p-2 space-y-2 max-h-[300px] overflow-y-auto">
-                                                            {memoryFiles.length === 0 ? <div className="h-full flex flex-col items-center justify-center text-gray-400 py-6"><span className="text-xs">暂无记忆 (点击上方"生成今日记忆"或上传)</span></div> : memoryFiles.map((file, i) => (
+                                                        <div className="bg-gray-50 rounded-xl border border-gray-200 min-h-[100px] p-2 space-y-2 max-h-[50vh] md:max-h-[300px] overflow-y-auto">
+                                                            {memoryFiles.length === 0 ? <div className="h-full flex flex-col items-center justify-center text-gray-400 py-6"><span className="text-xs">暂无记忆 (点击上方上传或归档)</span></div> : memoryFiles.map((file, i) => (
                                                                 <div key={i} className="flex flex-col bg-white p-2 rounded border border-gray-100 shadow-sm gap-2">
                                                                     <div className="flex items-center justify-between">
                                                                         <div className="flex items-center gap-2 overflow-hidden">
                                                                             <div className="bg-blue-100 p-1 rounded text-blue-600"><Icon name="FileText" size={14}/></div>
-                                                                            <div className="truncate">
-                                                                                <div className="text-xs font-medium text-gray-700 truncate max-w-[120px]">{file.name}</div>
+                                                                            <div className="truncate min-w-0">
+                                                                                <div className="text-xs font-medium text-gray-700 truncate">{file.name}</div>
                                                                                 <div className="text-[9px] text-gray-400">{file.date}</div>
                                                                             </div>
                                                                         </div>
-                                                                        <div className="flex gap-1">
+                                                                        <div className="flex gap-1 flex-shrink-0">
                                                                             <button onClick={() => startEditingMemory(i)} className="text-blue-500 hover:text-blue-700 p-1 bg-blue-50 rounded"><Icon name="Edit" size={12}/></button>
                                                                             <button onClick={() => removeFile(i, 'memory')} className="text-red-500 hover:text-red-700 p-1 bg-red-50 rounded"><Icon name="Trash2" size={12}/></button>
                                                                         </div>
@@ -1195,8 +1193,8 @@
                                                                             </div>
                                                                         </div>
                                                                     ) : (
-                                                                        <div className="text-[10px] text-gray-500 bg-gray-50 p-1.5 rounded max-h-16 overflow-hidden text-ellipsis whitespace-nowrap">
-                                                                            {file.content.slice(0, 100)}...
+                                                                        <div className="text-[10px] text-gray-500 bg-gray-50 p-2 rounded max-h-20 overflow-hidden line-clamp-3">
+                                                                            {file.content}
                                                                         </div>
                                                                     )}
                                                                 </div>
@@ -1207,42 +1205,39 @@
                                             )}
 
                                             {activeTab === 'backup' && (
-                                                <div className="p-6 space-y-6">
+                                                <div className="p-4 md:p-6 space-y-6 w-full pb-10 md:pb-6">
                                                     <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
-                                                        <div className="flex items-start gap-3">
-                                                            <div className="p-2 bg-blue-100 rounded-lg text-blue-600"><Icon name="Database" size={24}/></div>
-                                                            <div>
+                                                        <div className="flex flex-col md:flex-row items-start md:items-center gap-3">
+                                                            <div className="p-2 bg-blue-100 rounded-lg text-blue-600 hidden md:block"><Icon name="Database" size={24}/></div>
+                                                            <div className="flex-1">
                                                                 <h3 className="text-sm font-semibold text-gray-800">全量备份导出</h3>
-                                                                <p className="text-xs text-gray-600 mt-1 leading-relaxed">
-                                                                    将导出您所有的群员配置、API、记忆库以及聊天记录。
-                                                                </p>
-                                                                <button onClick={handleCreateBackup} className="mt-3 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
-                                                                    <Icon name="Download" size={16}/> 导出星月备份
-                                                                </button>
+                                                                <p className="text-xs text-gray-600 mt-1">导出所有群员、记忆库和聊天记录。</p>
                                                             </div>
+                                                            <button onClick={handleCreateBackup} className="mt-2 md:mt-0 w-full md:w-auto px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2">
+                                                                <Icon name="Download" size={16}/> 导出星月备份
+                                                            </button>
                                                         </div>
                                                     </div>
 
-                                                    <div className="border-t border-gray-100"></div>
-
                                                     <div className="bg-green-50 border border-green-100 rounded-xl p-4">
-                                                        <div className="flex items-start gap-3">
-                                                            <div className="p-2 bg-green-100 rounded-lg text-green-600"><Icon name="Upload" size={24}/></div>
-                                                            <div>
+                                                        <div className="flex flex-col md:flex-row items-start md:items-center gap-3">
+                                                            <div className="p-2 bg-green-100 rounded-lg text-green-600 hidden md:block"><Icon name="Upload" size={24}/></div>
+                                                            <div className="flex-1">
                                                                 <h3 className="text-sm font-semibold text-gray-800">从备份恢复</h3>
-                                                                <button onClick={() => backupInputRef.current.click()} className="mt-3 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
-                                                                    <Icon name="RefreshCw" size={16}/> 选择备份文件恢复
-                                                                </button>
-                                                                <input type="file" ref={backupInputRef} className="hidden" accept=".json" onChange={handleRestoreBackup} />
+                                                                <p className="text-xs text-red-500 mt-1 font-medium">警告：此操作将覆盖当前所有数据！</p>
                                                             </div>
+                                                            <button onClick={() => backupInputRef.current.click()} className="mt-2 md:mt-0 w-full md:w-auto px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2">
+                                                                <Icon name="RefreshCw" size={16}/> 选择备份文件
+                                                            </button>
+                                                            <input type="file" ref={backupInputRef} className="hidden" accept=".json" onChange={handleRestoreBackup} />
                                                         </div>
                                                     </div>
                                                 </div>
                                             )}
                                         </div>
                                     </div>
-                                    <div className="p-4 border-t border-gray-100 bg-gray-50 flex justify-end gap-3 rounded-b-2xl">
-                                        <button onClick={handleSaveConfig} className="w-full md:w-auto px-8 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors shadow-sm">保存并关闭</button>
+                                    <div className="p-3 md:p-4 border-t border-gray-100 bg-gray-50 flex justify-end gap-3 flex-shrink-0">
+                                        <button onClick={handleSaveConfig} className="w-full md:w-auto px-8 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors shadow-sm">保存设置</button>
                                     </div>
                                 </div>
                             </div>
