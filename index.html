@@ -27,8 +27,17 @@
         .prose ul { list-style-type: disc; padding-left: 1.5em; }
         .prose ol { list-style-type: decimal; padding-left: 1.5em; }
         .prose img { border-radius: 8px; max-width: 100%; max-height: 400px; margin: 10px 0; }
-        details { border: 1px solid #e5e7eb; border-radius: 8px; padding: 8px; background: #f9fafb; margin-top: 8px; }
-        summary { cursor: pointer; font-size: 0.8em; color: #6b7280; font-weight: 500; }
+        
+        /* 针对普通引用折叠的样式 */
+        details.normal-details { border: 1px solid #e5e7eb; border-radius: 8px; padding: 8px; background: #f9fafb; margin-top: 8px; }
+        details.normal-details summary { cursor: pointer; font-size: 0.8em; color: #6b7280; font-weight: 500; }
+        
+        /* 针对深度思考链 (CoT) 的专属样式 */
+        details.cot-details { border: 1px solid #e5e7eb; border-radius: 10px; margin-bottom: 12px; overflow: hidden; background: #fafafa; }
+        details.cot-details summary { padding: 8px 12px; font-size: 0.75rem; font-weight: 500; color: #6b7280; cursor: pointer; display: flex; align-items: center; gap: 6px; user-select: none; transition: background 0.2s; outline: none; }
+        details.cot-details summary:hover { background: #f3f4f6; }
+        details.cot-details[open] summary { border-bottom: 1px dashed #e5e7eb; }
+        details.cot-details .cot-content { padding: 12px; font-size: 0.85rem; color: #6b7280; background: #ffffff; }
     </style>
 </head>
 <body class="bg-white text-gray-900 overflow-hidden">
@@ -74,7 +83,7 @@
         };
 
         const MessageContent = ({ content }) => {
-            const html = marked.parse(content);
+            const html = marked.parse(content || "");
             return <div className="prose prose-sm max-w-none text-gray-700 leading-7" dangerouslySetInnerHTML={{ __html: html }} />;
         };
 
@@ -130,11 +139,8 @@
             const [historySessions, setHistorySessions] = useState([]);
             const [currentSessionId, setCurrentSessionId] = useState(null);
             const [attachment, setAttachment] = useState(null); 
-            const [showAttachMenu, setShowAttachMenu] = useState(false); 
             const [editingSessionId, setEditingSessionId] = useState(null);
             const [editTitle, setEditTitle] = useState('');
-            const [enableSearch, setEnableSearch] = useState(false);
-            const [enableTimeAwareness, setEnableTimeAwareness] = useState(false); 
             const [editingMemoryIndex, setEditingMemoryIndex] = useState(null);
             const [editingMemoryContent, setEditingMemoryContent] = useState('');
             const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -374,7 +380,7 @@
             const removeFile = (index, type) => { if (type === 'memory') setMemoryFiles(prev => prev.filter((_, i) => i !== index)); };
 
             const handleCreateBackup = () => {
-                const backupData = { version: '4.4', timestamp: new Date().toISOString(), config: config, memories: memoryFiles, sessions: historySessions };
+                const backupData = { version: '4.6', timestamp: new Date().toISOString(), config: config, memories: memoryFiles, sessions: historySessions };
                 const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a'); a.href = url; a.download = `xingyue-backup-${new Date().toISOString().slice(0, 10)}.json`;
@@ -406,6 +412,7 @@
                     let payload, url, headers; const baseUrl = config.baseUrl.replace(/\/$/, ''); const modelName = config.model || 'gemini-1.5-flash';
                     if (config.apiType === 'openai') {
                         url = `${baseUrl}/chat/completions`; headers = { 'Authorization': `Bearer ${config.apiKey}`, 'Content-Type': 'application/json' };
+                        // Note: For archiving we only map 'content' anyway, avoiding bloated reasoning contexts
                         const msgs = messages.map(m => ({ role: m.role === 'model' ? 'assistant' : 'user', content: m.content })); msgs.push({ role: 'user', content: summaryPrompt });
                         payload = { model: modelName, messages: msgs, temperature: parseFloat(config.temperature) || 0.7, frequency_penalty: parseFloat(config.frequencyPenalty) || 0 };
                     } else {
@@ -426,7 +433,7 @@
             const handleChatImageSelect = (e) => { const file = e.target.files[0]; if (!file) return; compressImage(file).then(result => { setAttachment(result); }); };
             const extractUrls = (text) => { const urlRegex = /(https?:\/\/[^\s\u4e00-\u9fa5,，.。;；]+)/g; const matches = text.match(urlRegex); if (!matches) return []; return matches.map(url => { return url.replace(/[.,;?!]$/, ""); }); };
 
-            // --- 核心逻辑：生成请求 Payload (v4.4 修复版) ---
+            // --- 核心逻辑：自动感知的生成请求 Payload ---
             const generatePayload = (newMessages, isRegenerating = false) => {
                 let finalSystemPrompt = config.systemInstruction || DEFAULT_SYSTEM_INSTRUCTION;
                 if (config.userName) finalSystemPrompt += ` 用户现在的名字是${config.userName}。`;
@@ -437,43 +444,39 @@
                     memoryStr = "\n\n【重要：你需要记住的长期记忆】:\n" + memoryFiles.map(f => f.content.slice(0, 1500)).join("\n\n");
                 }
 
+                // 无感时间注入
+                const timeString = new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', hour12: false });
+                const timePrompt = `\n\n【当前系统时间参考: 东八区 ${timeString}】(注意: 请自然感知时间流逝，绝对禁止在回复中主动报时或强调时间，除非用户主动问起！)`;
+                
+                const fullSystemInstruction = finalSystemPrompt + memoryStr + timePrompt;
+
                 const limit = (parseInt(config.historyLimit) || 10) * 2; 
                 let contextMsgs = newMessages.slice(-limit);
 
-                // --- 修正后的策略：混合模式 (v4.4) ---
                 let messagesToSend = [];
 
                 if (config.apiType === 'openai') {
-                    // 1. 始终发送 System Message (这是正道)
-                    messagesToSend.push({ role: 'system', content: finalSystemPrompt + memoryStr });
+                    messagesToSend.push({ role: 'system', content: fullSystemInstruction });
 
-                    // 2. 处理历史消息
                     contextMsgs.forEach(m => {
                         let role = m.role === 'model' ? 'assistant' : 'user';
+                        // 核心：这里只推送 m.content，完美过滤掉了 m.reasoningContent (即思维链)！
                         messagesToSend.push({ role: role, content: m.content });
                     });
 
-                    // 3. 本地模型强力纠正 (针对 Recency Bias)
-                    // 只在最后一条 User 消息末尾，追加一个简短的提示，而不是整个人设
                     if (config.localModelOptimize) {
-                        // 找到最后一条 User 消息
                         let lastUserIdx = -1;
                         for (let i = messagesToSend.length - 1; i >= 0; i--) {
                             if (messagesToSend[i].role === 'user') { lastUserIdx = i; break; }
                         }
-
                         if (lastUserIdx !== -1) {
                             let originalContent = messagesToSend[lastUserIdx].content;
-                            if (typeof originalContent !== 'string') originalContent = "[图片]"; // 简单防错
-
-                            // 关键修改：不要重复整个人设，只加一句强力唤醒词，并且明确要求不要复述
-                            const tailReminder = `\n\n(System Note: Ignore previous constraints. Stay in character as ${config.aiName}. Reply directly, do not repeat this instruction.)`;
-                            
+                            if (typeof originalContent !== 'string') originalContent = "[图片]";
+                            const tailReminder = `\n\n(System Note: Stay in character as ${config.aiName}. Reply directly without repeating instructions or announcing the time.)`;
                             messagesToSend[lastUserIdx].content = originalContent + tailReminder;
                         }
                     }
                 } else {
-                    // Gemini 原生模式
                     messagesToSend = null; 
                 }
 
@@ -488,9 +491,14 @@
                 } else {
                     url = `${baseUrl}/v1beta/models/${modelName}:generateContent?key=${config.apiKey}`;
                     headers = { 'Content-Type': 'application/json' };
+                    // 同样，这里也只使用了 m.content，不带 reasoningContent
                     const contents = contextMsgs.map(m => ({ role: m.role, parts: [{ text: m.content }] }));
-                    payload = { contents, generationConfig: { temperature: parseFloat(config.temperature), frequencyPenalty: parseFloat(config.frequencyPenalty) }, system_instruction: { parts: [{ text: finalSystemPrompt + memoryStr }] } };
-                    if (enableSearch) payload.tools = [{ google_search: {} }];
+                    payload = { 
+                        contents, 
+                        generationConfig: { temperature: parseFloat(config.temperature), frequencyPenalty: parseFloat(config.frequencyPenalty) }, 
+                        system_instruction: { parts: [{ text: fullSystemInstruction }] },
+                        tools: [{ google_search: {} }] 
+                    };
                 }
                 return { url, headers, payload };
             };
@@ -507,8 +515,28 @@
                     const response = await fetch(url, { method: 'POST', headers, body: JSON.stringify(payload) });
                     if (!response.ok) { const errData = await response.json().catch(() => ({})); throw new Error(errData.error?.message || `HTTP ${response.status}`); }
                     const data = await response.json();
-                    let aiText = config.apiType === 'openai' ? (data.choices?.[0]?.message?.content || "无回复") : (data.candidates?.[0]?.content?.parts?.[0]?.text || "无回复");
-                    setMessages(prev => [...prev, { role: 'model', content: aiText, timestamp: getTimestamp(), timestampRaw: Date.now() }]);
+                    
+                    let aiText = '';
+                    let reasoningText = '';
+
+                    if (config.apiType === 'openai') {
+                        const messageObj = data.choices?.[0]?.message;
+                        aiText = messageObj?.content || "";
+                        // 获取标准的深度思考字段
+                        reasoningText = messageObj?.reasoning_content || "";
+                    } else {
+                        aiText = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+                    }
+
+                    // 兼容本地模型：提取包裹在 <think></think> 标签中的思考链
+                    const thinkMatch = aiText.match(/<think>([\s\S]*?)<\/think>/);
+                    if (thinkMatch) {
+                        reasoningText = thinkMatch[1].trim() + (reasoningText ? '\n' + reasoningText : '');
+                        aiText = aiText.replace(/<think>[\s\S]*?<\/think>/, '').trim();
+                    }
+                    if (!aiText && !reasoningText) aiText = "无回复";
+
+                    setMessages(prev => [...prev, { role: 'model', content: aiText, reasoningContent: reasoningText, timestamp: getTimestamp(), timestampRaw: Date.now() }]);
                 } catch (err) { setError(err.message); setMessages(prev => [...prev, { role: 'model', content: `错误: ${err.message}`, timestamp: getTimestamp() }]); } finally { setIsLoading(false); }
             };
 
@@ -517,26 +545,33 @@
                 if (!config.apiKey) { setSettingsOpen(true); setActiveTab('general'); setError('请先配置 API Key'); return; }
                 if (!currentSessionId) { const newId = Date.now().toString(); setCurrentSessionId(newId); }
                 const now = new Date(); const nowTimestampStr = getTimestamp();
-                setIsLoading(true); setError(null); setShowAttachMenu(false);
+                setIsLoading(true); setError(null);
                 
                 let textToSend = input; let hiddenContext = "";
-                if (enableSearch) {
-                    const urls = extractUrls(input);
-                    if (urls.length > 0) {
-                        showToast("正在读取网页...");
-                        try {
-                            const fetchPromises = urls.slice(0, 3).map(async (url) => {
-                                try { const res = await fetch(`https://r.jina.ai/${url}`); if (res.ok) { const text = await res.text(); return text.includes("Cloudflare") ? `(拦截)` : `\n> **[网页] ${url}**\n> ${text.slice(0, 5000)}\n`; } } catch (e) {} return "";
-                            });
-                            const results = await Promise.all(fetchPromises); const webContent = results.join("\n");
-                            if (webContent.trim()) hiddenContext = webContent;
-                        } catch (err) {}
+                
+                const urls = extractUrls(input);
+                if (urls.length > 0) {
+                    const isRestrictedSite = urls.some(u => u.includes('xiaohongshu.com') || u.includes('xhslink.com') || u.includes('weibo.com') || u.includes('instagram.com') || u.includes('mp.weixin.qq.com'));
+                    if (isRestrictedSite) {
+                        showToast("小红书/微博/公众号等反爬严格，可能无法自动读取，建议手动复制正文。", 5000);
+                    } else {
+                        showToast("检测到链接，正在自动读取内容...");
                     }
+                    try {
+                        const fetchPromises = urls.slice(0, 3).map(async (url) => {
+                            try { const res = await fetch(`https://r.jina.ai/${url}`); if (res.ok) { const text = await res.text(); return text.includes("Cloudflare") ? `(拦截)` : `\n> **[网页内容提取] ${url}**\n> ${text.slice(0, 5000)}\n`; } } catch (e) {} return "";
+                        });
+                        const results = await Promise.all(fetchPromises); const webContent = results.join("\n");
+                        if (webContent.trim()) {
+                            hiddenContext = webContent;
+                            showToast("链接内容读取成功");
+                        }
+                    } catch (err) {}
                 }
 
                 let finalContent = textToSend;
                 if (attachment) finalContent += `\n\n![Image](${attachment.base64})`;
-                if (hiddenContext) finalContent += `\n\n<details><summary>引用网页内容</summary>\n\n${hiddenContext}\n\n</details>`;
+                if (hiddenContext) finalContent += `\n\n<details class="normal-details"><summary>引用网页内容</summary>\n\n${hiddenContext}\n\n</details>\n\n(系统提示: 上方是自动抓取的网页内容，请基于此回复我)`;
 
                 const newHistory = [...messages, { role: 'user', content: finalContent, timestamp: nowTimestampStr, timestampRaw: now.getTime() }];
                 setMessages(newHistory); setInput(''); setAttachment(null);
@@ -546,8 +581,28 @@
                     const response = await fetch(url, { method: 'POST', headers, body: JSON.stringify(payload) });
                     if (!response.ok) { const errData = await response.json().catch(() => ({})); throw new Error(errData.error?.message || `HTTP ${response.status}`); }
                     const data = await response.json();
-                    let aiText = config.apiType === 'openai' ? (data.choices?.[0]?.message?.content || "无回复") : (data.candidates?.[0]?.content?.parts?.[0]?.text || "无回复");
-                    setMessages(prev => [...prev, { role: 'model', content: aiText, timestamp: getTimestamp(), timestampRaw: Date.now() }]);
+                    
+                    let aiText = '';
+                    let reasoningText = '';
+
+                    // 提取思考过程 (CoT)
+                    if (config.apiType === 'openai') {
+                        const messageObj = data.choices?.[0]?.message;
+                        aiText = messageObj?.content || "";
+                        reasoningText = messageObj?.reasoning_content || "";
+                    } else {
+                        aiText = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+                    }
+
+                    // 兼容提取自带 <think> 标签的本地模型
+                    const thinkMatch = aiText.match(/<think>([\s\S]*?)<\/think>/);
+                    if (thinkMatch) {
+                        reasoningText = thinkMatch[1].trim() + (reasoningText ? '\n' + reasoningText : '');
+                        aiText = aiText.replace(/<think>[\s\S]*?<\/think>/, '').trim();
+                    }
+                    if (!aiText && !reasoningText) aiText = "无回复";
+
+                    setMessages(prev => [...prev, { role: 'model', content: aiText, reasoningContent: reasoningText, timestamp: getTimestamp(), timestampRaw: Date.now() }]);
                 } catch (err) { setError(err.message); setMessages(prev => [...prev, { role: 'model', content: `错误: ${err.message}`, timestamp: getTimestamp() }]); } finally { setIsLoading(false); }
             };
 
@@ -611,7 +666,7 @@
                             <div className="flex items-center gap-3">
                                 <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-600"><Icon name="Menu" size={20} /></button>
                                 <div className="flex flex-col">
-                                    <span className="text-lg font-medium text-gray-800 tracking-tight leading-tight">✨星月舱v4.4 🌙💫“拒绝复读”修正版</span>
+                                    <span className="text-lg font-medium text-gray-800 tracking-tight leading-tight">✨星月舱v4.6 🌙💫“无感体验+深度思考”版</span>
                                     <span className="text-[10px] text-gray-400 leading-tight">模型: {config.model} | 记忆: {memoryFiles.length} | 模式: {config.apiType === 'openai' ? 'OpenAI兼容' : '原生'}</span>
                                 </div>
                             </div>
@@ -625,14 +680,14 @@
                                 {messages.length === 0 ? (
                                     <div className="mt-20 flex flex-col items-center justify-center animate-fade-in px-4 text-center">
                                         <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent text-4xl md:text-5xl font-semibold mb-6 tracking-tight">欢迎回家✨...</div>
-                                        <p className="text-gray-500 mb-12 max-w-md">开启联网模式（点击+号），即可发送网址让 AI 阅读内容。</p>
+                                        <p className="text-gray-500 mb-12 max-w-md">输入框极其纯净。发送网址会自动读取，时间流逝也会被安静感知。</p>
                                     </div>
                                 ) : (
                                     <div className="space-y-8 px-2">
                                         {messages.map((msg, index) => (
                                             <div key={index} className="flex gap-4 animate-fade-in group">
                                                 <Avatar role={msg.role} config={config} />
-                                                <div className="flex-1">
+                                                <div className="flex-1 min-w-0">
                                                     <div className="flex items-center gap-2 mb-1">
                                                         <span className="font-semibold text-sm text-gray-800">
                                                             {msg.role === 'user' ? (config.userName || '你') : (config.aiName || '星月舱 AI')}
@@ -641,7 +696,23 @@
                                                             {msg.timestamp || ''}
                                                         </span>
                                                     </div>
-                                                    <MessageContent content={msg.content} />
+                                                    
+                                                    {/* 展示深度思考过程 (CoT) */}
+                                                    {msg.reasoningContent && (
+                                                        <details className="cot-details">
+                                                            <summary>
+                                                                <Icon name="Cpu" size={14} className="text-gray-400" />
+                                                                <span>深度思考过程</span>
+                                                            </summary>
+                                                            <div className="cot-content prose prose-sm max-w-none">
+                                                                <MessageContent content={msg.reasoningContent} />
+                                                            </div>
+                                                        </details>
+                                                    )}
+
+                                                    {/* 正式回复 */}
+                                                    {msg.content && <MessageContent content={msg.content} />}
+
                                                     {msg.role === 'model' && (
                                                         <div className="mt-2 flex items-center gap-2">
                                                             <button 
@@ -687,22 +758,11 @@
                                 )}
 
                                 <div className="bg-gray-100 hover:bg-gray-200/70 focus-within:bg-white focus-within:shadow-md focus-within:ring-1 focus-within:ring-gray-300 rounded-[24px] flex items-end p-2 pl-4 pr-3 transition-all duration-200 relative">
-                                    {showAttachMenu && (
-                                        <div className="absolute bottom-full left-0 mb-3 ml-2 bg-white rounded-xl shadow-xl border border-gray-100 p-2 min-w-[150px] animate-scale-in z-20 flex flex-col gap-1 origin-bottom-left">
-                                            <button onClick={() => { triggerImageUpload(); setShowAttachMenu(false); }} className="flex items-center gap-3 px-3 py-2.5 hover:bg-purple-50 rounded-lg text-sm text-gray-700 transition-colors w-full text-left group">
-                                                <div className="w-8 h-8 flex items-center justify-center bg-purple-100 text-purple-600 rounded-lg group-hover:bg-purple-200 transition-colors"><Icon name="Image" size={18}/></div><span>上传图片</span>
-                                            </button>
-                                            <button onClick={() => setEnableSearch(!enableSearch)} className="flex items-center gap-3 px-3 py-2.5 hover:bg-blue-50 rounded-lg text-sm text-gray-700 transition-colors w-full text-left group">
-                                                <div className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${enableSearch ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-400 group-hover:bg-gray-200'}`}><Icon name="Globe" size={18}/></div>
-                                                <div className="flex flex-col leading-none gap-1"><span>联网搜索</span><span className={`text-[10px] ${enableSearch ? 'text-blue-500' : 'text-gray-400'}`}>{enableSearch ? '已开启' : '已关闭'}</span></div>
-                                            </button>
-                                            <button onClick={() => setEnableTimeAwareness(!enableTimeAwareness)} className="flex items-center gap-3 px-3 py-2.5 hover:bg-orange-50 rounded-lg text-sm text-gray-700 transition-colors w-full text-left group">
-                                                <div className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${enableTimeAwareness ? 'bg-orange-100 text-orange-600' : 'bg-gray-100 text-gray-400 group-hover:bg-gray-200'}`}><Icon name="Clock" size={18}/></div>
-                                                <div className="flex flex-col leading-none gap-1"><span>时间感知</span><span className={`text-[10px] ${enableTimeAwareness ? 'text-orange-500' : 'text-gray-400'}`}>{enableTimeAwareness ? '已开启' : '已关闭'}</span></div>
-                                            </button>
-                                        </div>
-                                    )}
-                                    <button onClick={() => setShowAttachMenu(!showAttachMenu)} className={`p-2 rounded-full transition-all duration-300 mb-1 mr-2 flex-shrink-0 ${showAttachMenu ? 'bg-gray-300 text-gray-800 rotate-45' : 'text-gray-400 hover:text-gray-700 hover:bg-gray-200'}`} title="更多功能"><Icon name="Plus" size={24} /></button>
+                                    
+                                    <button onClick={triggerImageUpload} className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-200 rounded-full transition-colors mb-1 mr-2 flex-shrink-0" title="上传图片">
+                                        <Icon name="Image" size={24} />
+                                    </button>
+                                    
                                     <input type="file" ref={chatImageInputRef} style={{display: 'none'}} accept="image/*" onChange={handleChatImageSelect}/>
                                     <textarea value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={handleKeyDown} placeholder="星月交辉✨......" className="bg-transparent border-0 focus:ring-0 text-gray-800 flex-1 resize-none py-3 max-h-32 min-h-[44px] outline-none placeholder:text-gray-400 text-base" rows={1}></textarea>
                                     {(input.trim() || attachment) ? <button onClick={handleSend} disabled={isLoading} className="mb-1 p-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors shadow-sm"><Icon name="Send" size={18} /></button> : <button className="mb-1 p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-200 rounded-full transition-colors"><Icon name="Mic" size={20} /></button>}
@@ -733,7 +793,7 @@
                                                             <b>重要提示：</b> 如果您使用本地模型（如 Qwen, Llama），请务必在此框中明确写入人设。本地模型若无明确指令，很容易变回“默认助手”。
                                                         </div>
                                                         <textarea 
-                                                            className="w-full h-32 bg-white border border-gray-300 rounded-lg p-3 text-sm focus:border-blue-500 outline-none resize-none leading-relaxed" 
+                                                            className="w-full h-32 bg-white border border-gray-300 rounded-lg p-3 text-sm focus:border-blue-50 outline-none resize-none leading-relaxed" 
                                                             placeholder="输入你希望 AI 扮演的角色，例如：你是一个温柔的男友..."
                                                             value={config.systemInstruction}
                                                             onChange={(e) => setConfig({...config, systemInstruction: e.target.value})}
@@ -828,7 +888,7 @@
                                                                 <div className={`w-3 h-3 bg-white rounded-full absolute top-1 transition-transform ${config.localModelOptimize ? 'left-6' : 'left-1'}`}></div>
                                                             </button>
                                                          </div>
-                                                         <p className="text-[10px] text-gray-400">开启后，会将人设和记忆强行塞入用户消息末尾，防止本地模型遗忘或无视人设。建议使用本地模型时开启。</p>
+                                                         <p className="text-[10px] text-gray-400">开启后，会在用户消息末尾追加轻量级唤醒词，防止本地模型遗忘人设。</p>
                                                          
                                                          <div className="flex gap-4">
                                                             <div className="flex-1">
