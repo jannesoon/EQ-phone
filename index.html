@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EQ-chat✨星月舱v5.0🌙私域版</title>
+    <title>EQ-chat✨星月舱🌙私域版</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%238b5cf6' stroke='%238b5cf6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z'/></svg>">
     <script src="https://cdn.tailwindcss.com"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
@@ -219,7 +219,10 @@
                     }
                 }
                 setBots(initialBots);
-                if (initialBots.length > 0) setSelectedBotId(initialBots[0].id);
+                if (initialBots.length > 0) {
+                    setSelectedBotId(initialBots[0].id);
+                    setActiveTarget(initialBots[0].id); // 默认打开专属单聊频道
+                }
 
                 const storedConfig = localStorage.getItem('gemini_app_config');
                 if (storedConfig) {
@@ -239,9 +242,18 @@
                 
                 const storedSessions = localStorage.getItem('gemini_chat_sessions');
                 if (storedSessions) {
-                    // 数据迁移：给没有 target 的老会话默认标为 'group'
+                    // 数据迁移与修复：识别旧版的单聊记录，把它们从群聊里捞出来，放回第一个专属房间
                     let parsedSessions = JSON.parse(storedSessions);
-                    parsedSessions = parsedSessions.map(s => s.target ? s : { ...s, target: 'group' });
+                    const defaultBotId = initialBots.length > 0 ? initialBots[0].id : 'group';
+                    
+                    parsedSessions = parsedSessions.map(s => {
+                        // 如果记录里没有任何带 botId 的消息，说明它绝对是以前的旧版单聊记录
+                        const isRealGroupChat = s.messages && s.messages.some(m => m.botId);
+                        if (!s.target || (s.target === 'group' && !isRealGroupChat)) {
+                            return { ...s, target: defaultBotId };
+                        }
+                        return s;
+                    });
                     setHistorySessions(parsedSessions);
                 }
                 
