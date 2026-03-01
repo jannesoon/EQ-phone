@@ -70,7 +70,9 @@
             Edit: () => <g><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></g>,
             Check: () => <polyline points="20 6 9 17 4 12"/>,
             Save: () => <g><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></g>,
-            Clock: () => <g><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></g>
+            Clock: () => <g><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></g>,
+            ChevronLeft: () => <polyline points="15 18 9 12 15 6" />,
+            ChevronRight: () => <polyline points="9 18 15 12 9 6" />
         };
 
         const Icon = ({ name, size = 20, className = "" }) => {
@@ -478,6 +480,23 @@
             const handleChatImageSelect = (e) => { const file = e.target.files[0]; if (!file) return; compressImage(file).then(result => { setAttachment(result); }); };
             const extractUrls = (text) => { const urlRegex = /(https?:\/\/[^\s\u4e00-\u9fa5,，.。;；]+)/g; const matches = text.match(urlRegex); if (!matches) return []; return matches.map(url => { return url.replace(/[.,;?!]$/, ""); }); };
 
+            const switchVariant = (msgIndex, direction) => {
+                setMessages(prev => {
+                    const newMsgs = [...prev];
+                    const msg = { ...newMsgs[msgIndex] }; 
+                    let newIdx = msg.currentVariantIndex + direction;
+                    if (msg.variants && newIdx >= 0 && newIdx < msg.variants.length) {
+                        msg.currentVariantIndex = newIdx;
+                        msg.content = msg.variants[newIdx].content;
+                        msg.reasoningContent = msg.variants[newIdx].reasoningContent;
+                        msg.modelName = msg.variants[newIdx].modelName;
+                        msg.timestamp = msg.variants[newIdx].timestamp;
+                        newMsgs[msgIndex] = msg;
+                    }
+                    return newMsgs;
+                });
+            };
+
             const generatePayload = (newMessages, isRegenerating = false) => {
                 let finalSystemPrompt = config.systemInstruction || DEFAULT_SYSTEM_INSTRUCTION;
                 if (config.userName) finalSystemPrompt += ` 用户现在的名字是${config.userName}。`;
@@ -547,9 +566,41 @@
             const handleRegenerate = async () => {
                 if (isLoading || messages.length === 0) return;
                 let newMessages = [...messages];
-                if (newMessages[newMessages.length - 1].role === 'model') newMessages.pop();
+                let existingModelMsg = null;
+                
+                if (newMessages[newMessages.length - 1].role === 'model') {
+                    existingModelMsg = newMessages.pop();
+                }
+                
                 if (newMessages.length === 0) return;
-                setMessages(newMessages); setIsLoading(true); setError(null);
+                setIsLoading(true); setError(null);
+
+                let variants = existingModelMsg?.variants ? [...existingModelMsg.variants] : [];
+                if (existingModelMsg && variants.length === 0) {
+                    variants.push({
+                        content: existingModelMsg.content || '',
+                        reasoningContent: existingModelMsg.reasoningContent || '',
+                        modelName: existingModelMsg.modelName || config.model,
+                        timestamp: existingModelMsg.timestamp || getTimestamp()
+                    });
+                }
+                
+                const newVariantIndex = variants.length;
+                variants.push({ content: '', reasoningContent: '', modelName: config.model, timestamp: getTimestamp() });
+
+                const updatedModelMsg = {
+                    ...existingModelMsg,
+                    role: 'model',
+                    variants: variants,
+                    currentVariantIndex: newVariantIndex,
+                    content: '',
+                    reasoningContent: '',
+                    modelName: config.model,
+                    timestamp: getTimestamp(),
+                    timestampRaw: Date.now()
+                };
+
+                setMessages([...newMessages, updatedModelMsg]);
 
                 try {
                     const { url, headers, payload } = generatePayload(newMessages, true);
@@ -569,15 +620,20 @@
                         const thinkMatch = aiText.match(/<think>([\s\S]*?)<\/think>/);
                         if (thinkMatch) { reasoningText = thinkMatch[1].trim() + (reasoningText ? '\n' + reasoningText : ''); aiText = aiText.replace(/<think>[\s\S]*?<\/think>/, '').trim(); }
                         if (!aiText && !reasoningText) aiText = "无回复";
-                        setMessages(prev => [...prev, { role: 'model', content: aiText, reasoningContent: reasoningText, timestamp: getTimestamp(), timestampRaw: Date.now(), modelName: config.model }]);
+                        
+                        setMessages(prev => {
+                            const msgs = [...prev]; const last = msgs[msgs.length - 1];
+                            last.variants[newVariantIndex].content = aiText;
+                            last.variants[newVariantIndex].reasoningContent = reasoningText;
+                            last.content = aiText; last.reasoningContent = reasoningText;
+                            return msgs;
+                        });
                         setIsLoading(false);
                     } else {
                         setIsLoading(false);
                         const reader = response.body.getReader();
                         const decoder = new TextDecoder("utf-8");
                         let aiText = ""; let reasoningText = "";
-                        setMessages(prev => [...prev, { role: 'model', content: '', reasoningContent: '', timestamp: getTimestamp(), timestampRaw: Date.now(), modelName: config.model }]);
-                        
                         let buffer = "";
                         while (true) {
                             const { done, value } = await reader.read();
@@ -600,13 +656,28 @@
                                         const thinkMatch = aiText.match(/<think>([\s\S]*?)(<\/think>|$)/);
                                         if (thinkMatch) { displayReasoning = (reasoningText ? reasoningText + '\n' : '') + thinkMatch[1].trim(); displayContent = aiText.replace(/<think>[\s\S]*?(<\/think>|$)/, '').trim(); }
                                         
-                                        setMessages(prev => { const newMsgs = [...prev]; newMsgs[newMsgs.length - 1].content = displayContent; newMsgs[newMsgs.length - 1].reasoningContent = displayReasoning; return newMsgs; });
+                                        setMessages(prev => { 
+                                            const msgs = [...prev]; const last = msgs[msgs.length - 1];
+                                            last.variants[newVariantIndex].content = displayContent;
+                                            last.variants[newVariantIndex].reasoningContent = displayReasoning;
+                                            last.content = displayContent; last.reasoningContent = displayReasoning;
+                                            return msgs; 
+                                        });
                                     } catch (e) {}
                                 }
                             }
                         }
                     }
-                } catch (err) { setError(err.message); setMessages(prev => [...prev, { role: 'model', content: `错误: ${err.message}`, timestamp: getTimestamp(), modelName: config.model }]); setIsLoading(false); }
+                } catch (err) { 
+                    setError(err.message); 
+                    setMessages(prev => {
+                        const msgs = [...prev]; const last = msgs[msgs.length - 1];
+                        last.variants[newVariantIndex].content = `错误: ${err.message}`;
+                        last.content = `错误: ${err.message}`;
+                        return msgs;
+                    });
+                    setIsLoading(false); 
+                }
             };
 
             const handleSend = async () => {
@@ -663,14 +734,24 @@
                         const thinkMatch = aiText.match(/<think>([\s\S]*?)<\/think>/);
                         if (thinkMatch) { reasoningText = thinkMatch[1].trim() + (reasoningText ? '\n' + reasoningText : ''); aiText = aiText.replace(/<think>[\s\S]*?<\/think>/, '').trim(); }
                         if (!aiText && !reasoningText) aiText = "无回复";
-                        setMessages(prev => [...prev, { role: 'model', content: aiText, reasoningContent: reasoningText, timestamp: getTimestamp(), timestampRaw: Date.now(), modelName: config.model }]);
+                        
+                        setMessages(prev => [...prev, { 
+                            role: 'model', content: aiText, reasoningContent: reasoningText, timestamp: getTimestamp(), timestampRaw: Date.now(), modelName: config.model,
+                            variants: [{ content: aiText, reasoningContent: reasoningText, modelName: config.model, timestamp: getTimestamp() }],
+                            currentVariantIndex: 0
+                        }]);
                         setIsLoading(false);
                     } else {
                         setIsLoading(false);
                         const reader = response.body.getReader();
                         const decoder = new TextDecoder("utf-8");
                         let aiText = ""; let reasoningText = "";
-                        setMessages(prev => [...prev, { role: 'model', content: '', reasoningContent: '', timestamp: getTimestamp(), timestampRaw: Date.now(), modelName: config.model }]);
+                        
+                        setMessages(prev => [...prev, { 
+                            role: 'model', content: '', reasoningContent: '', timestamp: getTimestamp(), timestampRaw: Date.now(), modelName: config.model,
+                            variants: [{ content: '', reasoningContent: '', modelName: config.model, timestamp: getTimestamp() }],
+                            currentVariantIndex: 0
+                        }]);
                         
                         let buffer = "";
                         while (true) {
@@ -694,13 +775,29 @@
                                         const thinkMatch = aiText.match(/<think>([\s\S]*?)(<\/think>|$)/);
                                         if (thinkMatch) { displayReasoning = (reasoningText ? reasoningText + '\n' : '') + thinkMatch[1].trim(); displayContent = aiText.replace(/<think>[\s\S]*?(<\/think>|$)/, '').trim(); }
                                         
-                                        setMessages(prev => { const newMsgs = [...prev]; newMsgs[newMsgs.length - 1].content = displayContent; newMsgs[newMsgs.length - 1].reasoningContent = displayReasoning; return newMsgs; });
+                                        setMessages(prev => { 
+                                            const newMsgs = [...prev]; 
+                                            const lastMsg = newMsgs[newMsgs.length - 1];
+                                            lastMsg.content = displayContent; 
+                                            lastMsg.reasoningContent = displayReasoning;
+                                            lastMsg.variants[0].content = displayContent;
+                                            lastMsg.variants[0].reasoningContent = displayReasoning;
+                                            return newMsgs; 
+                                        });
                                     } catch (e) {}
                                 }
                             }
                         }
                     }
-                } catch (err) { setError(err.message); setMessages(prev => [...prev, { role: 'model', content: `错误: ${err.message}`, timestamp: getTimestamp(), modelName: config.model }]); setIsLoading(false); }
+                } catch (err) { 
+                    setError(err.message); 
+                    setMessages(prev => [...prev, { 
+                        role: 'model', content: `错误: ${err.message}`, timestamp: getTimestamp(), modelName: config.model,
+                        variants: [{ content: `错误: ${err.message}`, reasoningContent: '', modelName: config.model, timestamp: getTimestamp() }],
+                        currentVariantIndex: 0
+                    }]); 
+                    setIsLoading(false); 
+                }
             };
 
             const handleKeyDown = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } };
@@ -815,7 +912,7 @@
                                             <div key={index} className="flex gap-4 animate-fade-in group">
                                                 <Avatar role={msg.role} config={config} />
                                                 <div className="flex-1 min-w-0">
-                                                    <div className="flex items-center gap-2 mb-1">
+                                                    <div className="flex items-center gap-2 mb-1 flex-wrap">
                                                         <span className="font-semibold text-sm text-gray-800">
                                                             {msg.role === 'user' ? (config.userName || '你') : (config.aiName || '星月舱 AI')}
                                                         </span>
@@ -824,7 +921,14 @@
                                                                 {msg.modelName}
                                                             </span>
                                                         )}
-                                                        <span className="text-[10px] text-gray-400 font-mono">
+                                                        {msg.role === 'model' && msg.variants && msg.variants.length > 1 && (
+                                                            <div className="flex items-center gap-1 bg-gray-50 border border-gray-100 rounded px-1 py-0.5 ml-1">
+                                                                <button onClick={() => switchVariant(index, -1)} disabled={msg.currentVariantIndex === 0} className="text-gray-400 hover:text-blue-600 disabled:opacity-30 transition-colors"><Icon name="ChevronLeft" size={12} /></button>
+                                                                <span className="text-[9px] text-gray-500 font-mono select-none leading-none pt-[1px]">{msg.currentVariantIndex + 1}/{msg.variants.length}</span>
+                                                                <button onClick={() => switchVariant(index, 1)} disabled={msg.currentVariantIndex === msg.variants.length - 1} className="text-gray-400 hover:text-blue-600 disabled:opacity-30 transition-colors"><Icon name="ChevronRight" size={12} /></button>
+                                                            </div>
+                                                        )}
+                                                        <span className="text-[10px] text-gray-400 font-mono ml-auto">
                                                             {msg.timestamp || ''}
                                                         </span>
                                                     </div>
@@ -899,7 +1003,7 @@
                                     <textarea value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={handleKeyDown} placeholder="星月交辉✨......" className="bg-transparent border-0 focus:ring-0 text-gray-800 flex-1 resize-none py-3 max-h-32 min-h-[44px] outline-none placeholder:text-gray-400 text-base" rows={1}></textarea>
                                     {(input.trim() || attachment) ? <button onClick={handleSend} disabled={isLoading} className="mb-1 p-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors shadow-sm"><Icon name="Send" size={18} /></button> : <button className="mb-1 p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-200 rounded-full transition-colors"><Icon name="Mic" size={20} /></button>}
                                 </div>
-                                <div className="text-center mt-2 text-[10px] text-gray-400">星月舱api 可能会产生不准确的信息。</div>
+                                <div className="text-center mt-2 text-[10px] text-gray-400">Gemini 可能会产生不准确的信息。</div>
                             </div>
                         </div>
 
