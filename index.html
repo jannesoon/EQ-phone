@@ -139,8 +139,12 @@
             const [playingMsgIndex, setPlayingMsgIndex] = useState(null);
             const [isTTSLoading, setIsTTSLoading] = useState(false);
 
-            // --- 新增：合并数据的弹窗状态 ---
+            const [selectedBotId, setSelectedBotId] = useState(null); 
+            // --- 修复：添加 pendingBackup 状态声明 ---
             const [pendingBackup, setPendingBackup] = useState(null);
+            
+            // 为了避免未定义错误，临时声明一个 bots
+            const [bots, setBots] = useState([]);
 
             const [config, setConfig] = useState({
                 apiKey: '',
@@ -159,7 +163,7 @@
                 apiType: 'gemini',
                 userName: '你',
                 aiName: '星月舱 AI',
-                minimaxUrl: 'https://api.minimax.chat/v1/t2a_v2',
+                minimaxUrl: 'https://api.minimax.chat',
                 systemInstruction: DEFAULT_SYSTEM_INSTRUCTION,
                 localModelOptimize: true,
                 streamOutput: true
@@ -189,7 +193,7 @@
                     if (!parsed.userName) parsed.userName = '你';
                     if (!parsed.aiName) parsed.aiName = '星月舱 AI';
                     if (!parsed.minimaxVoiceId) parsed.minimaxVoiceId = 'male-qn-qingse';
-                    if (!parsed.minimaxUrl) parsed.minimaxUrl = 'https://api.minimax.chat/v1/t2a_v2'; 
+                    if (!parsed.minimaxUrl || parsed.minimaxUrl.includes('t2a_v2')) parsed.minimaxUrl = 'https://api.minimax.chat'; 
                     if (!parsed.minimaxModel) parsed.minimaxModel = 'speech-01-turbo'; 
                     if (!parsed.minimaxCustomModel) parsed.minimaxCustomModel = '';
                     if (parsed.temperature === undefined) parsed.temperature = 0.7;
@@ -272,6 +276,24 @@
                 if (currentSessionId === sessionId) { setMessages([]); setCurrentSessionId(null); }
             };
 
+            const startEditing = (e, session) => { e.stopPropagation(); setEditingSessionId(session.id); setEditTitle(session.title); };
+            const saveTitle = (e) => { e.stopPropagation(); const updatedSessions = historySessions.map(s => s.id === editingSessionId ? { ...s, title: editTitle } : s); setHistorySessions(updatedSessions); setEditingSessionId(null); };
+            const cancelEditing = (e) => { e.stopPropagation(); setEditingSessionId(null); };
+
+            const startEditingMemory = (index) => { setEditingMemoryIndex(index); setEditingMemoryContent(memoryFiles[index].content); };
+            const saveMemoryEdit = () => {
+                const updatedFiles = [...memoryFiles];
+                updatedFiles[editingMemoryIndex].content = editingMemoryContent;
+                const sizeInBytes = new Blob([editingMemoryContent]).size;
+                updatedFiles[editingMemoryIndex].size = (sizeInBytes / 1024).toFixed(1) + ' KB';
+                updatedFiles[editingMemoryIndex].date = new Date().toLocaleDateString() + ' (已编辑)';
+                setMemoryFiles(updatedFiles);
+                localStorage.setItem('gemini_memories', JSON.stringify(updatedFiles));
+                setEditingMemoryIndex(null);
+                showToast("记忆内容已更新");
+            };
+            const cancelMemoryEdit = () => { setEditingMemoryIndex(null); setEditingMemoryContent(''); };
+
             const updateSelectedBot = (field, value) => { setBots(bots.map(b => b.id === selectedBotId ? { ...b, [field]: value } : b)); };
             const handleBotAvatarUpload = (e) => {
                 const file = e.target.files[0]; if (!file) return;
@@ -282,7 +304,7 @@
                 if (audioPlayer && playingMsgIndex === index) { audioPlayer.pause(); setAudioPlayer(null); setPlayingMsgIndex(null); return; }
                 if (audioPlayer) audioPlayer.pause();
                 
-                if (!config.minimaxKey) { showToast("请在设置中配置 Minimax API Key"); setSettingsOpen(true); setActiveTab('general'); return; }
+                if (!config.minimaxKey) { showToast("请在设置中配置语音 API Key"); setSettingsOpen(true); setActiveTab('general'); return; }
                 
                 setIsTTSLoading(true); setPlayingMsgIndex(index);
                 try {
@@ -301,25 +323,23 @@
                     if (cleanText.length > 240) { cleanText = cleanText.substring(0, 240) + "......"; showToast("文本过长，仅读前240字"); }
                     if (!cleanText) cleanText = "嗯……"; 
                     
-                    let url = config.minimaxUrl || "https://api.minimax.chat/v1/t2a_v2";
-                    // 温柔处理：不暴力裁剪，如果有GroupId且原URL没带，才拼上去
-                    if (config.minimaxGroupId && !url.includes('GroupId=')) {
-                        url += url.includes('?') ? `&GroupId=${config.minimaxGroupId}` : `?GroupId=${config.minimaxGroupId}`;
-                    }
+                    // 彻底抛弃旧版参数，采用兼容性最强的通用标准接口
+                    let baseUrl = (config.minimaxUrl || "https://api.minimax.chat").trim().replace(/\/+$/, "");
+                    if (baseUrl.endsWith('/v1/t2a_v2')) baseUrl = baseUrl.replace('/v1/t2a_v2', '');
+                    
+                    let url = baseUrl.endsWith('/v1/audio/speech') ? baseUrl : baseUrl + "/v1/audio/speech";
                     
                     const targetModel = config.minimaxCustomModel ? config.minimaxCustomModel : (config.minimaxModel || "speech-01-turbo");
-                    const bodyV2 = { 
+                    const bodyPayload = { 
                         model: targetModel, 
-                        text: cleanText, 
-                        stream: false, 
-                        voice_setting: { voice_id: config.minimaxVoiceId, speed: 1.0, vol: 1.0, pitch: 0 },
-                        audio_setting: { sample_rate: 32000, bitrate: 128000, format: "mp3", channel: 1 }
+                        input: cleanText, 
+                        voice: config.minimaxVoiceId || "male-qn-qingse"
                     };
                     
                     const response = await fetch(url, { 
                         method: 'POST', 
-                        headers: { 'Authorization': `Bearer ${config.minimaxKey}`, 'Content-Type': 'application/json' }, 
-                        body: JSON.stringify(bodyV2) 
+                        headers: { 'Authorization': `Bearer ${config.minimaxKey.trim()}`, 'Content-Type': 'application/json' }, 
+                        body: JSON.stringify(bodyPayload) 
                     });
                     
                     if (!response.ok) {
@@ -327,7 +347,8 @@
                         let errMsg = `HTTP Error: ${response.status}`;
                         try {
                             const errJson = JSON.parse(errText);
-                            if (errJson.base_resp && errJson.base_resp.status_msg) errMsg = `引擎报错: ${errJson.base_resp.status_msg}`;
+                            if (errJson.error && errJson.error.message) errMsg = errJson.error.message;
+                            else if (errJson.base_resp && errJson.base_resp.status_msg) errMsg = errJson.base_resp.status_msg;
                         } catch(e) {}
                         throw new Error(errMsg);
                     }
@@ -336,19 +357,21 @@
                     if (blob.type.includes('application/json')) {
                         const textData = await blob.text(); const jsonData = JSON.parse(textData);
                         if (jsonData.base_resp && jsonData.base_resp.status_code !== 0) throw new Error(`${jsonData.base_resp.status_msg}`);
-                        if (jsonData.data && jsonData.data.audio) {
-                             const hexString = jsonData.data.audio; const bytes = new Uint8Array(hexString.length / 2);
-                             for (let i = 0; i < hexString.length; i += 2) { bytes[i / 2] = parseInt(hexString.substring(i, i + 2), 16); }
-                             const audioBlob = new Blob([bytes], { type: 'audio/mpeg' }); const audioUrl = URL.createObjectURL(audioBlob);
-                             const audio = new Audio(audioUrl); audio.onended = () => { setPlayingMsgIndex(null); setAudioPlayer(null); }; audio.play(); setAudioPlayer(audio); return;
-                        }
                     }
                     
-                    const audioUrl = URL.createObjectURL(blob); const audio = new Audio(audioUrl);
-                    audio.onended = () => { setPlayingMsgIndex(null); setAudioPlayer(null); }; audio.play(); setAudioPlayer(audio);
+                    // 标准接口直接返回纯净的音频流，不再需要繁琐的Hex解析
+                    const audioUrl = URL.createObjectURL(blob); 
+                    const audio = new Audio(audioUrl);
+                    audio.onended = () => { setPlayingMsgIndex(null); setAudioPlayer(null); }; 
+                    audio.play(); 
+                    setAudioPlayer(audio);
                 } catch (err) { 
                     let friendlyError = err.message;
-                    if (friendlyError === "Failed to fetch") friendlyError = "跨域拦截或地址错误(若无代理请尝试更换浏览器)";
+                    if (friendlyError.includes("Failed to fetch") || friendlyError.includes("NetworkError")) {
+                        friendlyError = "网络请求被拦截，请检查Base URL或更换网络";
+                    } else if (friendlyError.includes("Invalid URL")) {
+                        friendlyError = "地址格式错误，请检查是否有空格";
+                    }
                     showToast(`发声失败: ${friendlyError}`); 
                     setPlayingMsgIndex(null); 
                 } finally { setIsTTSLoading(false); }
@@ -1185,9 +1208,9 @@
                                                     <div className="border-t border-gray-100 pt-4"></div>
 
                                                     <div className="space-y-4">
-                                                        <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">全局语音配置 (Minimax)</h3>
-                                                        <div><label className="block text-sm font-medium text-gray-700 mb-1">Minimax API Key</label><input type="password" value={config.minimaxKey} onChange={(e) => setConfig({...config, minimaxKey: e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-lg p-2 text-sm focus:bg-white focus:border-blue-500 outline-none" /></div>
-                                                        <div><label className="block text-sm font-medium text-gray-700 mb-1">Minimax Group ID <span className="text-gray-400 font-normal">(新版API无需填写)</span></label><input type="text" value={config.minimaxGroupId} onChange={(e) => setConfig({...config, minimaxGroupId: e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-lg p-2 text-sm focus:bg-white focus:border-blue-500 outline-none" placeholder="留空即可" /></div>
+                                                        <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">全局语音配置 (兼容标准通道)</h3>
+                                                        <div><label className="block text-sm font-medium text-gray-700 mb-1">语音 API Key</label><input type="password" value={config.minimaxKey} onChange={(e) => setConfig({...config, minimaxKey: e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-lg p-2 text-sm focus:bg-white focus:border-blue-500 outline-none" /></div>
+                                                        <div><label className="block text-sm font-medium text-gray-700 mb-1">语音 Base URL</label><input type="text" value={config.minimaxUrl} onChange={(e) => setConfig({...config, minimaxUrl: e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-lg p-2 text-sm focus:bg-white focus:border-blue-500 outline-none" placeholder="默认: https://api.minimax.chat" /></div>
                                                         <div>
                                                             <label className="block text-sm font-medium text-gray-700 mb-1">语音 ID</label>
                                                             <div className="flex gap-2">
