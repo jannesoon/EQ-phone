@@ -272,33 +272,33 @@
                 if (currentSessionId === sessionId) { setMessages([]); setCurrentSessionId(null); }
             };
 
-            const startEditing = (e, session) => { e.stopPropagation(); setEditingSessionId(session.id); setEditTitle(session.title); };
-            const saveTitle = (e) => { e.stopPropagation(); const updatedSessions = historySessions.map(s => s.id === editingSessionId ? { ...s, title: editTitle } : s); setHistorySessions(updatedSessions); setEditingSessionId(null); };
-            const cancelEditing = (e) => { e.stopPropagation(); setEditingSessionId(null); };
-
-            const startEditingMemory = (index) => { setEditingMemoryIndex(index); setEditingMemoryContent(memoryFiles[index].content); };
-            const saveMemoryEdit = () => {
-                const updatedFiles = [...memoryFiles];
-                updatedFiles[editingMemoryIndex].content = editingMemoryContent;
-                const sizeInBytes = new Blob([editingMemoryContent]).size;
-                updatedFiles[editingMemoryIndex].size = (sizeInBytes / 1024).toFixed(1) + ' KB';
-                updatedFiles[editingMemoryIndex].date = new Date().toLocaleDateString() + ' (已编辑)';
-                setMemoryFiles(updatedFiles);
-                localStorage.setItem('gemini_memories', JSON.stringify(updatedFiles));
-                setEditingMemoryIndex(null);
-                showToast("记忆内容已更新");
+            const updateSelectedBot = (field, value) => { setBots(bots.map(b => b.id === selectedBotId ? { ...b, [field]: value } : b)); };
+            const handleBotAvatarUpload = (e) => {
+                const file = e.target.files[0]; if (!file) return;
+                compressImage(file).then(result => { updateSelectedBot('avatar', result.base64); showToast("成员头像已更新"); }).catch(err => { alert("图片处理失败"); });
             };
-            const cancelMemoryEdit = () => { setEditingMemoryIndex(null); setEditingMemoryContent(''); };
 
             const handleTTS = async (text, index) => {
                 if (audioPlayer && playingMsgIndex === index) { audioPlayer.pause(); setAudioPlayer(null); setPlayingMsgIndex(null); return; }
                 if (audioPlayer) audioPlayer.pause();
-                if (!config.minimaxKey || !config.minimaxGroupId) { showToast("请在设置中配置 Minimax API Key 和 Group ID"); setSettingsOpen(true); setActiveTab('general'); return; }
+                if (!config.minimaxKey || !config.minimaxGroupId) { showToast("请在设置中配置 Minimax"); setSettingsOpen(true); setActiveTab('general'); return; }
                 setIsTTSLoading(true); setPlayingMsgIndex(index);
                 try {
-                    let cleanText = text.replace(/!\[.*?\]\(.*?\)/g, '').replace(/\[([^\]]+)\]\([^\)]+\)/g, '$1').replace(/\(.*?\)/g, '').replace(/\（.*?\）/g, '').replace(/[*#`>~\-]/g, '').replace(/\n+/g, ' ').trim();
+                    // 彻底清除跨行的动作描写、心理活动及乱入的标签，只保留纯对白
+                    let cleanText = text
+                        .replace(/<think>[\s\S]*?<\/think>/g, '') 
+                        .replace(/!\[[\s\S]*?\]\([\s\S]*?\)/g, '') 
+                        .replace(/\[([\s\S]*?)\]\([\s\S]*?\)/g, '$1') 
+                        .replace(/\([\s\S]*?\)/g, '') 
+                        .replace(/（[\s\S]*?）/g, '') 
+                        .replace(/【[\s\S]*?】/g, '') 
+                        .replace(/\[[\s\S]*?\]/g, '') 
+                        .replace(/[*#`>~\-]/g, '') 
+                        .replace(/\n+/g, ' ') 
+                        .trim();
+
                     if (cleanText.length > 240) { cleanText = cleanText.substring(0, 240) + "......"; showToast("文本过长，仅播放前 240 字"); }
-                    if (!cleanText) throw new Error("没有可朗读的文本");
+                    if (!cleanText) throw new Error("没有可朗读文本");
                     let url = config.minimaxUrl || "https://api.minimax.chat/v1/t2a_v2";
                     url += url.includes('?') ? (url.includes('GroupId=') ? '' : `&GroupId=${config.minimaxGroupId}`) : `?GroupId=${config.minimaxGroupId}`;
                     const targetModel = config.minimaxCustomModel ? config.minimaxCustomModel : (config.minimaxModel || "speech-01-turbo");
