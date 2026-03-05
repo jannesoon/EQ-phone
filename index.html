@@ -155,6 +155,9 @@
                 minimaxGroupId: '',
                 minimaxVoiceId: 'male-qn-qingse',
                 minimaxModel: 'speech-01-turbo',
+                minimaxSpeed: 1.0,
+                minimaxPitch: 0,
+                siliconflowSpeed: 1.0, // 新增：SiliconFlow 语速控制
                 historyLimit: 10, 
                 temperature: 0.7, 
                 frequencyPenalty: 0, 
@@ -204,6 +207,9 @@
                     if (parsed.enableCorsProxy === undefined) parsed.enableCorsProxy = true;
                     if (!parsed.openaiTtsUrl) parsed.openaiTtsUrl = 'https://api.openai.com/v1';
                     if (!parsed.openaiTtsVoice) parsed.openaiTtsVoice = 'echo';
+                    if (parsed.minimaxSpeed === undefined) parsed.minimaxSpeed = 1.0;
+                    if (parsed.minimaxPitch === undefined) parsed.minimaxPitch = 0;
+                    if (parsed.siliconflowSpeed === undefined) parsed.siliconflowSpeed = 1.0;
                     if (!parsed.minimaxUrl || parsed.minimaxUrl.includes('minimax.chat')) {
                         parsed.minimaxUrl = 'https://api.minimaxi.com/v1/t2a_v2';
                     }
@@ -337,7 +343,12 @@
                         const response = await fetch(fetchUrl, {
                             method: 'POST',
                             headers: { 'Authorization': `Bearer ${builtinKey}`, 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ model: 'FunAudioLLM/CosyVoice2-0.5B', input: cleanText, voice: 'FunAudioLLM/CosyVoice2-0.5B:alex' })
+                            body: JSON.stringify({ 
+                                model: 'FunAudioLLM/CosyVoice2-0.5B', 
+                                input: cleanText, 
+                                voice: 'FunAudioLLM/CosyVoice2-0.5B:alex',
+                                speed: parseFloat(config.siliconflowSpeed) || 1.0 // 加上语速参数
+                            })
                         });
 
                         if (!response.ok) throw new Error(`内置通道拥挤 (${response.status})`);
@@ -378,7 +389,17 @@
                         
                         const fetchUrl = config.enableCorsProxy ? 'https://corsproxy.io/?' + encodeURIComponent(urlStr) : urlStr;
                         
-                        const bodyPayload = { model: config.minimaxModel || "speech-01-turbo", text: cleanText, stream: false, voice_setting: { voice_id: config.minimaxVoiceId || "male-qn-qingse", speed: 1.0, vol: 1.0, pitch: 0 } };
+                        const bodyPayload = { 
+                            model: config.minimaxModel || "speech-01-turbo", 
+                            text: cleanText, 
+                            stream: false, 
+                            voice_setting: { 
+                                voice_id: config.minimaxVoiceId || "male-qn-qingse", 
+                                speed: parseFloat(config.minimaxSpeed) || 1.0, 
+                                vol: 1.0, 
+                                pitch: parseInt(config.minimaxPitch) || 0 
+                            } 
+                        };
                         const response = await fetch(fetchUrl, { 
                             method: 'POST', 
                             headers: { 'Authorization': `Bearer ${config.minimaxKey.trim()}`, 'Content-Type': 'application/json' }, 
@@ -1270,6 +1291,10 @@
                                                                 <div className="bg-purple-100 text-purple-600 p-2 rounded-full mb-1"><Icon name="Sparkles" size={24}/></div>
                                                                 <h4 className="text-sm font-semibold text-gray-800">内置高速秘密通道已激活</h4>
                                                                 <p className="text-xs text-gray-500 max-w-xs">已内置稳定合法的专属发声秘钥与代理路径，直接点击任意消息的【播放语音】即可听到温柔男声，无需任何繁琐配置。</p>
+                                                                <div className="w-full mt-2 text-left">
+                                                                    <label className="block text-xs font-medium text-gray-700 mb-1">语速: {config.siliconflowSpeed}</label>
+                                                                    <input type="range" min="0.5" max="2.0" step="0.1" value={config.siliconflowSpeed} onChange={(e) => setConfig({...config, siliconflowSpeed: e.target.value})} className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-purple-600"/>
+                                                                </div>
                                                             </div>
                                                         ) : config.ttsEngine === 'openai' ? (
                                                             <div className="space-y-3 bg-green-50/50 p-3 rounded-xl border border-green-100">
@@ -1296,6 +1321,16 @@
                                                                     <div className="flex gap-2">
                                                                         <input type="text" value={config.minimaxVoiceId} onChange={(e) => setConfig({...config, minimaxVoiceId: e.target.value})} className="flex-1 bg-white border border-gray-300 rounded-lg p-2 text-sm focus:border-blue-500 outline-none" />
                                                                         <select className="bg-gray-50 border border-gray-300 rounded-lg p-2 text-sm outline-none" onChange={(e) => setConfig({...config, minimaxVoiceId: e.target.value})} value={config.minimaxVoiceId}><option value="male-qn-qingse">青涩男声</option><option value="female-shaonv">少女音</option><option value="female-yujie">御姐音</option><option value="male-qn-jingying">精英男声</option></select>
+                                                                    </div>
+                                                                </div>
+                                                                <div className="flex flex-col md:flex-row gap-4 mt-2">
+                                                                    <div className="flex-1">
+                                                                        <label className="block text-xs font-medium text-gray-700 mb-1">语速: {config.minimaxSpeed}</label>
+                                                                        <input type="range" min="0.5" max="2.0" step="0.1" value={config.minimaxSpeed} onChange={(e) => setConfig({...config, minimaxSpeed: e.target.value})} className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"/>
+                                                                    </div>
+                                                                    <div className="flex-1">
+                                                                        <label className="block text-xs font-medium text-gray-700 mb-1">语调: {config.minimaxPitch}</label>
+                                                                        <input type="range" min="-10" max="10" step="1" value={config.minimaxPitch} onChange={(e) => setConfig({...config, minimaxPitch: e.target.value})} className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"/>
                                                                     </div>
                                                                 </div>
                                                             </div>
