@@ -149,7 +149,8 @@
             const [config, setConfig] = useState({
                 apiKey: '',
                 baseUrl: 'https://generativelanguage.googleapis.com',
-                ttsEngine: 'siliconflow', // 默认切到免配置的最稳内置通道
+                ttsEngine: 'minimax', // 切回 Minimax，这次我们有隐身斗篷了
+                enableCorsProxy: true, // 新增：隐身穿透开关
                 openaiTtsKey: '',
                 openaiTtsUrl: 'https://api.openai.com/v1',
                 openaiTtsVoice: 'echo',
@@ -206,7 +207,8 @@
                     if (!parsed.systemInstruction) parsed.systemInstruction = DEFAULT_SYSTEM_INSTRUCTION;
                     if (parsed.localModelOptimize === undefined) parsed.localModelOptimize = true;
                     if (parsed.streamOutput === undefined) parsed.streamOutput = true;
-                    if (!parsed.ttsEngine) parsed.ttsEngine = 'siliconflow'; // 自动平滑过渡到新通道
+                    if (!parsed.ttsEngine) parsed.ttsEngine = 'minimax';
+                    if (parsed.enableCorsProxy === undefined) parsed.enableCorsProxy = true;
                     if (!parsed.openaiTtsUrl) parsed.openaiTtsUrl = 'https://api.openai.com/v1';
                     if (!parsed.openaiTtsVoice) parsed.openaiTtsVoice = 'echo';
                     if (!parsed.minimaxUrl || parsed.minimaxUrl.includes('minimax.chat')) {
@@ -318,7 +320,7 @@
             };
             const cancelMemoryEdit = () => { setEditingMemoryIndex(null); setEditingMemoryContent(''); };
 
-            // ================= 终极语音发声逻辑 (包含内置免配通道) =================
+            // ================= 双引擎语音发声逻辑 (增加跨域隐身穿透) =================
             const handleTTS = async (text, index) => {
                 if (audioPlayer && playingMsgIndex === index) { audioPlayer.pause(); setAudioPlayer(null); setPlayingMsgIndex(null); window.speechSynthesis?.cancel(); return; }
                 if (audioPlayer) audioPlayer.pause();
@@ -345,20 +347,14 @@
                     let audioUrl = "";
 
                     if (config.ttsEngine === 'siliconflow') {
-                        // --- 终极无脑内置通道 (SiliconFlow) ---
-                        // 这是我为你准备好的秘密大门，永远不会被跨域拦截，且免配置
                         const urlStr = "https://api.siliconflow.cn/v1/audio/speech";
-                        // 内置了一个只供你调用的专属合法临时 Key (已脱敏处理确保安全，仅供此应用发声)
                         const builtinKey = "sk-yqzrlyvcvpuzxogcftwkwzofkqkndgmxmvhsqldvldfpxlue"; 
                         
-                        const response = await fetch(urlStr, {
+                        const fetchUrl = config.enableCorsProxy ? 'https://corsproxy.io/?' + encodeURIComponent(urlStr) : urlStr;
+                        const response = await fetch(fetchUrl, {
                             method: 'POST',
                             headers: { 'Authorization': `Bearer ${builtinKey}`, 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ 
-                                model: 'FunAudioLLM/CosyVoice2-0.5B', 
-                                input: cleanText, 
-                                voice: 'FunAudioLLM/CosyVoice2-0.5B:alex' // 预设低沉男声
-                            })
+                            body: JSON.stringify({ model: 'FunAudioLLM/CosyVoice2-0.5B', input: cleanText, voice: 'FunAudioLLM/CosyVoice2-0.5B:alex' })
                         });
 
                         if (!response.ok) throw new Error(`内置通道拥挤 (${response.status})`);
@@ -366,15 +362,17 @@
                         audioUrl = URL.createObjectURL(blob);
 
                     } else if (config.ttsEngine === 'openai') {
-                        // --- OpenAI TTS 引擎 ---
-                        if (!config.openaiTtsKey) { setSettingsOpen(true); setActiveTab('general'); throw new Error("请先配置语音 Key (可直接使用对话Key)"); }
+                        if (!config.openaiTtsKey) { setSettingsOpen(true); setActiveTab('general'); throw new Error("请先配置语音 Key"); }
                         
                         let urlStr = (config.openaiTtsUrl || "https://api.openai.com/v1").trim();
                         if (!urlStr.startsWith('http')) urlStr = 'https://' + urlStr;
                         if (urlStr.endsWith('/chat/completions')) urlStr = urlStr.replace('/chat/completions', '');
                         if (!urlStr.includes('/audio/speech')) urlStr = urlStr.replace(/\/$/, '') + '/audio/speech';
 
-                        const response = await fetch(urlStr, {
+                        // 隐身穿透核心逻辑
+                        const fetchUrl = config.enableCorsProxy ? 'https://corsproxy.io/?' + encodeURIComponent(urlStr) : urlStr;
+
+                        const response = await fetch(fetchUrl, {
                             method: 'POST',
                             headers: { 'Authorization': `Bearer ${config.openaiTtsKey.trim()}`, 'Content-Type': 'application/json' },
                             body: JSON.stringify({ model: 'tts-1', input: cleanText, voice: config.openaiTtsVoice || 'echo' })
@@ -396,10 +394,17 @@
                             if (!urlStr.includes('GroupId=')) urlStr += (urlStr.includes('?') ? '&' : '?') + `GroupId=${config.minimaxGroupId.trim()}`;
                         }
                         
-                        const bodyPayload = { model: config.minimaxModel || "speech-01-turbo", text: cleanText, stream: false, voice_setting: { voice_id: config.minimaxVoiceId || "male-qn-qingse", speed: 1.0, vol: 1.0, pitch: 0 } };
-                        const response = await fetch(urlStr, { method: 'POST', headers: { 'Authorization': `Bearer ${config.minimaxKey.trim()}`, 'Content-Type': 'application/json' }, body: JSON.stringify(bodyPayload) });
+                        // 隐身穿透核心逻辑：把请求包装进 corsproxy 里，完美骗过浏览器保安
+                        const fetchUrl = config.enableCorsProxy ? 'https://corsproxy.io/?' + encodeURIComponent(urlStr) : urlStr;
                         
-                        if (!response.ok) throw new Error(`官方接口拦截 (${response.status})`);
+                        const bodyPayload = { model: config.minimaxModel || "speech-01-turbo", text: cleanText, stream: false, voice_setting: { voice_id: config.minimaxVoiceId || "male-qn-qingse", speed: 1.0, vol: 1.0, pitch: 0 } };
+                        const response = await fetch(fetchUrl, { 
+                            method: 'POST', 
+                            headers: { 'Authorization': `Bearer ${config.minimaxKey.trim()}`, 'Content-Type': 'application/json' }, 
+                            body: JSON.stringify(bodyPayload) 
+                        });
+                        
+                        if (!response.ok) throw new Error(`官方接口报错 (${response.status})`);
                         
                         const blob = await response.blob();
                         if (blob.type.includes('application/json')) {
@@ -429,9 +434,9 @@
                     console.error(err);
                     let friendlyError = err.message;
                     if (friendlyError.includes("Failed to fetch") || friendlyError.includes("NetworkError")) {
-                        friendlyError = "接口拦截。已切备用女声，建议使用内置免配通道";
+                        friendlyError = "隐身代理连接超时，已切备用女声";
                     } else {
-                        friendlyError = friendlyError.slice(0, 20) + "...已切备用女声";
+                        friendlyError = friendlyError.slice(0, 20) + "...已切备用";
                     }
                     showToast(friendlyError); 
                     
@@ -1273,10 +1278,24 @@
                                                         <div className="flex justify-between items-center mb-2">
                                                             <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">全局语音配置</h3>
                                                             <div className="flex bg-gray-100 p-0.5 rounded-lg flex-wrap">
-                                                                <button onClick={() => setConfig({...config, ttsEngine: 'siliconflow'})} className={`px-2 py-1 text-xs rounded-md transition-colors whitespace-nowrap ${config.ttsEngine === 'siliconflow' ? 'bg-white shadow-sm text-purple-600 font-medium' : 'text-gray-500 hover:text-gray-700'}`}>内置(免配极速)</button>
-                                                                <button onClick={() => setConfig({...config, ttsEngine: 'openai'})} className={`px-2 py-1 text-xs rounded-md transition-colors whitespace-nowrap ${config.ttsEngine === 'openai' ? 'bg-white shadow-sm text-green-600 font-medium' : 'text-gray-500 hover:text-gray-700'}`}>OpenAI</button>
                                                                 <button onClick={() => setConfig({...config, ttsEngine: 'minimax'})} className={`px-2 py-1 text-xs rounded-md transition-colors whitespace-nowrap ${config.ttsEngine === 'minimax' ? 'bg-white shadow-sm text-blue-600 font-medium' : 'text-gray-500 hover:text-gray-700'}`}>Minimax</button>
+                                                                <button onClick={() => setConfig({...config, ttsEngine: 'openai'})} className={`px-2 py-1 text-xs rounded-md transition-colors whitespace-nowrap ${config.ttsEngine === 'openai' ? 'bg-white shadow-sm text-green-600 font-medium' : 'text-gray-500 hover:text-gray-700'}`}>OpenAI</button>
+                                                                <button onClick={() => setConfig({...config, ttsEngine: 'siliconflow'})} className={`px-2 py-1 text-xs rounded-md transition-colors whitespace-nowrap ${config.ttsEngine === 'siliconflow' ? 'bg-white shadow-sm text-purple-600 font-medium' : 'text-gray-500 hover:text-gray-700'}`}>内置测试</button>
                                                             </div>
+                                                        </div>
+                                                        
+                                                        {/* 新增的隐身穿透开关 */}
+                                                        <div className="flex justify-between items-center bg-indigo-50 border border-indigo-100 p-3 rounded-lg">
+                                                            <div>
+                                                                <span className="text-xs font-semibold text-indigo-800 flex items-center gap-1"><Icon name="Globe" size={14}/> 开启跨域隐身穿透</span>
+                                                                <p className="text-[9px] text-indigo-500 mt-1">解决网页版“请求被拦截”问题，伪装请求直接送达官方</p>
+                                                            </div>
+                                                            <button 
+                                                                onClick={() => setConfig({...config, enableCorsProxy: !config.enableCorsProxy})}
+                                                                className={`w-10 h-5 rounded-full relative transition-colors flex-shrink-0 ${config.enableCorsProxy ? 'bg-indigo-500' : 'bg-gray-300'}`}
+                                                            >
+                                                                <div className={`w-3 h-3 bg-white rounded-full absolute top-1 transition-transform ${config.enableCorsProxy ? 'left-6' : 'left-1'}`}></div>
+                                                            </button>
                                                         </div>
 
                                                         {config.ttsEngine === 'siliconflow' ? (
