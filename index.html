@@ -298,17 +298,31 @@
                         .trim();
 
                     if (cleanText.length > 240) { cleanText = cleanText.substring(0, 240) + "......"; showToast("文本过长，仅播放前 240 字"); }
-                    if (!cleanText) throw new Error("没有可朗读文本");
+                    
+                    // 兜底：如果全部是动作描写导致文字被清空，发一个轻轻的拟声词，防止引擎报错
+                    if (!cleanText) cleanText = "嗯……"; 
+                    
                     let url = config.minimaxUrl || "https://api.minimax.chat/v1/t2a_v2";
                     url += url.includes('?') ? (url.includes('GroupId=') ? '' : `&GroupId=${config.minimaxGroupId}`) : `?GroupId=${config.minimaxGroupId}`;
                     const targetModel = config.minimaxCustomModel ? config.minimaxCustomModel : (config.minimaxModel || "speech-01-turbo");
                     const bodyV2 = { model: targetModel, text: cleanText, stream: false, voice_setting: { voice_id: config.minimaxVoiceId, speed: 1.0, vol: 1.0, pitch: 0 } };
+                    
                     const response = await fetch(url, { method: 'POST', headers: { 'Authorization': `Bearer ${config.minimaxKey}`, 'Content-Type': 'application/json' }, body: JSON.stringify(bodyV2) });
-                    if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
+                    
+                    if (!response.ok) {
+                        const errText = await response.text();
+                        let errMsg = `HTTP Error: ${response.status}`;
+                        try {
+                            const errJson = JSON.parse(errText);
+                            if (errJson.base_resp && errJson.base_resp.status_msg) errMsg = errJson.base_resp.status_msg;
+                        } catch(e) {}
+                        throw new Error(errMsg);
+                    }
+                    
                     const blob = await response.blob();
                     if (blob.type.includes('application/json')) {
                         const textData = await blob.text(); const jsonData = JSON.parse(textData);
-                        if (jsonData.base_resp && jsonData.base_resp.status_code !== 0) throw new Error(`Minimax Error: ${jsonData.base_resp.status_msg}`);
+                        if (jsonData.base_resp && jsonData.base_resp.status_code !== 0) throw new Error(`${jsonData.base_resp.status_msg}`);
                         if (jsonData.data && jsonData.data.audio) {
                              const hexString = jsonData.data.audio; const bytes = new Uint8Array(hexString.length / 2);
                              for (let i = 0; i < hexString.length; i += 2) { bytes[i / 2] = parseInt(hexString.substring(i, i + 2), 16); }
@@ -318,7 +332,10 @@
                     }
                     const audioUrl = URL.createObjectURL(blob); const audio = new Audio(audioUrl);
                     audio.onended = () => { setPlayingMsgIndex(null); setAudioPlayer(null); }; audio.play(); setAudioPlayer(audio);
-                } catch (err) { showToast(`语音生成失败: ${err.message}`); setPlayingMsgIndex(null); } finally { setIsTTSLoading(false); }
+                } catch (err) { 
+                    showToast(`语音失败: ${err.message}`); 
+                    setPlayingMsgIndex(null); 
+                } finally { setIsTTSLoading(false); }
             };
 
             const fetchModels = async () => {
