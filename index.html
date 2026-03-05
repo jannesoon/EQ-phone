@@ -299,15 +299,17 @@
 
             // ================= 极简纯净的 Minimax 语音发声逻辑 =================
             const handleTTS = async (text, index) => {
-                if (audioPlayer && playingMsgIndex === index) { audioPlayer.pause(); setAudioPlayer(null); setPlayingMsgIndex(null); return; }
+                if (audioPlayer && playingMsgIndex === index) { audioPlayer.pause(); setAudioPlayer(null); setPlayingMsgIndex(null); window.speechSynthesis?.cancel(); return; }
                 if (audioPlayer) audioPlayer.pause();
+                window.speechSynthesis?.cancel();
                 
                 if (!config.minimaxKey) { showToast("请在设置中配置语音 API Key"); setSettingsOpen(true); setActiveTab('general'); return; }
                 
                 setIsTTSLoading(true); setPlayingMsgIndex(index);
+                let cleanText = text;
                 try {
                     // 清理所有括号内内容、动作描写、markdown符号等，只留下干净的对白
-                    let cleanText = text
+                    cleanText = text
                         .replace(/<think>[\s\S]*?<\/think>/g, '') 
                         .replace(/!\[[\s\S]*?\]\([\s\S]*?\)/g, '') 
                         .replace(/\[([\s\S]*?)\]\([\s\S]*?\)/g, '$1') 
@@ -320,22 +322,18 @@
                         .trim();
 
                     if (cleanText.length > 240) { cleanText = cleanText.substring(0, 240) + "......"; showToast("文本过长，仅读前240字"); }
-                    
-                    // 兜底发声
                     if (!cleanText) cleanText = "嗯……"; 
                     
-                    // 采用最新官方域名 minimaxi.com，并自动替换已被弃用的旧域名
                     let urlStr = (config.minimaxUrl || "https://api.minimaxi.com/v1/t2a_v2").trim();
                     if (!urlStr.startsWith('http')) urlStr = 'https://' + urlStr;
                     
                     if (urlStr.includes('api.minimax.chat')) {
                         urlStr = urlStr.replace('api.minimax.chat', 'api.minimaxi.com');
                     }
-                    if (urlStr.includes('minimaxi.com') && !urlStr.includes('/v1/t2a_v2')) {
+                    if (!urlStr.includes('/t2a_v2') && !urlStr.includes('/audio/')) {
                         urlStr = urlStr.replace(/\/$/, '') + '/v1/t2a_v2';
                     }
 
-                    // 兼容一些需要 GroupId 的代理中转站
                     if (config.minimaxGroupId && config.minimaxGroupId.trim() !== '') {
                         if (!urlStr.includes('GroupId=')) {
                             urlStr += (urlStr.includes('?') ? '&' : '?') + `GroupId=${config.minimaxGroupId.trim()}`;
@@ -384,7 +382,9 @@
                              const audioUrl = URL.createObjectURL(audioBlob);
                              const audio = new Audio(audioUrl); 
                              audio.onended = () => { setPlayingMsgIndex(null); setAudioPlayer(null); }; 
-                             audio.play(); setAudioPlayer(audio); return;
+                             audio.play(); setAudioPlayer(audio);
+                             setIsTTSLoading(false);
+                             return;
                         }
                     }
                     
@@ -393,14 +393,32 @@
                     audio.onended = () => { setPlayingMsgIndex(null); setAudioPlayer(null); }; 
                     audio.play(); 
                     setAudioPlayer(audio);
+                    setIsTTSLoading(false);
                 } catch (err) { 
+                    console.error(err);
                     let friendlyError = err.message;
                     if (friendlyError.includes("Failed to fetch") || friendlyError.includes("NetworkError")) {
-                        friendlyError = "请求被拦截(跨域)。网页端请务必在设置填写【代理地址】，官方地址会被直接拦截。";
+                        friendlyError = "官方接口跨域拦截。已切换备用系统语音";
+                    } else {
+                        friendlyError = friendlyError.slice(0, 15) + "...已切换备用语音";
                     }
-                    showToast(`发声失败: ${friendlyError}`); 
-                    setPlayingMsgIndex(null); 
-                } finally { setIsTTSLoading(false); }
+                    showToast(friendlyError); 
+                    
+                    // 兜底：使用浏览器自带本地语音，绝不让你面对安静
+                    if ('speechSynthesis' in window) {
+                        const utterance = new SpeechSynthesisUtterance(cleanText);
+                        const voices = window.speechSynthesis.getVoices();
+                        const zhVoice = voices.find(v => v.lang.includes('zh') || v.lang.includes('cmn'));
+                        if (zhVoice) utterance.voice = zhVoice;
+                        
+                        utterance.onend = () => setPlayingMsgIndex(null);
+                        utterance.onerror = () => setPlayingMsgIndex(null);
+                        window.speechSynthesis.speak(utterance);
+                    } else {
+                        setPlayingMsgIndex(null); 
+                    }
+                    setIsTTSLoading(false);
+                }
             };
 
             const fetchModels = async () => {
