@@ -282,7 +282,6 @@
                 if (audioPlayer && playingMsgIndex === index) { audioPlayer.pause(); setAudioPlayer(null); setPlayingMsgIndex(null); return; }
                 if (audioPlayer) audioPlayer.pause();
                 
-                // GroupID已改为非必填项，只检查Key
                 if (!config.minimaxKey) { showToast("请在设置中配置 Minimax API Key"); setSettingsOpen(true); setActiveTab('general'); return; }
                 
                 setIsTTSLoading(true); setPlayingMsgIndex(index);
@@ -299,24 +298,19 @@
                         .replace(/\n+/g, ' ') 
                         .trim();
 
-                    if (cleanText.length > 240) { cleanText = cleanText.substring(0, 240) + "......"; showToast("文本过长，仅播放前 240 字"); }
-                    
-                    // 如果过滤完动作描写后什么都没了，兜底发一个拟声词防止引擎报错
+                    if (cleanText.length > 240) { cleanText = cleanText.substring(0, 240) + "......"; showToast("文本过长，仅读前240字"); }
                     if (!cleanText) cleanText = "嗯……"; 
                     
+                    // 强制清理可能带有的旧版参数，绝对不再发送 GroupId
                     let url = config.minimaxUrl || "https://api.minimax.chat/v1/t2a_v2";
-                    // 只有在填了GroupId的情况下才拼接到URL，新版API已经不需要了
-                    if (config.minimaxGroupId) {
-                        url += url.includes('?') ? `&GroupId=${config.minimaxGroupId}` : `?GroupId=${config.minimaxGroupId}`;
-                    }
+                    if (url.includes('?')) url = url.split('?')[0]; 
                     
                     const targetModel = config.minimaxCustomModel ? config.minimaxCustomModel : (config.minimaxModel || "speech-01-turbo");
                     const bodyV2 = { 
                         model: targetModel, 
                         text: cleanText, 
                         stream: false, 
-                        voice_setting: { voice_id: config.minimaxVoiceId, speed: 1.0, vol: 1.0, pitch: 0 },
-                        audio_setting: { sample_rate: 32000, bitrate: 128000, format: "mp3", channel: 1 }
+                        voice_setting: { voice_id: config.minimaxVoiceId, speed: 1.0, vol: 1.0, pitch: 0 }
                     };
                     
                     const response = await fetch(url, { 
@@ -330,7 +324,7 @@
                         let errMsg = `HTTP Error: ${response.status}`;
                         try {
                             const errJson = JSON.parse(errText);
-                            if (errJson.base_resp && errJson.base_resp.status_msg) errMsg = `Minimax报错: ${errJson.base_resp.status_msg}`;
+                            if (errJson.base_resp && errJson.base_resp.status_msg) errMsg = `引擎报错: ${errJson.base_resp.status_msg}`;
                         } catch(e) {}
                         throw new Error(errMsg);
                     }
@@ -338,7 +332,7 @@
                     const blob = await response.blob();
                     if (blob.type.includes('application/json')) {
                         const textData = await blob.text(); const jsonData = JSON.parse(textData);
-                        if (jsonData.base_resp && jsonData.base_resp.status_code !== 0) throw new Error(`Minimax报错: ${jsonData.base_resp.status_msg}`);
+                        if (jsonData.base_resp && jsonData.base_resp.status_code !== 0) throw new Error(`${jsonData.base_resp.status_msg}`);
                         if (jsonData.data && jsonData.data.audio) {
                              const hexString = jsonData.data.audio; const bytes = new Uint8Array(hexString.length / 2);
                              for (let i = 0; i < hexString.length; i += 2) { bytes[i / 2] = parseInt(hexString.substring(i, i + 2), 16); }
@@ -347,11 +341,12 @@
                         }
                     }
                     
-                    // 兼容引擎直接返回二进制音频流的情况
                     const audioUrl = URL.createObjectURL(blob); const audio = new Audio(audioUrl);
                     audio.onended = () => { setPlayingMsgIndex(null); setAudioPlayer(null); }; audio.play(); setAudioPlayer(audio);
                 } catch (err) { 
-                    showToast(`语音失败: ${err.message}`); 
+                    let friendlyError = err.message;
+                    if (friendlyError === "Failed to fetch") friendlyError = "网络请求被拦截，请检查API地址或网络环境";
+                    showToast(`发声失败: ${friendlyError}`); 
                     setPlayingMsgIndex(null); 
                 } finally { setIsTTSLoading(false); }
             };
