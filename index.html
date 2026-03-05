@@ -317,16 +317,16 @@
                     // 兜底发声
                     if (!cleanText) cleanText = "嗯……"; 
                     
-                    // 恢复对自定义代理地址的完全支持！不再锁死官方地址
+                    // 彻底开放代理通道，智能拼凑完整路径，绝不锁死官方地址
                     let urlStr = (config.minimaxUrl || "https://api.minimax.chat/v1/t2a_v2").trim();
                     if (!urlStr.startsWith('http')) urlStr = 'https://' + urlStr;
                     
-                    // 如果用户填的是官方基础域名，帮他们补全路径；如果是代理地址，则原样保留
-                    if (urlStr.endsWith('minimax.chat') || urlStr.endsWith('minimax.chat/')) {
+                    // 如果用户填写的代理地址没有带上发声路径，自动补全
+                    if (!urlStr.includes('/v1/t2a_v2')) {
                         urlStr = urlStr.replace(/\/$/, '') + '/v1/t2a_v2';
                     }
 
-                    // 把 Group ID 重新加上，很多代理中转站必须靠它来识别放行
+                    // 兼容一些需要 GroupId 的代理中转站
                     if (config.minimaxGroupId && config.minimaxGroupId.trim() !== '') {
                         if (!urlStr.includes('GroupId=')) {
                             urlStr += (urlStr.includes('?') ? '&' : '?') + `GroupId=${config.minimaxGroupId.trim()}`;
@@ -387,7 +387,7 @@
                 } catch (err) { 
                     let friendlyError = err.message;
                     if (friendlyError.includes("Failed to fetch") || friendlyError.includes("NetworkError")) {
-                        friendlyError = "请求被拦截。若是手机浏览器，请检查代理或换用官方地址";
+                        friendlyError = "请求被拦截(跨域)。网页端请务必在设置填写【代理地址】，官方地址会被直接拦截。";
                     }
                     showToast(`发声失败: ${friendlyError}`); 
                     setPlayingMsgIndex(null); 
