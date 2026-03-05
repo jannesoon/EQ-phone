@@ -301,16 +301,19 @@
                     if (cleanText.length > 240) { cleanText = cleanText.substring(0, 240) + "......"; showToast("文本过长，仅读前240字"); }
                     if (!cleanText) cleanText = "嗯……"; 
                     
-                    // 强制清理可能带有的旧版参数，绝对不再发送 GroupId
                     let url = config.minimaxUrl || "https://api.minimax.chat/v1/t2a_v2";
-                    if (url.includes('?')) url = url.split('?')[0]; 
+                    // 温柔处理：不暴力裁剪，如果有GroupId且原URL没带，才拼上去
+                    if (config.minimaxGroupId && !url.includes('GroupId=')) {
+                        url += url.includes('?') ? `&GroupId=${config.minimaxGroupId}` : `?GroupId=${config.minimaxGroupId}`;
+                    }
                     
                     const targetModel = config.minimaxCustomModel ? config.minimaxCustomModel : (config.minimaxModel || "speech-01-turbo");
                     const bodyV2 = { 
                         model: targetModel, 
                         text: cleanText, 
                         stream: false, 
-                        voice_setting: { voice_id: config.minimaxVoiceId, speed: 1.0, vol: 1.0, pitch: 0 }
+                        voice_setting: { voice_id: config.minimaxVoiceId, speed: 1.0, vol: 1.0, pitch: 0 },
+                        audio_setting: { sample_rate: 32000, bitrate: 128000, format: "mp3", channel: 1 }
                     };
                     
                     const response = await fetch(url, { 
@@ -345,7 +348,7 @@
                     audio.onended = () => { setPlayingMsgIndex(null); setAudioPlayer(null); }; audio.play(); setAudioPlayer(audio);
                 } catch (err) { 
                     let friendlyError = err.message;
-                    if (friendlyError === "Failed to fetch") friendlyError = "网络请求被拦截，请检查API地址或网络环境";
+                    if (friendlyError === "Failed to fetch") friendlyError = "跨域拦截或地址错误(若无代理请尝试更换浏览器)";
                     showToast(`发声失败: ${friendlyError}`); 
                     setPlayingMsgIndex(null); 
                 } finally { setIsTTSLoading(false); }
