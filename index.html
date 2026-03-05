@@ -317,8 +317,21 @@
                     // 兜底发声
                     if (!cleanText) cleanText = "嗯……"; 
                     
-                    // 使用最标准的 Minimax t2a_v2 接口
-                    const url = "https://api.minimax.chat/v1/t2a_v2";
+                    // 智能处理用户填写的地址：去空格、补协议、补全路径
+                    let urlStr = (config.minimaxUrl || "https://api.minimax.chat/v1/t2a_v2").trim();
+                    if (!urlStr.startsWith('http')) {
+                        urlStr = 'https://' + urlStr;
+                    }
+                    if (urlStr.endsWith('minimax.chat') || urlStr.endsWith('minimax.chat/')) {
+                        urlStr = urlStr.replace(/\/$/, '') + '/v1/t2a_v2';
+                    }
+
+                    // 兼容旧版账号或代理服务器可能需要的 GroupId
+                    if (config.minimaxGroupId && config.minimaxGroupId.trim() !== '') {
+                        if (!urlStr.includes('GroupId=')) {
+                            urlStr += (urlStr.includes('?') ? '&' : '?') + `GroupId=${config.minimaxGroupId.trim()}`;
+                        }
+                    }
                     
                     const bodyPayload = { 
                         model: config.minimaxModel || "speech-01-turbo", 
@@ -330,7 +343,7 @@
                         }
                     };
                     
-                    const response = await fetch(url, { 
+                    const response = await fetch(urlStr, { 
                         method: 'POST', 
                         headers: { 
                             'Authorization': `Bearer ${config.minimaxKey.trim()}`, 
@@ -374,7 +387,7 @@
                 } catch (err) { 
                     let friendlyError = err.message;
                     if (friendlyError.includes("Failed to fetch") || friendlyError.includes("NetworkError")) {
-                        friendlyError = "网络请求被拦截，请检查网络环境或关闭代理规则";
+                        friendlyError = "请求被拦截。若是手机浏览器，请检查代理或换用官方地址";
                     }
                     showToast(`发声失败: ${friendlyError}`); 
                     setPlayingMsgIndex(null); 
