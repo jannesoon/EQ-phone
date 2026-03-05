@@ -1062,6 +1062,131 @@
                                             {activeTab === 'general' && (
                                                 <div className="space-y-6">
                                                     <div className="space-y-4">
+                                                        <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">系统人设 (System Prompt)</h3>
+                                                        <div className="bg-yellow-50 border border-yellow-100 p-3 rounded-lg text-xs text-yellow-700 mb-2">
+                                                            <b>重要提示：</b> 如果您使用本地模型（如 Qwen, Llama），请务必在此框中明确写入人设。
+                                                        </div>
+                                                        <textarea 
+                                                            className="w-full h-32 bg-white border border-gray-300 rounded-lg p-3 text-sm focus:border-blue-500 outline-none resize-none leading-relaxed" 
+                                                            placeholder="输入你希望 AI 扮演的角色，例如：你是一个温柔的男友..."
+                                                            value={config.systemInstruction}
+                                                            onChange={(e) => setConfig({...config, systemInstruction: e.target.value})}
+                                                        ></textarea>
+                                                        <p className="text-[10px] text-gray-400">此指令会强制覆盖模型的默认性格。</p>
+                                                    </div>
+
+                                                    <div className="border-t border-gray-100 pt-2"></div>
+
+                                                    <div className="space-y-4">
+                                                        <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">模型选择</h3>
+                                                        <div className="flex flex-col md:flex-row items-start md:items-end gap-2">
+                                                            <div className="flex-1 w-full">
+                                                                <label className="block text-sm font-medium text-gray-700 mb-1">当前模型</label>
+                                                                {availableModels.length > 0 ? (
+                                                                    <select value={config.model} onChange={(e) => setConfig({...config, model: e.target.value})} className="w-full bg-white border border-gray-300 rounded-lg p-2 text-sm focus:border-blue-500 outline-none">{availableModels.map(m => <option key={m} value={m}>{m}</option>)}</select>
+                                                                ) : (
+                                                                    <input type="text" value={config.model} onChange={(e) => setConfig({...config, model: e.target.value})} className="w-full bg-white border border-gray-300 rounded-lg p-2 text-sm focus:border-blue-500 outline-none" placeholder="如 gemini-1.5-flash" />
+                                                                )}
+                                                            </div>
+                                                            <button onClick={fetchModels} disabled={isFetchingModels} className="w-full md:w-auto px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-1 h-[38px] whitespace-nowrap"><Icon name="RefreshCw" size={14} className={isFetchingModels ? "animate-spin" : ""} />{isFetchingModels ? '获取中' : '获取列表'}</button>
+                                                        </div>
+                                                        <p className="text-xs text-gray-400">若地址以 /v1 结尾，系统会自动切换到 OpenAI 兼容模式获取。</p>
+                                                    </div>
+
+                                                    <div className="border-t border-gray-100 pt-4"></div>
+
+                                                    <div className="space-y-4">
+                                                        <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">个性化</h3>
+                                                        <div>
+                                                            <label className="block text-sm font-medium text-gray-700 mb-2">用户设置</label>
+                                                            <div className="flex items-center gap-4 mb-2">
+                                                                <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-100 border border-gray-200 flex-shrink-0">{config.userAvatar ? <img src={config.userAvatar} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-gray-400 bg-gray-100"><Icon name="UserCircle" size={24} /></div>}</div>
+                                                                <button onClick={() => avatarInputRef.current.click()} className="px-3 py-1.5 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-md text-sm transition-colors">上传图片</button>
+                                                                <input type="file" ref={avatarInputRef} className="hidden" accept="image/*" onChange={(e) => handleAvatarUpload(e, 'user')}/>
+                                                                {config.userAvatar && <button onClick={() => setConfig({...config, userAvatar: ''})} className="text-xs text-red-500 hover:underline">清除</button>}
+                                                            </div>
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="text-sm text-gray-500 w-12">昵称:</span>
+                                                                <input type="text" value={config.userName} onChange={(e) => setConfig({...config, userName: e.target.value})} className="flex-1 bg-white border border-gray-300 rounded p-1 text-sm focus:border-blue-500 outline-none" placeholder="默认：你"/>
+                                                            </div>
+                                                        </div>
+                                                        <div>
+                                                            <label className="block text-sm font-medium text-gray-700 mb-2">AI 设置</label>
+                                                            <div className="flex items-center gap-4 mb-2">
+                                                                <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-100 border border-gray-200 flex-shrink-0">{config.aiAvatar ? <img src={config.aiAvatar} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-gray-400 bg-gray-100"><Icon name="Bot" size={24} /></div>}</div>
+                                                                <button onClick={() => aiAvatarInputRef.current.click()} className="px-3 py-1.5 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-md text-sm transition-colors">上传图片</button>
+                                                                <input type="file" ref={aiAvatarInputRef} className="hidden" accept="image/*" onChange={(e) => handleAvatarUpload(e, 'ai')}/>
+                                                                {config.aiAvatar && <button onClick={() => setConfig({...config, aiAvatar: ''})} className="text-xs text-red-500 hover:underline">清除</button>}
+                                                            </div>
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="text-sm text-gray-500 w-12">昵称:</span>
+                                                                <input type="text" value={config.aiName} onChange={(e) => setConfig({...config, aiName: e.target.value})} className="flex-1 bg-white border border-gray-300 rounded p-1 text-sm focus:border-blue-500 outline-none" placeholder="默认：星月舱 AI"/>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="border-t border-gray-100 pt-4"></div>
+
+                                                    <div className="space-y-4">
+                                                        <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">API 配置</h3>
+                                                        <div>
+                                                            <div className="flex justify-between mb-1">
+                                                                <label className="block text-sm font-medium text-gray-700">API 协议标准</label>
+                                                                <span className="text-xs text-gray-400 bg-gray-100 px-2 rounded-full">{config.apiType === 'openai' ? 'OpenAI兼容' : '原生'}</span>
+                                                            </div>
+                                                            <div className="flex gap-2">
+                                                                <button onClick={() => setConfig({...config, apiType: 'gemini'})} className={`flex-1 py-2 text-sm rounded-lg border ${config.apiType === 'gemini' ? 'bg-blue-50 border-blue-500 text-blue-700' : 'bg-white border-gray-200 text-gray-600'}`}>Gemini 原生</button>
+                                                                <button onClick={() => setConfig({...config, apiType: 'openai'})} className={`flex-1 py-2 text-sm rounded-lg border ${config.apiType === 'openai' ? 'bg-green-50 border-green-500 text-green-700' : 'bg-white border-gray-200 text-gray-600'}`}>OpenAI 兼容</button>
+                                                            </div>
+                                                        </div>
+                                                        <div><label className="block text-sm font-medium text-gray-700 mb-1">API Base URL</label><input type="text" value={config.baseUrl} onChange={(e) => setConfig({...config, baseUrl: e.target.value})} className="w-full bg-white border border-gray-300 rounded-lg p-2 text-sm focus:border-blue-500 outline-none" /></div>
+                                                        <div><label className="block text-sm font-medium text-gray-700 mb-1">API Key</label><input type="password" value={config.apiKey} onChange={(e) => setConfig({...config, apiKey: e.target.value})} className="w-full bg-white border border-gray-300 rounded-lg p-2 text-sm focus:border-blue-500 outline-none" /></div>
+                                                    </div>
+                                                    
+                                                    <div className="border-t border-gray-100 pt-4"></div>
+                                                    
+                                                    <div className="space-y-4">
+                                                         <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">对话控制</h3>
+                                                         <div>
+                                                            <label className="block text-sm font-medium text-gray-700 mb-1">短期记忆 (轮数): {config.historyLimit}</label>
+                                                            <input type="range" min="5" max="50" step="1" value={config.historyLimit} onChange={(e) => setConfig({...config, historyLimit: e.target.value})} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"/>
+                                                         </div>
+                                                         
+                                                         <div className="flex justify-between items-center bg-gray-100 p-2 rounded-lg">
+                                                            <span className="text-xs font-medium text-gray-700">本地模型强力纠正</span>
+                                                            <button 
+                                                                onClick={() => setConfig({...config, localModelOptimize: !config.localModelOptimize})}
+                                                                className={`w-10 h-5 rounded-full relative transition-colors ${config.localModelOptimize ? 'bg-blue-600' : 'bg-gray-300'}`}
+                                                            >
+                                                                <div className={`w-3 h-3 bg-white rounded-full absolute top-1 transition-transform ${config.localModelOptimize ? 'left-6' : 'left-1'}`}></div>
+                                                            </button>
+                                                         </div>
+                                                         
+                                                         <div className="flex justify-between items-center bg-gray-100 p-2 rounded-lg mt-2">
+                                                            <span className="text-xs font-medium text-gray-700">流式输出 (打字机效果)</span>
+                                                            <button 
+                                                                onClick={() => setConfig({...config, streamOutput: !config.streamOutput})}
+                                                                className={`w-10 h-5 rounded-full relative transition-colors ${config.streamOutput ? 'bg-blue-600' : 'bg-gray-300'}`}
+                                                            >
+                                                                <div className={`w-3 h-3 bg-white rounded-full absolute top-1 transition-transform ${config.streamOutput ? 'left-6' : 'left-1'}`}></div>
+                                                            </button>
+                                                         </div>
+                                                         
+                                                         <div className="flex flex-col md:flex-row gap-4 mt-2">
+                                                            <div className="flex-1">
+                                                                <label className="block text-sm font-medium text-gray-700 mb-1">温度: {config.temperature}</label>
+                                                                <input type="range" min="0" max="2" step="0.1" value={config.temperature} onChange={(e) => setConfig({...config, temperature: e.target.value})} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"/>
+                                                            </div>
+                                                            <div className="flex-1">
+                                                                <label className="block text-sm font-medium text-gray-700 mb-1">重复惩罚: {config.frequencyPenalty}</label>
+                                                                <input type="range" min="-2" max="2" step="0.1" value={config.frequencyPenalty} onChange={(e) => setConfig({...config, frequencyPenalty: e.target.value})} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"/>
+                                                            </div>
+                                                         </div>
+                                                    </div>
+
+                                                    <div className="border-t border-gray-100 pt-4"></div>
+
+                                                    <div className="space-y-4">
                                                         <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">全局语音配置 (Minimax)</h3>
                                                         <div><label className="block text-sm font-medium text-gray-700 mb-1">Minimax API Key</label><input type="password" value={config.minimaxKey} onChange={(e) => setConfig({...config, minimaxKey: e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-lg p-2 text-sm focus:bg-white focus:border-blue-500 outline-none" /></div>
                                                         <div><label className="block text-sm font-medium text-gray-700 mb-1">Minimax Group ID <span className="text-gray-400 font-normal">(新版API无需填写)</span></label><input type="text" value={config.minimaxGroupId} onChange={(e) => setConfig({...config, minimaxGroupId: e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-lg p-2 text-sm focus:bg-white focus:border-blue-500 outline-none" placeholder="留空即可" /></div>
