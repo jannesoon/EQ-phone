@@ -142,15 +142,12 @@
             const [selectedBotId, setSelectedBotId] = useState(null); 
             const [pendingBackup, setPendingBackup] = useState(null);
             const [bots, setBots] = useState([]);
-            
-            // --- 新增：存放本地可用语音列表 ---
-            const [localVoices, setLocalVoices] = useState([]);
 
             const [config, setConfig] = useState({
                 apiKey: '',
                 baseUrl: 'https://generativelanguage.googleapis.com',
-                ttsEngine: 'minimax', // 切回 Minimax，这次我们有隐身斗篷了
-                enableCorsProxy: true, // 新增：隐身穿透开关
+                ttsEngine: 'minimax',
+                enableCorsProxy: true,
                 openaiTtsKey: '',
                 openaiTtsUrl: 'https://api.openai.com/v1',
                 openaiTtsVoice: 'echo',
@@ -170,11 +167,7 @@
                 systemInstruction: DEFAULT_SYSTEM_INSTRUCTION,
                 localModelOptimize: true,
                 streamOutput: true,
-                minimaxUrl: 'https://api.minimaxi.com/v1/t2a_v2',
-                // 本地语音配置
-                localVoiceURI: '',
-                localVoicePitch: 1,
-                localVoiceRate: 1
+                minimaxUrl: 'https://api.minimaxi.com/v1/t2a_v2'
             });
             
             const [availableModels, setAvailableModels] = useState([]);
@@ -214,8 +207,6 @@
                     if (!parsed.minimaxUrl || parsed.minimaxUrl.includes('minimax.chat')) {
                         parsed.minimaxUrl = 'https://api.minimaxi.com/v1/t2a_v2';
                     }
-                    if (parsed.localVoicePitch === undefined) parsed.localVoicePitch = 1;
-                    if (parsed.localVoiceRate === undefined) parsed.localVoiceRate = 1;
                     
                     setConfig(prev => ({...prev, ...parsed}));
                 }
@@ -227,13 +218,6 @@
                     setHistorySessions(sessions);
                 }
                 if (window.innerWidth < 768) setSidebarOpen(false);
-                
-                // 加载本地语音列表
-                if ('speechSynthesis' in window) {
-                    const updateVoices = () => { setLocalVoices(window.speechSynthesis.getVoices()); };
-                    updateVoices();
-                    window.speechSynthesis.onvoiceschanged = updateVoices;
-                }
             }, []);
 
             useEffect(() => {
@@ -320,11 +304,10 @@
             };
             const cancelMemoryEdit = () => { setEditingMemoryIndex(null); setEditingMemoryContent(''); };
 
-            // ================= 双引擎语音发声逻辑 (增加跨域隐身穿透) =================
+            // ================= 双引擎语音发声逻辑 (彻底移除本地系统女声) =================
             const handleTTS = async (text, index) => {
-                if (audioPlayer && playingMsgIndex === index) { audioPlayer.pause(); setAudioPlayer(null); setPlayingMsgIndex(null); window.speechSynthesis?.cancel(); return; }
+                if (audioPlayer && playingMsgIndex === index) { audioPlayer.pause(); setAudioPlayer(null); setPlayingMsgIndex(null); return; }
                 if (audioPlayer) audioPlayer.pause();
-                window.speechSynthesis?.cancel();
                 
                 setIsTTSLoading(true); setPlayingMsgIndex(index);
                 let cleanText = text;
@@ -369,7 +352,6 @@
                         if (urlStr.endsWith('/chat/completions')) urlStr = urlStr.replace('/chat/completions', '');
                         if (!urlStr.includes('/audio/speech')) urlStr = urlStr.replace(/\/$/, '') + '/audio/speech';
 
-                        // 隐身穿透核心逻辑
                         const fetchUrl = config.enableCorsProxy ? 'https://corsproxy.io/?' + encodeURIComponent(urlStr) : urlStr;
 
                         const response = await fetch(fetchUrl, {
@@ -394,7 +376,6 @@
                             if (!urlStr.includes('GroupId=')) urlStr += (urlStr.includes('?') ? '&' : '?') + `GroupId=${config.minimaxGroupId.trim()}`;
                         }
                         
-                        // 隐身穿透核心逻辑：把请求包装进 corsproxy 里，完美骗过浏览器保安
                         const fetchUrl = config.enableCorsProxy ? 'https://corsproxy.io/?' + encodeURIComponent(urlStr) : urlStr;
                         
                         const bodyPayload = { model: config.minimaxModel || "speech-01-turbo", text: cleanText, stream: false, voice_setting: { voice_id: config.minimaxVoiceId || "male-qn-qingse", speed: 1.0, vol: 1.0, pitch: 0 } };
@@ -434,26 +415,12 @@
                     console.error(err);
                     let friendlyError = err.message;
                     if (friendlyError.includes("Failed to fetch") || friendlyError.includes("NetworkError")) {
-                        friendlyError = "隐身代理连接超时，已切备用女声";
+                        friendlyError = "隐身代理连接超时，请检查网络或稍后再试";
                     } else {
-                        friendlyError = friendlyError.slice(0, 20) + "...已切备用";
+                        friendlyError = friendlyError.slice(0, 20) + "...连接失败";
                     }
                     showToast(friendlyError); 
-                    
-                    if ('speechSynthesis' in window) {
-                        const utterance = new SpeechSynthesisUtterance(cleanText);
-                        const voices = window.speechSynthesis.getVoices();
-                        let selectedVoice = config.localVoiceURI ? voices.find(v => v.voiceURI === config.localVoiceURI) : null;
-                        if (!selectedVoice) selectedVoice = voices.find(v => v.lang.includes('zh') || v.lang.includes('cmn'));
-                        if (selectedVoice) utterance.voice = selectedVoice;
-                        utterance.pitch = parseFloat(config.localVoicePitch) || 1;
-                        utterance.rate = parseFloat(config.localVoiceRate) || 1;
-                        utterance.onend = () => setPlayingMsgIndex(null);
-                        utterance.onerror = () => setPlayingMsgIndex(null);
-                        window.speechSynthesis.speak(utterance);
-                    } else {
-                        setPlayingMsgIndex(null); 
-                    }
+                    setPlayingMsgIndex(null); 
                     setIsTTSLoading(false);
                 }
             };
@@ -1333,44 +1300,6 @@
                                                                 </div>
                                                             </div>
                                                         )}
-                                                    </div>
-
-                                                    <div className="border-t border-gray-100 pt-4"></div>
-
-                                                    <div className="space-y-4">
-                                                        <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">全局语音配置 (Minimax)</h3>
-                                                        <div><label className="block text-sm font-medium text-gray-700 mb-1">语音 API Key</label><input type="password" value={config.minimaxKey} onChange={(e) => setConfig({...config, minimaxKey: e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-lg p-2 text-sm focus:bg-white focus:border-blue-500 outline-none" /></div>
-                                                        <div><label className="block text-sm font-medium text-gray-700 mb-1">语音 Base URL</label><input type="text" value={config.minimaxUrl} onChange={(e) => setConfig({...config, minimaxUrl: e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-lg p-2 text-sm focus:bg-white focus:border-blue-500 outline-none" placeholder="默认: https://api.minimaxi.com/v1/t2a_v2" /></div>
-                                                        <div>
-                                                            <label className="block text-sm font-medium text-gray-700 mb-1">语音 ID</label>
-                                                            <div className="flex gap-2">
-                                                                <input type="text" value={config.minimaxVoiceId} onChange={(e) => setConfig({...config, minimaxVoiceId: e.target.value})} className="flex-1 bg-white border border-gray-300 rounded-lg p-2 text-sm focus:border-blue-500 outline-none" />
-                                                                <select className="bg-gray-50 border border-gray-300 rounded-lg p-2 text-sm outline-none" onChange={(e) => setConfig({...config, minimaxVoiceId: e.target.value})} value={config.minimaxVoiceId}><option value="male-qn-qingse">青涩男声</option><option value="female-shaonv">少女音</option><option value="female-yujie">御姐音</option><option value="male-qn-jingying">精英男声</option></select>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="border-t border-gray-100 pt-4"></div>
-
-                                                    <div className="space-y-4">
-                                                        <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">备用本地调音台 <span className="bg-gray-100 text-gray-400 text-[9px] px-1.5 py-0.5 rounded">云端拦截时启用</span></h3>
-                                                        <div>
-                                                            <label className="block text-[10px] font-medium text-gray-500 mb-1">系统自带嗓音选择</label>
-                                                            <select className="w-full bg-gray-50 border border-gray-200 rounded-lg p-2 text-sm focus:bg-white focus:border-blue-500 outline-none" value={config.localVoiceURI} onChange={e => setConfig({...config, localVoiceURI: e.target.value})}>
-                                                                <option value="">自动选择中文女声/男声</option>
-                                                                {localVoices.map(v => <option key={v.voiceURI} value={v.voiceURI}>{v.name} ({v.lang})</option>)}
-                                                            </select>
-                                                        </div>
-                                                        <div className="flex flex-col md:flex-row gap-4 mt-2">
-                                                            <div className="flex-1">
-                                                                <label className="block text-[10px] font-medium text-gray-500 mb-1">语速: {config.localVoiceRate}</label>
-                                                                <input type="range" min="0.5" max="2" step="0.1" value={config.localVoiceRate} onChange={(e) => setConfig({...config, localVoiceRate: e.target.value})} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"/>
-                                                            </div>
-                                                            <div className="flex-1">
-                                                                <label className="block text-[10px] font-medium text-gray-500 mb-1">声调(粗细): {config.localVoicePitch}</label>
-                                                                <input type="range" min="0" max="2" step="0.1" value={config.localVoicePitch} onChange={(e) => setConfig({...config, localVoicePitch: e.target.value})} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"/>
-                                                            </div>
-                                                        </div>
                                                     </div>
                                                 </div>
                                             )}
