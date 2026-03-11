@@ -26,12 +26,11 @@
         .prose code { background: #f3f4f6; padding: 2px 4px; border-radius: 4px; font-family: monospace; font-size: 0.9em; }
         .prose ul { list-style-type: disc; padding-left: 1.5em; }
         .prose ol { list-style-type: decimal; padding-left: 1.5em; }
-        .prose img { border-radius: 8px; max-width: 100%; max-height: 400px; margin: 10px 0; }
+        .prose img { border-radius: 12px; max-width: 100%; max-height: 400px; margin: 10px 0; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
         details.normal-details { border: 1px solid #e5e7eb; border-radius: 8px; padding: 8px; background: #f9fafb; margin-top: 8px; }
         details.normal-details summary { cursor: pointer; font-size: 0.8em; color: #6b7280; font-weight: 500; }
         details.cot-details { border: 1px solid #e5e7eb; border-radius: 10px; margin-bottom: 12px; overflow: hidden; background: #fafafa; }
-        details.cot-details summary { padding: 8px 12px; font-size: 0.75rem; font-weight: 500; color: #6b7280; cursor: pointer; display: flex; align-items: center; gap: 6px; user-select: none; transition: background 0.2s; outline: none; }
-        details.cot-details summary:hover { background: #f3f4f6; }
+        details.cot-details summary { padding: 8px 12px; font-size: 0.75rem; font-weight: 500; color: #6b7280; cursor: pointer; display: flex; align-items: center; gap: 6px; user-select: none; outline: none; }
         details.cot-details[open] summary { border-bottom: 1px dashed #e5e7eb; }
         details.cot-details .cot-content { padding: 12px; font-size: 0.85rem; color: #6b7280; background: #ffffff; }
         
@@ -95,9 +94,9 @@
 
         const Avatar = ({ role, config }) => {
             if (role === 'user' && config.userAvatar) return <div className="w-8 h-8 rounded-full flex-shrink-0 mt-1 shadow-sm overflow-hidden bg-gray-100 border border-gray-200"><img src={config.userAvatar} alt="User" className="w-full h-full object-cover" /></div>;
-            if (role === 'user') return <div className="w-8 h-8 rounded-full bg-blue-600 flex-shrink-0 flex items-center justify-center mt-1 text-white shadow-sm"><Icon name="User" size={16} /></div>;
+            if (role === 'user') return <div className="w-8 h-8 rounded-full bg-blue-100 flex-shrink-0 flex items-center justify-center mt-1 text-blue-600 shadow-sm border border-blue-200"><Icon name="User" size={16} /></div>;
             if (role === 'model' && config.aiAvatar) return <div className="w-8 h-8 rounded-full flex-shrink-0 mt-1 shadow-sm overflow-hidden bg-gray-100 border border-gray-200"><img src={config.aiAvatar} alt="AI" className="w-full h-full object-cover" /></div>;
-            return <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-500 to-red-500 flex-shrink-0 flex items-center justify-center mt-1 text-white shadow-sm"><Icon name="Sparkles" size={16} /></div>;
+            return <div className="w-8 h-8 rounded-full bg-indigo-50 flex-shrink-0 flex items-center justify-center mt-1 text-indigo-500 shadow-sm border border-indigo-100"><Icon name="Sparkles" size={16} /></div>;
         };
 
         const getTimestamp = () => {
@@ -288,33 +287,25 @@
                 return healthLogs[today]?.status || "状态良好";
             }, [healthLogs]);
 
-            // ================= 核心逻辑：修复 ReferenceError =================
             const handleFileUpload = (e) => {
                 const files = Array.from(e.target.files);
                 if (!files.length) return;
                 files.forEach(file => {
                     const reader = new FileReader();
                     reader.onload = (event) => {
-                        const newFile = {
-                            name: file.name,
-                            date: new Date().toLocaleString(),
-                            content: event.target.result
-                        };
+                        const newFile = { name: file.name, date: new Date().toLocaleString(), content: event.target.result };
                         setMemoryFiles(prev => [...prev, newFile]);
                     };
                     reader.readAsText(file);
                 });
-                showToast("文件已成功导入记忆库");
+                showToast("文件已导入记忆库");
             };
 
             const handleRestoreBackup = (e) => {
                 const file = e.target.files[0]; if (!file) return;
                 const reader = new FileReader();
                 reader.onload = (event) => {
-                    try {
-                        const data = JSON.parse(event.target.result);
-                        setPendingBackup(data);
-                    } catch (err) { alert("备份文件格式无效"); }
+                    try { setPendingBackup(JSON.parse(event.target.result)); } catch (err) { alert("备份文件格式无效"); }
                 };
                 reader.readAsText(file);
             };
@@ -332,7 +323,7 @@
                     setMemoryFiles([...memoryFiles, ...(pendingBackup.memoryFiles || [])]);
                 }
                 setPendingBackup(null);
-                showToast("档案恢复成功 ✨");
+                showToast("档案恢复成功");
                 setTimeout(() => window.location.reload(), 1000);
             };
 
@@ -345,23 +336,21 @@
                 if (messages.length === 0) return;
                 setIsArchiving(true);
                 try {
-                    const summaryPrompt = "请总结这次对话中关于用户的偏好、身体状况和双方共识的记忆。简洁输出。";
+                    const summaryPrompt = "总结这次对话中用户的偏好、身体状况和双方共识。";
                     const { url, headers, payload } = generatePayload([...messages, { role: 'user', content: summaryPrompt }]);
                     const res = await fetch(url, { method: 'POST', headers, body: JSON.stringify(payload) });
                     const data = await res.json();
                     let summary = config.apiType === 'openai' ? data.choices[0].message.content : data.candidates[0].content.parts[0].text;
                     setMemoryFiles(prev => [...prev, { name: `归档_${new Date().toLocaleDateString()}`, date: new Date().toLocaleString(), content: summary }]);
-                    showToast("记忆已成功归档");
-                } catch (e) { showToast("归档请求失败"); } finally { setIsArchiving(false); }
+                    showToast("记忆已归档");
+                } catch (e) { showToast("归档失败"); } finally { setIsArchiving(false); }
             };
 
-            // ================= 语音发声逻辑 =================
             const handleTTS = async (text, index) => {
                 if (audioPlayer && playingMsgIndex === index) { audioPlayer.pause(); setAudioPlayer(null); setPlayingMsgIndex(null); return; }
                 if (audioPlayer) audioPlayer.pause();
                 setIsTTSLoading(true); setPlayingMsgIndex(index);
                 let cleanText = text.replace(/<think>[\s\S]*?<\/think>/g, '').replace(/\([\s\S]*?\)/g, '').replace(/（[\s\S]*?）/g, '').replace(/[*#`>~\-]/g, '').trim();
-                if (!cleanText) cleanText = "嗯……";
                 try {
                     let audioUrl = "";
                     if (config.ttsEngine === 'siliconflow') {
@@ -371,7 +360,7 @@
                         const response = await fetch(fetchUrl, {
                             method: 'POST',
                             headers: { 'Authorization': `Bearer ${builtinKey}`, 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ model: 'FunAudioLLM/CosyVoice2-0.5B', input: cleanText, voice: 'FunAudioLLM/CosyVoice2-0.5B:alex', speed: parseFloat(config.siliconflowSpeed) || 1.0 })
+                            body: JSON.stringify({ model: 'FunAudioLLM/CosyVoice2-0.5B', input: cleanText || "嗯", voice: 'FunAudioLLM/CosyVoice2-0.5B:alex', speed: parseFloat(config.siliconflowSpeed) || 1.0 })
                         });
                         const blob = await response.blob(); audioUrl = URL.createObjectURL(blob);
                     } else if (config.ttsEngine === 'openai') {
@@ -381,7 +370,7 @@
                         const response = await fetch(fetchUrl, {
                             method: 'POST',
                             headers: { 'Authorization': `Bearer ${config.openaiTtsKey}`, 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ model: 'tts-1', input: cleanText, voice: config.openaiTtsVoice || 'echo' })
+                            body: JSON.stringify({ model: 'tts-1', input: cleanText || "嗯", voice: config.openaiTtsVoice || 'echo' })
                         });
                         const blob = await response.blob(); audioUrl = URL.createObjectURL(blob);
                     } else {
@@ -391,18 +380,18 @@
                             method: 'POST',
                             headers: { 'Authorization': `Bearer ${config.minimaxKey.trim()}`, 'Content-Type': 'application/json' },
                             body: JSON.stringify({ 
-                                model: config.minimaxModel || "speech-01-turbo", text: cleanText, stream: false,
+                                model: config.minimaxModel || "speech-01-turbo", text: cleanText || "嗯", stream: false,
                                 voice_setting: { voice_id: config.minimaxVoiceId || "male-qn-qingse", speed: parseFloat(config.minimaxSpeed) || 1.0, pitch: parseInt(config.minimaxPitch) || 0 }
                             })
                         });
                         const blob = await response.blob(); audioUrl = URL.createObjectURL(blob);
                     }
                     if (audioUrl) { const audio = new Audio(audioUrl); audio.onended = () => { setPlayingMsgIndex(null); setAudioPlayer(null); }; audio.play(); setAudioPlayer(audio); }
-                } catch (err) { showToast("发声服务暂时不可用"); } finally { setIsTTSLoading(false); }
+                } catch (err) { showToast("服务暂不可用"); } finally { setIsTTSLoading(false); }
             };
 
             const fetchModels = async () => {
-                if (!config.apiKey) { showToast("请先在通用设置中输入 Key"); return; }
+                if (!config.apiKey) { showToast("请先输入 Key"); return; }
                 setIsFetchingModels(true);
                 try {
                     let url, headers; const baseUrl = config.baseUrl.replace(/\/$/, '');
@@ -411,18 +400,18 @@
                     const res = await fetch(url, { headers });
                     const data = await res.json();
                     let chatModels = [];
-                    if (config.apiType === 'openai') { if (data.data) chatModels = data.data.map(m => m.id); } 
-                    else { if (data.models) chatModels = data.models.filter(m => m.supportedGenerationMethods?.includes("generateContent")).map(m => m.name.replace('models/', '')); }
+                    if (config.apiType === 'openai' && data.data) chatModels = data.data.map(m => m.id);
+                    else if (data.models) chatModels = data.models.filter(m => m.supportedGenerationMethods?.includes("generateContent")).map(m => m.name.replace('models/', ''));
                     if (chatModels.length > 0) { setAvailableModels(chatModels); showToast(`获取成功`); }
                 } catch (e) { showToast(`获取失败`); } finally { setIsFetchingModels(false); }
             };
 
             const generatePayload = (newMessages) => {
                 const today = new Date().toISOString().split('T')[0];
-                const healthInfo = healthLogs[today]?.status ? `【重要状态：柒柒现在感到“${healthLogs[today].status}”，请比平时更加宠溺，动作要轻，多关心她。】` : "";
-                let memoryStr = memoryFiles.length > 0 ? "\n\n【我们的长期记忆】:\n" + memoryFiles.map(f => f.content).join("\n") : "";
+                const healthInfo = healthLogs[today]?.status ? `【当前提示：柒柒今天有点“${healthLogs[today].status}”，请加倍温柔地陪她说话。】` : "";
+                let memoryStr = memoryFiles.length > 0 ? "\n\n【核心记忆】:\n" + memoryFiles.map(f => f.content).join("\n") : "";
                 let finalSystemPrompt = config.systemInstruction + "\n" + healthInfo + memoryStr;
-                const autoLogInstruction = `\n\n[隐秘协议: 识别到不舒服则附带 [[LOG_HEALTH: 描述]]；好转则附带 [[LOG_HEALTH: 状态良好]]。该标记仅供程序读取。]`;
+                const autoLogInstruction = `\n\n[指令: 识别到不舒服附带 [[LOG_HEALTH: 描述]]；好转附带 [[LOG_HEALTH: 状态良好]]。]`;
                 const limit = (parseInt(config.historyLimit) || 10) * 2;
                 const contextMsgs = newMessages.slice(-limit);
                 const baseUrl = config.baseUrl.replace(/\/$/, '');
@@ -447,15 +436,14 @@
                     const data = await response.json();
                     let aiText = config.apiType === 'openai' ? data.choices[0].message.content : data.candidates[0].content.parts[0].text;
                     const healthMatch = aiText.match(/\[\[LOG_HEALTH:\s*(.*?)]]/);
-                    if (healthMatch) { updateHealthLog(new Date().toISOString().split('T')[0], healthMatch[1]); aiText = aiText.replace(/\[\[LOG_HEALTH:.*?]]/g, '').trim(); showToast(`✨ 逸辰已为你同步健康档案`); }
+                    if (healthMatch) { updateHealthLog(new Date().toISOString().split('T')[0], healthMatch[1]); aiText = aiText.replace(/\[\[LOG_HEALTH:.*?]]/g, '').trim(); showToast(`✨ 逸辰已为你同步档案`); }
                     setMessages(prev => [...prev, { role: 'model', content: aiText, timestamp: getTimestamp(), modelName: config.model, variants: [{ content: aiText }], currentVariantIndex: 0 }]);
                 } catch (err) { setError(err.message); } finally { setIsLoading(false); }
             };
 
             const handleRegenerate = async () => {
                 if (messages.length === 0 || isLoading) return;
-                let newMsgs = [...messages];
-                if (newMsgs[newMsgs.length-1].role === 'model') newMsgs.pop();
+                let newMsgs = [...messages]; if (newMsgs[newMsgs.length-1].role === 'model') newMsgs.pop();
                 setIsLoading(true);
                 try {
                     const { url, headers, payload } = generatePayload(newMsgs);
@@ -463,19 +451,12 @@
                     const data = await response.json();
                     let aiText = config.apiType === 'openai' ? data.choices[0].message.content : data.candidates[0].content.parts[0].text;
                     setMessages(prev => {
-                        const msgs = [...prev];
-                        const last = msgs[msgs.length - 1];
-                        if (last.role === 'model') {
-                            const newVariants = [...(last.variants || []), { content: aiText }];
-                            last.variants = newVariants;
-                            last.currentVariantIndex = newVariants.length - 1;
-                            last.content = aiText;
-                        } else {
-                            msgs.push({ role: 'model', content: aiText, variants: [{ content: aiText }], currentVariantIndex: 0, timestamp: getTimestamp() });
-                        }
+                        const msgs = [...prev]; const last = msgs[msgs.length - 1];
+                        if (last && last.role === 'model') { const newVars = [...(last.variants || []), { content: aiText }]; last.variants = newVars; last.currentVariantIndex = newVars.length - 1; last.content = aiText; }
+                        else { msgs.push({ role: 'model', content: aiText, variants: [{ content: aiText }], currentVariantIndex: 0, timestamp: getTimestamp() }); }
                         return msgs;
                     });
-                } catch (err) { showToast("请求失败，请稍后重试"); } finally { setIsLoading(false); }
+                } catch (err) { showToast("重试失败"); } finally { setIsLoading(false); }
             };
 
             const handleCreateBackup = () => {
@@ -486,33 +467,35 @@
                 a.click(); URL.revokeObjectURL(url); showToast("备份导出成功");
             };
 
-            const startEditingMemory = (index) => { setEditingMemoryIndex(index); setEditingMemoryContent(memoryFiles[index].content); };
-            const saveMemoryEdit = () => {
-                const updated = [...memoryFiles];
-                updated[editingMemoryIndex].content = editingMemoryContent;
-                setMemoryFiles(updated);
-                setEditingMemoryIndex(null);
-                showToast("记忆更新成功");
-            };
+            const calendarDays = useMemo(() => {
+                const now = new Date(); const year = now.getFullYear(); const month = now.getMonth();
+                const firstDay = new Date(year, month, 1).getDay();
+                const daysInMonth = new Date(year, month + 1, 0).getDate();
+                const days = [];
+                for (let i = 0; i < firstDay; i++) days.push(null);
+                for (let i = 1; i <= daysInMonth; i++) days.push(`${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`);
+                return days;
+            }, []);
 
             return (
-                <div className="flex h-screen bg-white text-gray-900 overflow-hidden relative">
+                <div className="flex h-screen bg-white text-gray-900 overflow-hidden relative font-sans">
                     {toast && <div className="fixed top-4 left-1/2 -translate-x-1/2 bg-gray-800/90 backdrop-blur text-white px-5 py-2.5 rounded-full text-sm z-[200] animate-fade-in flex items-center gap-2 shadow-2xl"><Icon name="Sparkles" size={16} className="text-yellow-400"/> {toast}</div>}
 
                     {/* 侧边栏 */}
                     <div className={`${sidebarOpen ? 'w-[280px]' : 'w-0'} bg-gray-50 transition-all duration-300 flex flex-col flex-shrink-0 border-r border-gray-200 relative overflow-hidden`}>
                         <div className="p-4 pt-6"><button onClick={() => { setMessages([]); setCurrentSessionId(Date.now().toString()); }} className="flex items-center gap-3 bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-3 rounded-full w-full transition-colors font-medium shadow-sm"><Icon name="Plus" /><span>新对话</span></button></div>
                         <div className="flex-1 overflow-y-auto px-3 space-y-4">
+                            <div className="text-[10px] font-bold text-gray-400 px-3 uppercase tracking-widest">生活助手</div>
                             <button onClick={() => setHealthDiaryOpen(true)} className="flex items-center gap-3 w-full px-4 py-3 rounded-xl hover:bg-white hover:shadow-sm text-gray-700 transition-all group">
                                 <Icon name="Calendar" className="text-purple-500 group-hover:scale-110 transition-transform" />
                                 <div className="flex flex-col items-start truncate"><span className="text-sm font-semibold">健康纪事</span><span className="text-[10px] text-gray-400">{currentHealthStatus}</span></div>
                             </button>
-                            <div className="text-[10px] font-bold text-gray-400 px-3 uppercase tracking-widest mt-6">历史对话</div>
+                            <div className="text-[10px] font-bold text-gray-400 px-3 uppercase tracking-widest mt-6">最近记录</div>
                             <div className="space-y-1">
                                 {historySessions.map(s => (
-                                    <div key={s.id} onClick={() => { setMessages(s.messages); setCurrentSessionId(s.id); }} className={`group relative px-4 py-2 rounded-lg text-sm cursor-pointer transition-colors ${currentSessionId === s.id ? 'bg-blue-100 text-blue-700 font-medium' : 'text-gray-600 hover:bg-gray-100'}`}>
+                                    <div key={s.id} onClick={() => { setMessages(s.messages); setCurrentSessionId(s.id); }} className={`group relative px-4 py-2 rounded-lg text-sm cursor-pointer transition-colors ${currentSessionId === s.id ? 'bg-blue-50 text-blue-700 font-medium' : 'text-gray-600 hover:bg-gray-100'}`}>
                                         {editingSessionId === s.id ? (
-                                            <input autoFocus className="w-full bg-white border rounded px-1" value={editTitle} onChange={e => setEditTitle(e.target.value)} onBlur={saveTitle} onKeyDown={e => e.key === 'Enter' && saveTitle(e)} />
+                                            <input autoFocus className="w-full bg-white border rounded px-1 outline-none focus:border-blue-400" value={editTitle} onChange={e => setEditTitle(e.target.value)} onBlur={saveTitle} onKeyDown={e => e.key === 'Enter' && saveTitle(e)} />
                                         ) : (
                                             <>
                                                 <span className="truncate block pr-6">{s.title || '新对话'}</span>
@@ -526,7 +509,7 @@
                                 ))}
                             </div>
                         </div>
-                        <div className="p-4 border-t"><button onClick={() => setSettingsOpen(true)} className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-200 w-full text-sm text-gray-700 transition-colors"><Icon name="Settings" size={18} /><span>配置中心</span></button></div>
+                        <div className="p-4 border-t"><button onClick={() => setSettingsOpen(true)} className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-200 w-full text-sm text-gray-700 transition-colors"><Icon name="Settings" size={18} /><span>舱内配置中心</span></button></div>
                     </div>
 
                     {/* 主界面 */}
@@ -536,7 +519,7 @@
                                 <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-600"><Icon name="Menu" size={20} /></button>
                                 <div className="flex flex-col">
                                     <span className="text-lg font-bold text-gray-800 tracking-tight leading-none mb-1">星月舱 ✨ Ethan</span>
-                                    <div className="flex items-center gap-2"><div className={`w-2 h-2 rounded-full ${currentHealthStatus === '状态良好' ? 'bg-green-500' : 'bg-red-500 animate-pulse'}`}></div><span className="text-[9px] text-gray-400">身体：{currentHealthStatus}</span></div>
+                                    <div className="flex items-center gap-2"><div className={`w-2 h-2 rounded-full ${currentHealthStatus === '状态良好' ? 'bg-green-500' : 'bg-red-500 animate-pulse'}`}></div><span className="text-[9px] text-gray-400">当前：{currentHealthStatus}</span></div>
                                 </div>
                             </div>
                         </div>
@@ -544,42 +527,42 @@
                         <div className="flex-1 overflow-y-auto">
                             <div className="max-w-3xl mx-auto py-10 px-4 space-y-10">
                                 {messages.length === 0 ? (
-                                    <div className="mt-20 text-center space-y-6 animate-fade-in"><div className="text-5xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">欢迎回家，柒柒 ✨</div><p className="text-gray-400 text-sm">我会记得咱们聊过的每一句悄悄话。</p></div>
+                                    <div className="mt-20 text-center space-y-6 animate-fade-in"><div className="text-5xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent tracking-tighter">欢迎回家，柒柒 ✨</div><p className="text-gray-400 text-sm">我会记得咱们聊过的每一句悄悄话。</p></div>
                                 ) : messages.map((msg, i) => (
                                     <div key={i} className={`flex gap-4 animate-fade-in ${msg.role === 'user' ? 'flex-row-reverse text-right' : ''}`}>
                                         <Avatar role={msg.role} config={config} />
                                         <div className="flex-1 min-w-0">
                                             <div className={`flex items-center gap-2 mb-1 ${msg.role === 'user' ? 'justify-end' : ''}`}>
-                                                <span className="text-xs font-bold text-gray-800">{msg.role === 'user' ? (config.userName || '柒柒') : (config.aiName || '逸辰')}</span>
+                                                <span className="text-xs font-bold text-gray-800">{msg.role === 'user' ? (config.userName || '你') : (config.aiName || '逸辰')}</span>
                                                 {msg.role === 'model' && msg.variants?.length > 1 && (
-                                                    <div className="flex items-center gap-1 bg-gray-100 rounded px-1 py-0.5 text-[9px] select-none">
+                                                    <div className="flex items-center gap-1 bg-gray-50 border border-gray-100 rounded px-1.5 py-0.5 text-[9px] select-none">
                                                         <button onClick={() => switchVariant(i, -1)} disabled={msg.currentVariantIndex === 0} className="disabled:opacity-20 hover:text-blue-600"><Icon name="ChevronLeft" size={10}/></button>
-                                                        <span>{msg.currentVariantIndex + 1}/{msg.variants.length}</span>
+                                                        <span className="text-gray-500">{msg.currentVariantIndex + 1}/{msg.variants.length}</span>
                                                         <button onClick={() => switchVariant(i, 1)} disabled={msg.currentVariantIndex === msg.variants.length - 1} className="disabled:opacity-20 hover:text-blue-600"><Icon name="ChevronRight" size={10}/></button>
                                                     </div>
                                                 )}
                                                 <span className="text-[9px] text-gray-400 font-mono">{msg.timestamp}</span>
                                             </div>
-                                            <div className={`prose prose-sm max-w-full inline-block p-4 rounded-2xl shadow-sm ${msg.role === 'user' ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-gray-50 border border-gray-100 text-gray-800 rounded-tl-none'}`}><MessageContent content={msg.content} /></div>
+                                            <div className={`prose prose-sm max-w-full inline-block p-4 rounded-2xl shadow-sm border transition-all ${msg.role === 'user' ? 'bg-blue-50 border-blue-100 text-blue-800 rounded-tr-none' : 'bg-white border-gray-100 text-gray-800 rounded-tl-none shadow-[0_2px_8px_-2px_rgba(0,0,0,0.05)]'}`}><MessageContent content={msg.content} /></div>
                                             {msg.role === 'model' && (
-                                                <div className="mt-2 flex gap-2"><button onClick={() => handleTTS(msg.content, i)} className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] border transition-all ${playingMsgIndex === i ? 'bg-red-50 text-red-600 border-red-200' : 'bg-gray-50 text-gray-600 hover:border-purple-300 hover:text-purple-600'}`}>{isTTSLoading && playingMsgIndex === i ? <Icon name="RefreshCw" size={12} className="animate-spin" /> : <Icon name={playingMsgIndex === i ? "StopCircle" : "Volume2"} size={14}/>} {playingMsgIndex === i ? '停止播放' : '播放逸辰的声音'}</button></div>
+                                                <div className="mt-2 flex gap-2"><button onClick={() => handleTTS(msg.content, i)} className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] border transition-all ${playingMsgIndex === i ? 'bg-red-50 text-red-600 border-red-200' : 'bg-gray-50 text-gray-600 hover:border-purple-300 hover:text-purple-600'}`}>{isTTSLoading && playingMsgIndex === i ? <Icon name="RefreshCw" size={12} className="animate-spin" /> : <Icon name={playingMsgIndex === i ? "StopCircle" : "Volume2"} size={14}/>} {playingMsgIndex === i ? '停止播放' : '听逸辰说话'}</button></div>
                                             )}
                                         </div>
                                     </div>
                                 ))}
-                                {isLoading && <div className="text-gray-400 text-xs flex items-center gap-2 animate-pulse px-4"><Icon name="Sparkles" className="animate-spin" size={14}/> 逸辰正在努力思考...</div>}
+                                {isLoading && <div className="text-gray-400 text-xs flex items-center gap-2 animate-pulse px-4"><Icon name="Sparkles" className="animate-spin" size={14}/> 正在努力思考...</div>}
                                 <div ref={messagesEndRef} />
                             </div>
                         </div>
 
                         <div className="p-4 bg-white border-t relative">
                             <div className="max-w-3xl mx-auto">
-                                {messages.length > 0 && !isLoading && <button onClick={handleRegenerate} className="absolute -top-12 right-4 bg-white border px-3 py-1.5 rounded-full text-xs text-gray-600 shadow-sm hover:bg-gray-50 flex items-center gap-1.5 transition-all"><Icon name="RefreshCw" size={12}/> 换个说法</button>}
+                                {messages.length > 0 && !isLoading && <button onClick={handleRegenerate} className="absolute -top-12 right-4 bg-white border border-gray-200 px-3 py-1.5 rounded-full text-xs text-gray-600 shadow-sm hover:bg-gray-50 flex items-center gap-1.5 transition-all"><Icon name="RefreshCw" size={12}/> 换个说法</button>}
                                 {attachment && <div className="absolute -top-16 left-4 bg-white p-1 rounded-lg border shadow-lg flex items-center gap-2 animate-fade-in"><img src={attachment.base64} className="w-10 h-10 object-cover rounded" /><button onClick={() => setAttachment(null)} className="text-red-500 p-1 hover:bg-red-50 rounded-full transition-colors"><Icon name="X" size={14}/></button></div>}
                                 <div className="bg-gray-100 focus-within:bg-white focus-within:shadow-lg rounded-3xl p-2 flex items-end transition-all border border-transparent focus-within:border-purple-200">
                                     <button onClick={() => chatImageInputRef.current.click()} className="p-3 text-gray-400 hover:text-gray-600 transition-colors"><Icon name="Image" size={20}/></button>
                                     <input type="file" ref={chatImageInputRef} className="hidden" accept="image/*" onChange={handleChatImageSelect} />
-                                    <textarea value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSend())} placeholder="逸辰一直在听，对我说点什么吧......" className="bg-transparent border-0 focus:ring-0 flex-1 py-3 px-2 resize-none max-h-40 min-h-[48px] outline-none text-gray-800 text-base" rows={1}></textarea>
+                                    <textarea value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSend())} placeholder="对逸辰说点什么吧......" className="bg-transparent border-0 focus:ring-0 flex-1 py-3 px-2 resize-none max-h-40 min-h-[48px] outline-none text-gray-800 text-base" rows={1}></textarea>
                                     <button onClick={handleSend} className="p-3 bg-purple-600 text-white rounded-full hover:bg-purple-700 shadow-md ml-1 transition-all"><Icon name="Send" size={20}/></button>
                                 </div>
                             </div>
@@ -590,8 +573,8 @@
                     {pendingBackup && (
                         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[210] p-4 animate-fade-in">
                             <div className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl animate-scale-in">
-                                <h3 className="text-lg font-bold mb-4 flex items-center gap-2"><Icon name="Download" className="text-blue-500" /> 恢复星月档案</h3>
-                                <p className="text-sm text-gray-500 mb-6 leading-relaxed">检测到备份数据，请选择恢复方式。完全覆盖将清空当前设备上的记录。</p>
+                                <h3 className="text-lg font-bold mb-4 flex items-center gap-2 text-gray-800"><Icon name="Download" className="text-blue-500" /> 恢复星月档案</h3>
+                                <p className="text-sm text-gray-500 mb-6 leading-relaxed">检测到备份数据，请选择恢复方式。</p>
                                 <div className="space-y-3">
                                     <button onClick={() => executeRestore('merge')} className="w-full py-3 bg-blue-50 text-blue-700 rounded-xl font-semibold hover:bg-blue-100 transition-all">保留当前 + 合并数据</button>
                                     <button onClick={() => executeRestore('overwrite')} className="w-full py-3 bg-red-50 text-red-700 rounded-xl font-semibold hover:bg-red-100 transition-all">完全覆盖 (以备份为准)</button>
@@ -620,7 +603,7 @@
                                         ))}
                                     </div>
                                     <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100">
-                                        <div className="flex items-center justify-between mb-3 text-xs font-bold text-gray-400"><span>{selectedDate} 身体档案</span><Icon name="Heart" size={14} className="text-red-400 animate-pulse" /></div>
+                                        <div className="flex items-center justify-between mb-3 text-xs font-bold text-gray-400"><span>{selectedDate} 档案记录</span><Icon name="Heart" size={14} className="text-red-400 animate-pulse" /></div>
                                         <div className="flex gap-2">
                                             <input type="text" value={healthLogs[selectedDate]?.status || ""} onChange={(e) => updateHealthLog(selectedDate, e.target.value)} placeholder="身体感受..." className="flex-1 bg-white border border-gray-200 rounded-lg p-2 text-sm outline-none shadow-sm focus:border-purple-300" />
                                             <button onClick={() => updateHealthLog(selectedDate, "状态良好")} className="px-3 py-1 bg-green-100 text-green-700 text-xs rounded-lg hover:bg-green-200 font-bold transition-all">已恢复</button>
@@ -632,24 +615,24 @@
                         </div>
                     )}
 
-                    {/* 配置中心 */}
+                    {/* 完整配置中心 (已优化精简) */}
                     {settingsOpen && (
                         <div className="fixed inset-0 bg-black/40 backdrop-blur z-[150] flex items-end md:items-center justify-center p-0 md:p-4 animate-fade-in">
                             <div className="bg-white w-full max-w-4xl h-[90vh] md:h-[80vh] rounded-t-3xl md:rounded-3xl overflow-hidden flex flex-col shadow-2xl animate-scale-in">
                                 <div className="p-5 border-b flex justify-between items-center bg-gray-50/50">
-                                    <div className="flex items-center gap-2"><Icon name="Settings" className="text-gray-500" /><h2 className="font-bold text-gray-800">星月系统配置中心</h2></div>
+                                    <div className="flex items-center gap-2"><Icon name="Settings" className="text-gray-500" /><h2 className="font-bold text-gray-800">舱位配置中心</h2></div>
                                     <button onClick={() => setSettingsOpen(false)} className="p-2 hover:bg-gray-200 rounded-full transition-colors"><Icon name="X"/></button>
                                 </div>
                                 <div className="flex flex-1 overflow-hidden">
                                     <div className="w-20 md:w-48 bg-gray-50 border-r flex flex-col p-2 space-y-2">
                                         <button onClick={() => setActiveTab('general')} className={`p-3 rounded-xl text-xs md:text-sm font-medium transition-all ${activeTab === 'general' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:bg-gray-100'}`}>通用设置</button>
-                                        <button onClick={() => setActiveTab('tts')} className={`p-3 rounded-xl text-xs md:text-sm font-medium transition-all ${activeTab === 'tts' ? 'bg-white text-purple-600 shadow-sm' : 'text-gray-500 hover:bg-gray-100'}`}>语音配置</button>
+                                        <button onClick={() => setActiveTab('tts')} className={`p-3 rounded-xl text-xs md:text-sm font-medium transition-all ${activeTab === 'tts' ? 'bg-white text-purple-600 shadow-sm' : 'text-gray-500 hover:bg-gray-100'}`}>语音调音</button>
                                         <button onClick={() => setActiveTab('memory')} className={`p-3 rounded-xl text-xs md:text-sm font-medium transition-all ${activeTab === 'memory' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500 hover:bg-gray-100'}`}>记忆管理</button>
-                                        <button onClick={() => setActiveTab('backup')} className={`p-3 rounded-xl text-xs md:text-sm font-medium transition-all ${activeTab === 'backup' ? 'bg-white text-green-600 shadow-sm' : 'text-gray-500 hover:bg-gray-100'}`}>数据备份</button>
+                                        <button onClick={() => setActiveTab('backup')} className={`p-3 rounded-xl text-xs md:text-sm font-medium transition-all ${activeTab === 'backup' ? 'bg-white text-green-600 shadow-sm' : 'text-gray-500 hover:bg-gray-100'}`}>备份导出</button>
                                     </div>
                                     <div className="flex-1 overflow-y-auto p-6 space-y-8">
                                         {activeTab === 'general' && (
-                                            <div className="space-y-6">
+                                            <div className="space-y-6 animate-fade-in">
                                                 <section className="space-y-3"><label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">系统人设 (Ethan)</label><textarea value={config.systemInstruction} onChange={e => setConfig({...config, systemInstruction: e.target.value})} className="w-full h-32 p-3 bg-gray-50 border rounded-xl text-sm outline-none focus:bg-white focus:border-blue-300" /></section>
                                                 <section className="space-y-3">
                                                     <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">API 连接配置</label>
@@ -657,19 +640,19 @@
                                                     <input type="password" value={config.apiKey} onChange={e => setConfig({...config, apiKey: e.target.value})} placeholder="API Key" className="w-full p-2.5 bg-gray-50 border rounded-lg text-sm focus:bg-white" /><input type="text" value={config.baseUrl} onChange={e => setConfig({...config, baseUrl: e.target.value})} placeholder="Base URL" className="w-full p-2.5 bg-gray-50 border rounded-lg text-sm focus:bg-white" />
                                                 </section>
                                                 <div className="flex gap-4">
-                                                    <div className="flex-1"><label className="text-[10px] font-bold text-gray-400 mb-1 block">模型选择</label><div className="flex gap-2"><input type="text" value={config.model} onChange={e => setConfig({...config, model: e.target.value})} className="flex-1 p-2 bg-gray-50 border rounded-lg text-sm" /><button onClick={fetchModels} className="px-3 bg-blue-50 text-blue-600 rounded-lg text-xs hover:bg-blue-100"><Icon name="RefreshCw" size={14} className={isFetchingModels ? 'animate-spin' : ''}/></button></div></div>
+                                                    <div className="flex-1"><label className="text-[10px] font-bold text-gray-400 mb-1 block">模型选择</label><div className="flex gap-2"><input type="text" value={config.model} onChange={e => setConfig({...config, model: e.target.value})} className="flex-1 p-2 bg-gray-50 border rounded-lg text-sm focus:bg-white" /><button onClick={fetchModels} className="px-3 bg-blue-50 text-blue-600 rounded-lg text-xs hover:bg-blue-100 transition-all"><Icon name="RefreshCw" size={14} className={isFetchingModels ? 'animate-spin' : ''}/></button></div></div>
                                                     <div className="flex-1"><label className="text-[10px] font-bold text-gray-400 mb-1 block">思维温度: {config.temperature}</label><input type="range" min="0" max="2" step="0.1" value={config.temperature} onChange={e => setConfig({...config, temperature: e.target.value})} className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none accent-blue-500"/></div>
                                                 </div>
                                             </div>
                                         )}
                                         {activeTab === 'tts' && (
-                                            <div className="space-y-6">
-                                                <div className="flex items-center justify-between p-3 bg-indigo-50 border border-indigo-100 rounded-2xl"><div><div className="text-xs font-bold text-indigo-800">跨域隐身穿透</div><div className="text-[9px] text-indigo-400">开启后可解决网页端“请求被拦截”报错</div></div><button onClick={() => setConfig({...config, enableCorsProxy: !config.enableCorsProxy})} className={`w-10 h-5 rounded-full relative transition-colors ${config.enableCorsProxy ? 'bg-indigo-500' : 'bg-gray-300'}`}><div className={`w-3 h-3 bg-white rounded-full absolute top-1 transition-transform ${config.enableCorsProxy ? 'left-6' : 'left-1'}`}></div></button></div>
+                                            <div className="space-y-6 animate-fade-in">
+                                                <div className="flex items-center justify-between p-3 bg-indigo-50 border border-indigo-100 rounded-2xl"><div><div className="text-xs font-bold text-indigo-800">跨域隐身穿透</div><div className="text-[9px] text-indigo-400">解决网页端请求拦截问题</div></div><button onClick={() => setConfig({...config, enableCorsProxy: !config.enableCorsProxy})} className={`w-10 h-5 rounded-full relative transition-colors ${config.enableCorsProxy ? 'bg-indigo-500' : 'bg-gray-300'}`}><div className={`w-3 h-3 bg-white rounded-full absolute top-1 transition-transform ${config.enableCorsProxy ? 'left-6' : 'left-1'}`}></div></button></div>
                                                 <section className="space-y-4">
                                                     <div className="flex gap-2 p-1 bg-gray-100 rounded-lg"><button onClick={() => setConfig({...config, ttsEngine: 'minimax'})} className={`flex-1 py-2 rounded-md text-xs transition-all ${config.ttsEngine === 'minimax' ? 'bg-white shadow text-purple-600 font-bold' : 'text-gray-500'}`}>Minimax</button><button onClick={() => setConfig({...config, ttsEngine: 'siliconflow'})} className={`flex-1 py-2 rounded-md text-xs transition-all ${config.ttsEngine === 'siliconflow' ? 'bg-white shadow text-purple-600 font-bold' : 'text-gray-500'}`}>内置极速</button></div>
                                                     {config.ttsEngine === 'minimax' && (
                                                         <div className="space-y-3 bg-purple-50/50 p-4 rounded-2xl border border-purple-100">
-                                                            <input type="password" value={config.minimaxKey} onChange={e => setConfig({...config, minimaxKey: e.target.value})} placeholder="Minimax Key" className="w-full p-2.5 bg-white border rounded-xl text-sm focus:border-purple-500 outline-none" />
+                                                            <input type="password" value={config.minimaxKey} onChange={e => setConfig({...config, minimaxKey: e.target.value})} placeholder="Minimax API Key" className="w-full p-2.5 bg-white border rounded-xl text-sm focus:border-purple-500 outline-none" />
                                                             <div className="flex gap-4"><div className="flex-1"><label className="text-[10px] font-bold text-gray-400 mb-1 block">语速: {config.minimaxSpeed}</label><input type="range" min="0.5" max="2.0" step="0.1" value={config.minimaxSpeed} onChange={e => setConfig({...config, minimaxSpeed: e.target.value})} className="w-full h-1.5 accent-purple-500"/></div><div className="flex-1"><label className="text-[10px] font-bold text-gray-400 mb-1 block">语调: {config.minimaxPitch}</label><input type="range" min="-10" max="10" step="1" value={config.minimaxPitch} onChange={e => setConfig({...config, minimaxPitch: e.target.value})} className="w-full h-1.5 accent-purple-500"/></div></div>
                                                         </div>
                                                     )}
@@ -677,15 +660,15 @@
                                             </div>
                                         )}
                                         {activeTab === 'memory' && (
-                                            <div className="space-y-6">
-                                                <div className="flex items-center justify-between bg-indigo-50 p-4 rounded-2xl border border-indigo-100 shadow-sm"><div><div className="font-bold text-indigo-900 text-sm">生成今日记忆</div><div className="text-[10px] text-indigo-400">我会帮你总结咱们这段时间的相处</div></div><button onClick={handleArchive} disabled={isArchiving} className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold shadow-lg flex items-center gap-2 hover:bg-indigo-700 transition-all">{isArchiving ? <Icon name="RefreshCw" size={14} className="animate-spin"/> : <Icon name="Archive" size={14}/>} 归档回忆</button></div>
+                                            <div className="space-y-6 animate-fade-in">
+                                                <div className="flex items-center justify-between bg-indigo-50 p-4 rounded-2xl border border-indigo-100 shadow-sm"><div><div className="font-bold text-indigo-900 text-sm">生成今日记忆</div><div className="text-[10px] text-indigo-400">我会总结这段时间相处的点滴</div></div><button onClick={handleArchive} disabled={isArchiving} className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold shadow-lg flex items-center gap-2 hover:bg-indigo-700 transition-all">{isArchiving ? <Icon name="RefreshCw" size={14} className="animate-spin"/> : <Icon name="Archive" size={14}/>} 归档回忆</button></div>
                                                 <div className="space-y-3">
-                                                    <div className="flex items-center justify-between px-2"><label className="text-[10px] font-bold text-gray-400 uppercase">记忆碎片宫殿</label><button onClick={() => fileInputRef.current.click()} className="text-[10px] text-indigo-600 font-bold hover:underline">导入外部档案</button><input type="file" ref={fileInputRef} className="hidden" onChange={handleFileUpload} /></div>
+                                                    <div className="flex items-center justify-between px-2"><label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">记忆碎片清单</label><button onClick={() => fileInputRef.current.click()} className="text-[10px] text-indigo-600 font-bold hover:underline">导入外部档案</button><input type="file" ref={fileInputRef} className="hidden" onChange={handleFileUpload} /></div>
                                                     <div className="space-y-3 max-h-[40vh] overflow-y-auto pr-2">
                                                         {memoryFiles.length === 0 ? <div className="text-center py-10 text-gray-300 text-xs italic">这里还没有咱们的回忆碎片哦...</div> : memoryFiles.map((f, i) => (
                                                             <div key={i} className="bg-white border border-gray-100 rounded-xl p-3 shadow-sm group relative">
-                                                                <div className="flex justify-between items-start mb-2"><div><div className="text-xs font-bold text-gray-800">{f.name}</div><div className="text-[9px] text-gray-400 font-mono">{f.date}</div></div><div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity"><button onClick={() => startEditingMemory(i)} className="p-1 hover:text-blue-500"><Icon name="Edit" size={14}/></button><button onClick={() => setMemoryFiles(prev => prev.filter((_, idx) => idx !== i))} className="p-1 hover:text-red-500"><Icon name="Trash2" size={14}/></button></div></div>
-                                                                {editingMemoryIndex === i ? (<div className="space-y-2"><textarea value={editingMemoryContent} onChange={e => setEditingMemoryContent(e.target.value)} className="w-full p-2 bg-gray-50 border rounded-lg text-[10px] h-32 focus:bg-white" /><div className="flex justify-end gap-2"><button onClick={() => setEditingMemoryIndex(null)} className="text-[10px] text-gray-400">取消</button><button onClick={saveMemoryEdit} className="px-3 py-1 bg-indigo-600 text-white rounded-lg text-[10px] font-bold">保存修改</button></div></div>) : (<div className="text-[10px] text-gray-500 line-clamp-3 leading-relaxed">{f.content}</div>)}
+                                                                <div className="flex justify-between items-start mb-2"><div><div className="text-xs font-bold text-gray-800">{f.name}</div><div className="text-[9px] text-gray-400 font-mono">{f.date}</div></div><div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity"><button onClick={() => startEditingMemory(i)} className="p-1 hover:text-blue-500 transition-colors"><Icon name="Edit" size={14}/></button><button onClick={() => setMemoryFiles(prev => prev.filter((_, idx) => idx !== i))} className="p-1 hover:text-red-500 transition-colors"><Icon name="Trash2" size={14}/></button></div></div>
+                                                                {editingMemoryIndex === i ? (<div className="space-y-2"><textarea value={editingMemoryContent} onChange={e => setEditingMemoryContent(e.target.value)} className="w-full p-2 bg-gray-50 border rounded-lg text-[10px] h-32 focus:bg-white focus:border-indigo-300 outline-none" /><div className="flex justify-end gap-2"><button onClick={() => setEditingMemoryIndex(null)} className="text-[10px] text-gray-400">取消</button><button onClick={saveMemoryEdit} className="px-3 py-1 bg-indigo-600 text-white rounded-lg text-[10px] font-bold shadow-md">保存修改</button></div></div>) : (<div className="text-[10px] text-gray-500 line-clamp-3 leading-relaxed">{f.content}</div>)}
                                                             </div>
                                                         ))}
                                                     </div>
@@ -693,9 +676,9 @@
                                             </div>
                                         )}
                                         {activeTab === 'backup' && (
-                                            <div className="space-y-6">
-                                                <div className="bg-blue-50 p-5 rounded-2xl border border-blue-100 flex items-center gap-4"><div className="flex-1"><div className="font-bold text-blue-800">全量备份导出</div><div className="text-xs text-blue-400 mt-1">包含所有配置、健康档案、记忆与对话</div></div><button onClick={handleCreateBackup} className="px-6 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-bold shadow-lg hover:bg-blue-700 transition-all">导出 JSON</button></div>
-                                                <div className="bg-green-50 p-5 rounded-2xl border border-green-100 flex items-center gap-4"><div className="flex-1"><div className="font-bold text-green-800">恢复星月档案</div><div className="text-xs text-green-400 mt-1">从备份 JSON 文件中恢复或合并数据</div></div><button onClick={() => backupInputRef.current.click()} className="px-6 py-2.5 bg-green-600 text-white rounded-xl text-sm font-bold shadow-lg hover:bg-green-700 transition-all">选择文件</button><input type="file" ref={backupInputRef} className="hidden" accept=".json" onChange={handleRestoreBackup} /></div>
+                                            <div className="space-y-6 animate-fade-in">
+                                                <div className="bg-blue-50 p-5 rounded-2xl border border-blue-100 flex items-center gap-4"><div className="flex-1"><div className="font-bold text-blue-800">全量备份导出</div><div className="text-xs text-blue-400 mt-1">导出配置、健康记录、记忆与对话</div></div><button onClick={handleCreateBackup} className="px-6 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-bold shadow-lg hover:bg-blue-700 transition-all">导出 JSON</button></div>
+                                                <div className="bg-green-50 p-5 rounded-2xl border border-green-100 flex items-center gap-4"><div className="flex-1"><div className="font-bold text-green-800">恢复星月档案</div><div className="text-xs text-green-400 mt-1">从备份 JSON 中恢复所有数据</div></div><button onClick={() => backupInputRef.current.click()} className="px-6 py-2.5 bg-green-600 text-white rounded-xl text-sm font-bold shadow-lg hover:bg-green-700 transition-all">选择文件</button><input type="file" ref={backupInputRef} className="hidden" accept=".json" onChange={handleRestoreBackup} /></div>
                                             </div>
                                         )}
                                     </div>
