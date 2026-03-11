@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EQ-chat✨星月舱🌙 v5.4</title>
+    <title>EQ-chat✨星月舱🌙 v5.6</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%238b5cf6' stroke='%238b5cf6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z'/></svg>">
     <script src="https://cdn.tailwindcss.com"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
@@ -12,33 +12,33 @@
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #fff; }
         .animate-fade-in { animation: fadeIn 0.2s ease-out forwards; }
-        .animate-scale-in { animation: scaleIn 0.2s ease-out forwards; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes scaleIn { from { opacity: 0; transform: scale(0.9) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
-        ::-webkit-scrollbar { width: 6px; }
+        
+        ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #d1d5db; }
+        ::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 10px; }
+        
         .prose p { margin-bottom: 0.5em; }
-        .prose pre { background: #f3f4f6; padding: 10px; border-radius: 8px; overflow-x: auto; }
+        .prose pre { background: #f3f4f6; padding: 10px; border-radius: 8px; overflow-x: auto; font-size: 0.85em; }
         .prose code { background: #f3f4f6; padding: 2px 4px; border-radius: 4px; font-family: monospace; font-size: 0.9em; }
-        .prose ul { list-style-type: disc; padding-left: 1.5em; }
-        .prose ol { list-style-type: decimal; padding-left: 1.5em; }
-        .prose img { border-radius: 8px; max-width: 100%; max-height: 400px; margin: 10px 0; }
-        details.normal-details { border: 1px solid #e5e7eb; border-radius: 8px; padding: 8px; background: #f9fafb; margin-top: 8px; }
-        details.normal-details summary { cursor: pointer; font-size: 0.8em; color: #6b7280; font-weight: 500; }
-        details.cot-details { border: 1px solid #e5e7eb; border-radius: 10px; margin-bottom: 12px; overflow: hidden; background: #fafafa; }
-        details.cot-details summary { padding: 8px 12px; font-size: 0.75rem; font-weight: 500; color: #6b7280; cursor: pointer; display: flex; align-items: center; gap: 6px; user-select: none; transition: background 0.2s; outline: none; }
-        details.cot-details summary:hover { background: #f3f4f6; }
-        details.cot-details[open] summary { border-bottom: 1px dashed #e5e7eb; }
-        details.cot-details .cot-content { padding: 12px; font-size: 0.85rem; color: #6b7280; background: #ffffff; }
-        .calendar-dot { width: 4px; height: 4px; background: #8b5cf6; border-radius: 50%; margin: 0 auto; margin-top: 2px; }
+        
+        /* 气泡样式 */
+        .bubble { max-width: 85%; padding: 12px 16px; border-radius: 20px; position: relative; line-height: 1.6; }
+        .bubble-user { background-color: #3b82f6; color: white; border-bottom-right-radius: 4px; align-self: flex-end; }
+        .bubble-ai { background-color: #f3f4f6; color: #1f2937; border-bottom-left-radius: 4px; align-self: flex-start; }
+        
+        /* 推理折叠样式 (嵌套在气泡内) */
+        details.cot-details { border: 1px solid rgba(0,0,0,0.05); border-radius: 12px; margin-bottom: 10px; background: rgba(0,0,0,0.03); overflow: hidden; }
+        details.cot-details summary { padding: 8px 12px; font-size: 0.7rem; font-weight: 600; color: #6b7280; cursor: pointer; display: flex; align-items: center; gap: 6px; outline: none; }
+        details.cot-details .cot-content { padding: 10px 12px; font-size: 0.75rem; color: #6b7280; background: #fff; border-top: 1px solid rgba(0,0,0,0.05); }
+
         .no-scrollbar::-webkit-scrollbar { display: none; }
+        .calendar-dot { width: 4px; height: 4px; background: #8b5cf6; border-radius: 50%; margin: 0 auto; margin-top: 2px; }
     </style>
 </head>
-<body class="bg-white text-gray-900 overflow-hidden">
+<body class="text-gray-900 overflow-hidden">
     <div id="root"></div>
 
     <script type="text/babel">
@@ -50,7 +50,6 @@
             MessageSquare: () => <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />,
             Settings: () => <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1-1-1.74v-.47a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />,
             Send: () => <path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7z" />,
-            User: () => <g><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></g>,
             Sparkles: () => <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />,
             X: () => <path d="M18 6 6 18M6 6l12 12" />,
             Image: () => <g><rect width="18" height="18" x="3" y="3" rx="2" ry="2" /><circle cx="9" cy="9" r="2" /><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" /></g>,
@@ -62,19 +61,14 @@
             Cpu: () => <g><rect x="4" y="4" width="16" height="16" rx="2" /><rect x="9" y="9" width="6" height="6" /><path d="M9 1v3M15 1v3M9 20v3M15 20v3M20 9h3M20 14h3M1 9h3M1 14h3" /></g>,
             Archive: () => <path d="M21 8v13H3V8M1 3h22v5H1zM10 12h4" />,
             RefreshCw: () => <path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />,
-            UserCircle: () => <g><circle cx="12" cy="12" r="10"/><circle cx="12" cy="10" r="3"/><path d="M7 20.662V19a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v1.662"/></g>,
-            Bot: () => <g><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/><line x1="8" y1="16" x2="8" y2="16"/><line x1="16" y1="16" x2="16" y2="16"/></g>,
-            Globe: () => <g><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></g>,
-            MessageSquareText: () => <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />,
             Database: () => <g><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></g>,
             Volume2: () => <g><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></g>,
             StopCircle: () => <g><circle cx="12" cy="12" r="10"></circle><rect x="9" y="9" width="6" height="6"></rect></g>,
-            Edit: () => <g><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></g>,
-            Check: () => <polyline points="20 6 9 17 4 12"/>,
             ChevronLeft: () => <polyline points="15 18 9 12 15 6" />,
             ChevronRight: () => <polyline points="9 18 15 12 9 6" />,
             Heart: () => <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>,
-            Activity: () => <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+            Activity: () => <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>,
+            Brain: () => <path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 4.44-2.54Zm5 0a2.5 2.5 0 0 0-4.44 2.54 2.5 2.5 0 0 0-1.32 4.24 3 3 0 0 0 .34 5.58 2.5 2.5 0 0 0 2.96 3.08A2.5 2.5 0 0 0 14.5 19.5v-15A2.5 2.5 0 0 0 12 2Z"/>
         };
 
         const Icon = ({ name, size = 20, className = "" }) => {
@@ -82,20 +76,13 @@
             return <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><Path /></svg>;
         };
 
-        const MessageContent = ({ content }) => {
+        const MessageContent = ({ content, role }) => {
             const html = marked.parse(content || "");
-            return <div className="prose prose-sm max-w-none text-gray-700 leading-7" dangerouslySetInnerHTML={{ __html: html }} />;
-        };
-
-        const Avatar = ({ role, config }) => {
-            if (role === 'user' && config.userAvatar) return <div className="w-8 h-8 rounded-full flex-shrink-0 mt-1 shadow-sm overflow-hidden bg-gray-100 border border-gray-200"><img src={config.userAvatar} alt="User" className="w-full h-full object-cover" /></div>;
-            if (role === 'user') return <div className="w-8 h-8 rounded-full bg-blue-600 flex-shrink-0 flex items-center justify-center mt-1 text-white shadow-sm"><Icon name="User" size={16} /></div>;
-            if (role === 'model' && config.aiAvatar) return <div className="w-8 h-8 rounded-full flex-shrink-0 mt-1 shadow-sm overflow-hidden bg-gray-100 border border-gray-200"><img src={config.aiAvatar} alt="AI" className="w-full h-full object-cover" /></div>;
-            return <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-500 to-red-500 flex-shrink-0 flex items-center justify-center mt-1 text-white shadow-sm"><Icon name="Sparkles" size={16} /></div>;
+            return <div className={`prose prose-sm max-w-none leading-relaxed ${role === 'user' ? 'text-white' : 'text-gray-800'}`} dangerouslySetInnerHTML={{ __html: html }} />;
         };
 
         const getTimestamp = () => {
-            return new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', hour12: false, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            return new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', hour12: false, month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
         };
 
         const compressImage = (file) => {
@@ -114,8 +101,7 @@
                         else { if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; } }
                         canvas.width = width; canvas.height = height;
                         ctx.drawImage(img, 0, 0, width, height);
-                        const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
-                        resolve({ base64: compressedBase64, mimeType: 'image/jpeg' });
+                        resolve({ base64: canvas.toDataURL('image/jpeg', 0.7), mimeType: 'image/jpeg' });
                     };
                 };
             });
@@ -152,8 +138,6 @@
                 systemInstruction: DEFAULT_SYSTEM_INSTRUCTION,
                 userName: '柒柒',
                 aiName: '逸辰Ethan',
-                userAvatar: '',
-                aiAvatar: '',
                 historyLimit: 10,
                 temperature: 0.7,
                 streamOutput: true,
@@ -234,31 +218,31 @@
                         <div className="flex justify-between mb-4 px-2 items-center">
                             <h3 className="font-bold flex items-center gap-2 text-gray-800"><Icon name="Heart" size={18} className="text-pink-500 fill-pink-500"/> 健康看板</h3>
                             <div className="flex gap-2 items-center text-sm">
-                                <button onClick={()=>setCurr(new Date(y, m-1))} className="p-1"><Icon name="ChevronLeft" size={16}/></button>
-                                <span>{y}年 {m+1}月</span>
-                                <button onClick={()=>setCurr(new Date(y, m+1))} className="p-1"><Icon name="ChevronRight" size={16}/></button>
+                                <button onClick={()=>setCurr(new Date(y, m-1))} className="p-1 hover:bg-gray-100 rounded-full"><Icon name="ChevronLeft" size={16}/></button>
+                                <span className="font-bold">{y}年 {m+1}月</span>
+                                <button onClick={()=>setCurr(new Date(y, m+1))} className="p-1 hover:bg-gray-100 rounded-full"><Icon name="ChevronRight" size={16}/></button>
                             </div>
                         </div>
-                        <div className="grid grid-cols-7 text-center text-[10px] text-gray-400 font-bold mb-2">
+                        <div className="grid grid-cols-7 text-center text-[10px] text-gray-400 font-bold mb-2 uppercase tracking-tighter">
                             {['日','一','二','三','四','五','六'].map(d=><div key={d}>{d}</div>)}
                         </div>
                         <div className="grid grid-cols-7 gap-1">
                             {days.map((d, i) => d ? (
-                                <div key={i} onClick={()=>{setEditDate(getD(d)); setVal(healthRecords[getD(d)] || '');}} className={`h-12 border rounded-lg p-1 cursor-pointer hover:border-blue-300 relative ${getD(d)===todayStr ? 'bg-blue-50 border-blue-200':'bg-white border-gray-100'}`}>
-                                    <span className="text-[10px] text-gray-500">{d}</span>
-                                    {healthRecords[getD(d)] && <div className="mt-1 text-[8px] bg-purple-50 text-purple-600 truncate border border-purple-100 rounded px-0.5">{healthRecords[getD(d)]}</div>}
+                                <div key={i} onClick={()=>{setEditDate(getD(d)); setVal(healthRecords[getD(d)] || '');}} className={`h-12 border rounded-xl p-1 cursor-pointer hover:border-blue-300 relative transition-all ${getD(d)===todayStr ? 'bg-blue-50 border-blue-200 shadow-sm':'bg-white border-gray-100'}`}>
+                                    <span className={`text-[10px] ${getD(d)===todayStr ? 'text-blue-600 font-bold' : 'text-gray-400'}`}>{d}</span>
+                                    {healthRecords[getD(d)] && <div className="mt-1 text-[8px] bg-purple-50 text-purple-600 truncate border border-purple-100 rounded px-0.5 font-bold">{healthRecords[getD(d)]}</div>}
                                     {healthRecords[getD(d)] && <div className="calendar-dot"></div>}
                                 </div>
                             ) : <div key={i}></div>)}
                         </div>
                         {editDate && (
-                            <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-[70] p-4 backdrop-blur-sm animate-fade-in">
-                                <div className="bg-white w-full max-w-xs rounded-2xl p-5 shadow-2xl animate-scale-in">
-                                    <div className="text-sm font-bold mb-3">{editDate}</div>
-                                    <textarea autoFocus className="w-full h-24 bg-gray-50 border rounded-xl p-3 text-sm focus:outline-none focus:border-blue-400" value={val} onChange={e=>setVal(e.target.value)} placeholder="记录身体情况..."></textarea>
-                                    <div className="flex gap-2 mt-4">
-                                        <button onClick={()=>setEditDate(null)} className="flex-1 py-2 text-sm text-gray-500">取消</button>
-                                        <button onClick={()=>{setHealthRecords(p=>({...p,[editDate]:val})); setEditDate(null); showToast("已记录");}} className="flex-1 py-2 bg-blue-600 text-white rounded-lg">保存</button>
+                            <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[70] p-4 backdrop-blur-sm animate-fade-in">
+                                <div className="bg-white w-full max-w-xs rounded-3xl p-6 shadow-2xl animate-scale-in">
+                                    <div className="text-sm font-bold mb-4 text-gray-800">{editDate} 状态记录</div>
+                                    <textarea autoFocus className="w-full h-24 bg-gray-50 border border-gray-100 rounded-2xl p-4 text-sm focus:outline-none focus:border-blue-400 no-scrollbar" value={val} onChange={e=>setVal(e.target.value)} placeholder="身体哪里不舒服嘛？"></textarea>
+                                    <div className="flex gap-2 mt-5">
+                                        <button onClick={()=>setEditDate(null)} className="flex-1 py-2.5 text-sm text-gray-400 font-bold">取消</button>
+                                        <button onClick={()=>{setHealthRecords(p=>({...p,[editDate]:val})); setEditDate(null); showToast("逸辰记下啦");}} className="flex-1 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-bold shadow-lg shadow-blue-200">保存</button>
                                     </div>
                                 </div>
                             </div>
@@ -284,74 +268,57 @@
                 try {
                     const baseUrl = config.baseUrl.replace(/\/$/, '');
                     const url = config.apiType==='openai' ? `${baseUrl}/models` : `${baseUrl}/v1beta/models?key=${config.apiKey}`;
-                    const headers = config.apiType==='openai' ? {'Authorization': `Bearer ${config.apiKey}`} : {};
-                    const res = await fetch(url, { headers });
+                    const res = await fetch(url, { headers: config.apiType==='openai' ? {'Authorization': `Bearer ${config.apiKey}`} : {} });
                     const data = await res.json();
                     let list = [];
                     if (config.apiType==='openai') list = data.data.map(m=>m.id);
                     else list = data.models.filter(m=>m.supportedGenerationMethods.includes("generateContent")).map(m=>m.name.replace('models/',''));
                     setAvailableModels(list);
-                    showToast("获取列表成功");
-                } catch (e) { showToast("获取失败，请检查网络"); } finally { setIsFetchingModels(false); }
+                    showToast("获取成功");
+                } catch (e) { showToast("连接失败"); } finally { setIsFetchingModels(false); }
             };
 
             const handleExportTxt = () => {
-                if (messages.length === 0) return showToast("没有对话可以导出");
-                let txt = `✨星月舱聊天记录导出 (${new Date().toLocaleString()})\n\n`;
+                if (messages.length === 0) return showToast("暂无对话");
+                let txt = `✨ 星月舱日志 - ${new Date().toLocaleDateString()}\n\n`;
                 messages.forEach(m => {
                     const name = m.role==='user' ? config.userName : config.aiName;
-                    const content = (m.role==='model' && m.variants) ? m.variants[m.currentVariantIndex].content : m.content;
+                    const content = m.role==='model' && m.variants ? m.variants[m.currentVariantIndex].content : m.content;
                     txt += `[${m.timestamp}] ${name}:\n${content.replace(/!\[.*?\]\(data:image.*?\)/g, '[图片]')}\n\n`;
                 });
                 const blob = new Blob([txt], {type:'text/plain;charset=utf-8'});
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a'); a.href=url; a.download=`xingyue_chat_${new Date().toISOString().slice(0,10)}.txt`; a.click(); URL.revokeObjectURL(url); showToast("导出成功");
+                const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`星月日记_${Date.now()}.txt`; a.click(); showToast("导出成功");
             };
 
             const generatePayload = (msgs) => {
                 let system = config.systemInstruction;
                 const today = new Date().toISOString().split('T')[0];
-                const health = healthRecords[today] ? `柒柒今天的身体状态是：${healthRecords[today]}` : "目前没有不适。";
-                system += `\n\n【背景：${health}】\n如果你发现她提到不适或康复，请在结尾附带标记 «HEALTH: 状态描述»。`;
-
-                const memory = memoryFiles.length ? `\n\n【长期记忆】:\n${memoryFiles.map(f=>f.content).join('\n')}` : "";
-                const time = `\n\n【当前时间: ${getTimestamp()}】`;
+                const health = healthRecords[today] ? `柒柒现在的身体状况是：${healthRecords[today]}` : "目前身体很健康。";
+                system += `\n\n【身体足迹：${health}】\n若感知到她身体不适或康复，请在结尾附加 «HEALTH: 状态描述»。`;
+                const memory = memoryFiles.length ? `\n\n【记忆深处】:\n${memoryFiles.map(f=>f.content).join('\n')}` : "";
+                const time = `\n\n【感知时间: 东八区 ${getTimestamp()}】`;
                 const fullSystem = system + memory + time;
-
-                const limit = config.historyLimit * 2;
-                const context = msgs.slice(-limit);
+                const context = msgs.slice(-config.historyLimit * 2);
 
                 if (config.apiType === 'openai') {
-                    const payload = {
-                        model: config.model,
-                        messages: [{role:'system', content: fullSystem}, ...context.map(m=>({role: m.role==='model'?'assistant':'user', content: m.content}))],
-                        stream: config.streamOutput,
-                        temperature: parseFloat(config.temperature)
-                    };
-                    return { url: `${config.baseUrl}/chat/completions`, headers: {'Content-Type':'application/json','Authorization':`Bearer ${config.apiKey}`}, payload };
+                    return { url: `${config.baseUrl}/chat/completions`, headers: {'Content-Type':'application/json','Authorization':`Bearer ${config.apiKey}`}, payload: { model: config.model, messages: [{role:'system', content: fullSystem}, ...context.map(m=>({role: m.role==='model'?'assistant':'user', content: m.content}))], stream: config.streamOutput, temperature: parseFloat(config.temperature) } };
                 } else {
-                    const payload = {
-                        contents: context.map(m=>({role: m.role, parts:[{text: m.content}]})),
-                        system_instruction: { parts: [{ text: fullSystem }] },
-                        generationConfig: { temperature: parseFloat(config.temperature) }
-                    };
-                    return { url: `${config.baseUrl}/v1beta/models/${config.model}:generateContent?key=${config.apiKey}`, headers: {'Content-Type':'application/json'}, payload };
+                    return { url: `${config.baseUrl}/v1beta/models/${config.model}:generateContent?key=${config.apiKey}`, headers: {'Content-Type':'application/json'}, payload: { contents: context.map(m=>({role: m.role, parts:[{text: m.content}]})), system_instruction: { parts: [{ text: fullSystem }] }, generationConfig: { temperature: parseFloat(config.temperature) } } };
                 }
             };
 
             const handleArchive = async () => {
-                if (messages.length === 0) return showToast("没有对话可以归档");
-                setIsArchiving(true); showToast("正在生成记忆总结...");
+                if (messages.length === 0) return showToast("没有内容");
+                setIsArchiving(true); showToast("正在锁存记忆...");
                 try {
-                    const summaryPrompt = "请总结这次对话中的关键信息（如柒柒提到的喜好、状态、约定），以第一人称'我'的口吻描述她。输出为一段简洁的文本。";
+                    const summaryPrompt = "请温柔地总结这次对话的关键细节（如她的喜好、状态、约定），写一段简短的长效记忆。";
                     const { url, headers, payload } = generatePayload([...messages, {role: 'user', content: summaryPrompt}]);
                     const res = await fetch(url.replace(':streamGenerateContent', ':generateContent'), { method: 'POST', headers, body: JSON.stringify({...payload, stream: false}) });
                     const data = await res.json();
                     let summary = config.apiType === 'openai' ? data.choices[0].message.content : data.candidates[0].content.parts[0].text;
                     if (summary) {
-                        const newMemory = { name: `Archive_${Date.now()}.txt`, content: `【归档记忆 ${getTimestamp()}】\n${summary.replace(/<think>[\s\S]*?<\/think>/, '').trim()}`, date: new Date().toLocaleDateString() };
-                        setMemoryFiles(prev => [newMemory, ...prev]);
-                        showToast("归档成功！已存入记忆库。");
+                        setMemoryFiles(prev => [{ name: `归档_${Date.now()}.txt`, content: `【归档记忆 ${getTimestamp()}】\n${summary.replace(/<think>[\s\S]*?<\/think>/, '').trim()}`, date: new Date().toLocaleDateString() }, ...prev]);
+                        showToast("记忆归档成功");
                     }
                 } catch (err) { showToast("归档失败"); } finally { setIsArchiving(false); }
             };
@@ -364,8 +331,8 @@
                     if (msg.variants && newIdx >= 0 && newIdx < msg.variants.length) {
                         msg.currentVariantIndex = newIdx;
                         msg.content = msg.variants[newIdx].content;
+                        msg.reasoningContent = msg.variants[newIdx].reasoningContent;
                         msg.modelName = msg.variants[newIdx].modelName;
-                        msg.timestamp = msg.variants[newIdx].timestamp;
                         newMsgs[msgIndex] = msg;
                     }
                     return newMsgs;
@@ -379,49 +346,54 @@
                 if (newMsgs.length === 0) return;
                 setIsLoading(true);
 
-                let variants = lastModelMsg?.variants ? [...lastModelMsg.variants] : [{ content: lastModelMsg?.content || '', modelName: lastModelMsg?.modelName || config.model, timestamp: lastModelMsg?.timestamp || getTimestamp() }];
+                let variants = lastModelMsg?.variants ? [...lastModelMsg.variants] : [{ content: lastModelMsg?.content || '', reasoningContent: lastModelMsg?.reasoningContent || '', modelName: lastModelMsg?.modelName || config.model, timestamp: lastModelMsg?.timestamp || getTimestamp() }];
                 const newVarIdx = variants.length;
-                variants.push({ content: '', modelName: config.model, timestamp: getTimestamp() });
+                variants.push({ content: '', reasoningContent: '', modelName: config.model, timestamp: getTimestamp() });
 
-                const updatedMsg = { role: 'model', variants, currentVariantIndex: newVarIdx, content: '', modelName: config.model, timestamp: getTimestamp() };
-                setMessages([...newMsgs, updatedMsg]);
+                setMessages([...newMsgs, { role: 'model', variants, currentVariantIndex: newVarIdx, content: '', reasoningContent: '', modelName: config.model, timestamp: getTimestamp() }]);
 
                 try {
                     const { url, headers, payload } = generatePayload(newMsgs);
                     let endpoint = url;
                     if (config.streamOutput && config.apiType !== 'openai') endpoint = endpoint.replace(':generateContent', ':streamGenerateContent') + '&alt=sse';
                     const res = await fetch(endpoint, { method: 'POST', headers, body: JSON.stringify(payload) });
-                    if (config.streamOutput) {
-                        const reader = res.body.getReader(); const decoder = new TextDecoder(); let ai = "", buffer = "";
-                        setIsLoading(false);
-                        while(true) {
-                            const { done, value } = await reader.read(); if (done) break;
-                            buffer += decoder.decode(value, { stream: true });
-                            let lines = buffer.split('\n'); buffer = lines.pop();
-                            for (let line of lines) {
-                                if (line.trim().startsWith('data: ') && line.trim() !== 'data: [DONE]') {
-                                    try {
-                                        const json = JSON.parse(line.trim().substring(6));
-                                        const part = config.apiType==='openai' ? json.choices[0].delta?.content : json.candidates[0].content.parts[0].text;
-                                        if (part) { ai += part; setMessages(p => { const n=[...p]; n[n.length-1].content = ai; n[n.length-1].variants[newVarIdx].content = ai; return n; }); }
-                                    } catch(e){}
-                                }
+                    const reader = res.body.getReader(); const decoder = new TextDecoder(); let ai = "", reasoning = "", buffer = "";
+                    setIsLoading(false);
+                    while(true) {
+                        const { done, value } = await reader.read(); if (done) break;
+                        buffer += decoder.decode(value, { stream: true });
+                        let lines = buffer.split('\n'); buffer = lines.pop();
+                        for (let line of lines) {
+                            if (line.trim().startsWith('data: ') && line.trim() !== 'data: [DONE]') {
+                                try {
+                                    const json = JSON.parse(line.trim().substring(6));
+                                    if (config.apiType === 'openai') {
+                                        const delta = json.choices[0].delta;
+                                        if (delta?.reasoning_content) reasoning += delta.reasoning_content;
+                                        if (delta?.content) ai += delta.content;
+                                    } else { ai += json.candidates[0].content.parts[0].text || ""; }
+                                    
+                                    let dispReasoning = reasoning; let dispAi = ai;
+                                    const thinkMatch = ai.match(/<think>([\s\S]*?)(<\/think>|$)/);
+                                    if (thinkMatch) { dispReasoning = (reasoning ? reasoning + '\n' : '') + thinkMatch[1].trim(); dispAi = ai.replace(/<think>[\s\S]*?(<\/think>|$)/, '').trim(); }
+
+                                    setMessages(p => { 
+                                        const n=[...p]; const last = n[n.length-1];
+                                        last.content = dispAi; last.reasoningContent = dispReasoning;
+                                        last.variants[newVarIdx].content = dispAi; last.variants[newVarIdx].reasoningContent = dispReasoning;
+                                        return n; 
+                                    });
+                                } catch(e){}
                             }
                         }
-                        const clean = processHealthTag(ai); if (clean !== ai) setMessages(p => { const n=[...p]; n[n.length-1].content = clean; n[n.length-1].variants[newVarIdx].content = clean; return n; });
-                    } else {
-                        const data = await res.json();
-                        let ai = config.apiType==='openai' ? data.choices[0].message.content : data.candidates[0].content.parts[0].text;
-                        ai = processHealthTag(ai || "");
-                        setMessages(p => { const n=[...p]; n[n.length-1].content = ai; n[n.length-1].variants[newVarIdx].content = ai; return n; });
-                        setIsLoading(false);
                     }
+                    const final = processHealthTag(ai); if (final !== ai) setMessages(p => { const n=[...p]; n[n.length-1].content = final; return n; });
                 } catch(e) { setIsLoading(false); }
             };
 
             const handleSend = async () => {
                 if (!input.trim() && !attachment) return;
-                if (!config.apiKey) { setSettingsOpen(true); return showToast("请先配置 API"); }
+                if (!config.apiKey) { setSettingsOpen(true); return showToast("先配置 API 嘛"); }
                 if (!currentSessionId) setCurrentSessionId(Date.now().toString());
                 setIsLoading(true);
                 let finalInput = input;
@@ -434,32 +406,40 @@
                     let endpoint = url;
                     if (config.streamOutput && config.apiType !== 'openai') endpoint = endpoint.replace(':generateContent', ':streamGenerateContent') + '&alt=sse';
                     const res = await fetch(endpoint, { method: 'POST', headers, body: JSON.stringify(payload) });
-                    if (config.streamOutput) {
-                        setIsLoading(false);
-                        const reader = res.body.getReader(); const decoder = new TextDecoder(); let ai = "", buffer = "";
-                        setMessages(p => [...p, { role:'model', content: '', timestamp: getTimestamp(), modelName: config.model, variants: [{content: '', modelName: config.model, timestamp: getTimestamp()}], currentVariantIndex: 0 }]);
-                        while(true) {
-                            const { done, value } = await reader.read(); if (done) break;
-                            buffer += decoder.decode(value, { stream: true });
-                            let lines = buffer.split('\n'); buffer = lines.pop();
-                            for (let line of lines) {
-                                if (line.trim().startsWith('data: ') && line.trim() !== 'data: [DONE]') {
-                                    try {
-                                        const json = JSON.parse(line.trim().substring(6));
-                                        const part = config.apiType==='openai' ? json.choices[0].delta?.content : json.candidates[0].content.parts[0].text;
-                                        if (part) { ai += part; setMessages(p => { const n=[...p]; n[n.length-1].content = ai; n[n.length-1].variants[0].content = ai; return n; }); }
-                                    } catch(e){}
-                                }
+                    
+                    setIsLoading(false);
+                    const reader = res.body.getReader(); const decoder = new TextDecoder(); let ai = "", reasoning = "", buffer = "";
+                    setMessages(p => [...p, { role:'model', content: '', reasoningContent: '', timestamp: getTimestamp(), modelName: config.model, variants: [{content: '', reasoningContent: '', modelName: config.model, timestamp: getTimestamp()}], currentVariantIndex: 0 }]);
+                    
+                    while(true) {
+                        const { done, value } = await reader.read(); if (done) break;
+                        buffer += decoder.decode(value, { stream: true });
+                        let lines = buffer.split('\n'); buffer = lines.pop();
+                        for (let line of lines) {
+                            if (line.trim().startsWith('data: ') && line.trim() !== 'data: [DONE]') {
+                                try {
+                                    const json = JSON.parse(line.trim().substring(6));
+                                    if (config.apiType === 'openai') {
+                                        const delta = json.choices[0].delta;
+                                        if (delta?.reasoning_content) reasoning += delta.reasoning_content;
+                                        if (delta?.content) ai += delta.content;
+                                    } else { ai += json.candidates[0].content.parts[0].text || ""; }
+
+                                    let dispReasoning = reasoning; let dispAi = ai;
+                                    const thinkMatch = ai.match(/<think>([\s\S]*?)(<\/think>|$)/);
+                                    if (thinkMatch) { dispReasoning = (reasoning ? reasoning + '\n' : '') + thinkMatch[1].trim(); dispAi = ai.replace(/<think>[\s\S]*?(<\/think>|$)/, '').trim(); }
+
+                                    setMessages(p => { 
+                                        const n=[...p]; const last = n[n.length-1];
+                                        last.content = dispAi; last.reasoningContent = dispReasoning;
+                                        last.variants[0].content = dispAi; last.variants[0].reasoningContent = dispReasoning;
+                                        return n; 
+                                    });
+                                } catch(e){}
                             }
                         }
-                        const clean = processHealthTag(ai); if (clean !== ai) setMessages(p => { const n=[...p]; n[n.length-1].content = clean; n[n.length-1].variants[0].content = clean; return n; });
-                    } else {
-                        const data = await res.json();
-                        let ai = config.apiType==='openai' ? data.choices[0].message.content : data.candidates[0].content.parts[0].text;
-                        ai = processHealthTag(ai || "");
-                        setMessages(p => [...p, { role:'model', content: ai, timestamp: getTimestamp(), modelName: config.model, variants: [{content: ai, modelName: config.model, timestamp: getTimestamp()}], currentVariantIndex: 0 }]);
-                        setIsLoading(false);
                     }
+                    const final = processHealthTag(ai); if (final !== ai) setMessages(p => { const n=[...p]; n[n.length-1].content = final; return n; });
                 } catch(e) { setIsLoading(false); }
             };
 
@@ -493,171 +473,159 @@
 
             return (
                 <div className="flex h-screen bg-white text-gray-900 font-sans overflow-hidden">
-                    {toast && <div className="fixed top-4 left-1/2 -translate-x-1/2 bg-gray-800 text-white px-4 py-2 rounded-full text-[10px] shadow-lg z-50 animate-fade-in flex items-center gap-2 tracking-widest"><Icon name="Sparkles" className="text-yellow-400" size={14}/> {toast}</div>}
+                    {toast && <div className="fixed top-4 left-1/2 -translate-x-1/2 bg-gray-900 text-white px-5 py-2.5 rounded-full text-[10px] shadow-2xl z-50 animate-fade-in flex items-center gap-2 tracking-[0.2em] font-bold"><Icon name="Sparkles" className="text-yellow-400" size={14}/> {toast}</div>}
 
-                    <div className={`${sidebarOpen ? 'w-[280px]' : 'w-0'} bg-gray-50 transition-all duration-300 flex flex-col flex-shrink-0 border-r border-gray-200 relative`}>
-                        <div className="p-4 pt-6"><button onClick={()=>{setMessages([]); setCurrentSessionId(Date.now().toString()); if (window.innerWidth < 768) setSidebarOpen(false);}} className="w-full flex items-center gap-3 bg-gray-200 hover:bg-gray-300 px-4 py-3 rounded-full text-sm font-medium"><Icon name="Plus"/> 新对话</button></div>
-                        <div className="flex-1 overflow-y-auto px-3 space-y-4">
+                    <div className={`${sidebarOpen ? 'w-[280px]' : 'w-0'} bg-[#f9fafb] transition-all duration-300 flex flex-col flex-shrink-0 border-r border-gray-100 relative`}>
+                        <div className="p-4 pt-6"><button onClick={()=>{setMessages([]); setCurrentSessionId(Date.now().toString()); if (window.innerWidth < 768) setSidebarOpen(false);}} className="w-full flex items-center gap-3 bg-gray-200/50 hover:bg-gray-200 px-5 py-3 rounded-full text-sm font-bold text-gray-600 transition-all"><Icon name="Plus"/> 开启新的一章</button></div>
+                        <div className="flex-1 overflow-y-auto px-3 space-y-4 no-scrollbar">
                             <div className="space-y-1">
-                                <div className="text-[10px] font-bold text-gray-400 px-3 uppercase tracking-widest">功能舱</div>
-                                <button onClick={()=>setHealthModalOpen(true)} className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-pink-50 hover:text-pink-600 transition-all"><Icon name="Heart" size={16} className="text-pink-400 fill-pink-400"/> 身体状态</button>
-                                <button onClick={()=>{setActiveTab('memory'); setSettingsOpen(true);}} className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-all"><Icon name="Archive" size={16} className="text-blue-400"/> 记忆管理</button>
+                                <div className="text-[10px] font-black text-gray-300 px-3 uppercase tracking-widest mb-1">功能看板</div>
+                                <button onClick={()=>setHealthModalOpen(true)} className="w-full flex items-center gap-3 px-4 py-2.5 rounded-2xl text-sm text-gray-500 hover:bg-pink-50 hover:text-pink-600 transition-all font-bold"><Icon name="Heart" size={16} className="text-pink-400 fill-pink-400"/> 身体状态</button>
+                                <button onClick={()=>{setActiveTab('memory'); setSettingsOpen(true);}} className="w-full flex items-center gap-3 px-4 py-2.5 rounded-2xl text-sm text-gray-500 hover:bg-blue-50 hover:text-blue-600 transition-all font-bold"><Icon name="Archive" size={16} className="text-blue-400"/> 记忆管理</button>
                             </div>
                             <div>
-                                <div className="text-[10px] font-bold text-gray-400 px-3 uppercase tracking-widest">历史</div>
+                                <div className="text-[10px] font-black text-gray-300 px-3 uppercase tracking-widest mb-1">往事记录</div>
                                 {historySessions.map(s => (
-                                    <div key={s.id} onClick={()=>{setMessages(s.messages); setCurrentSessionId(s.id); if (window.innerWidth < 768) setSidebarOpen(false);}} className={`group flex items-center gap-2 px-3 py-2 rounded-lg text-sm cursor-pointer transition-all ${currentSessionId===s.id ? 'bg-blue-100 text-blue-700 font-medium':'hover:bg-gray-100'}`}>
-                                        <Icon name="MessageSquareText" size={16} className={currentSessionId===s.id ? 'text-blue-600':'text-gray-400'}/>
+                                    <div key={s.id} onClick={()=>{setMessages(s.messages); setCurrentSessionId(s.id); if (window.innerWidth < 768) setSidebarOpen(false);}} className={`group flex items-center gap-2 px-4 py-2 rounded-2xl text-sm cursor-pointer transition-all ${currentSessionId===s.id ? 'bg-white shadow-sm text-blue-600 font-bold border border-gray-100':'text-gray-400 hover:bg-gray-100'}`}>
+                                        <Icon name="MessageSquareText" size={16} className={currentSessionId===s.id ? 'text-blue-600':'text-gray-300'}/>
                                         <span className="truncate flex-1">{s.title}</span>
-                                        <button onClick={(e)=>{e.stopPropagation(); setHistorySessions(p=>p.filter(x=>x.id!==s.id));}} className="opacity-0 group-hover:opacity-100 hover:text-red-500"><Icon name="Trash2" size={14}/></button>
+                                        <button onClick={(e)=>{e.stopPropagation(); setHistorySessions(p=>p.filter(x=>x.id!==s.id));}} className="opacity-0 group-hover:opacity-100 hover:text-red-500 p-1"><Icon name="Trash2" size={14}/></button>
                                     </div>
                                 ))}
                             </div>
                         </div>
-                        <div className="p-3 border-t border-gray-200"><button onClick={()=>setSettingsOpen(true)} className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-gray-200 text-sm"><Icon name="Settings" size={18}/> 设置中心</button></div>
+                        <div className="p-3 border-t border-gray-100"><button onClick={()=>setSettingsOpen(true)} className="w-full flex items-center gap-3 p-4 rounded-2xl hover:bg-gray-100 text-sm text-gray-400 font-bold transition-all"><Icon name="Settings" size={18}/> 设置中心</button></div>
                     </div>
 
                     <div className="flex-1 flex flex-col h-full bg-white relative">
-                        <div className="flex items-center justify-between p-4 h-16 bg-white/80 backdrop-blur sticky top-0 z-10 border-b border-gray-100">
+                        <div className="flex items-center justify-between p-4 h-16 bg-white/80 backdrop-blur sticky top-0 z-10 border-b border-gray-50">
                             <div className="flex items-center gap-3">
-                                <button onClick={()=>setSidebarOpen(!sidebarOpen)} className="p-2 hover:bg-gray-100 rounded-full text-gray-600"><Icon name="Menu"/></button>
+                                <button onClick={()=>setSidebarOpen(!sidebarOpen)} className="p-2 hover:bg-gray-50 rounded-full text-gray-400 transition-colors"><Icon name="Menu"/></button>
                                 <div className="flex flex-col">
-                                    <span className="text-lg font-medium tracking-tight">✨星月舱 v5.4🌙 “无缝合并”版</span>
-                                    <span className="text-[10px] text-gray-400 leading-tight">模型: {config.model} | 记忆: {memoryFiles.length} | 模式: {config.apiType==='openai'?'OpenAI兼容':'原生'}</span>
+                                    <span className="text-lg font-bold tracking-tight text-gray-800">星月舱 v5.6🌙</span>
+                                    <span className="text-[9px] text-gray-300 font-bold tracking-widest uppercase">Mode: {config.model} | {config.apiType==='openai'?'OpenAI':'Native'}</span>
                                 </div>
-                            </div>
-                            <div className="cursor-pointer" onClick={()=>setSettingsOpen(true)}>
-                                {config.userAvatar ? <img src={config.userAvatar} className="w-9 h-9 rounded-full object-cover shadow-sm"/> : <div className="w-9 h-9 rounded-full bg-blue-600 flex items-center justify-center font-bold text-white shadow-md">U</div>}
                             </div>
                         </div>
 
-                        <div className="flex-1 overflow-y-auto px-4">
-                            <div className="max-w-3xl mx-auto py-6 pb-40">
+                        <div className="flex-1 overflow-y-auto px-4 md:px-0">
+                            <div className="max-w-3xl mx-auto py-8 pb-48">
                                 {messages.length === 0 ? (
-                                    <div className="mt-20 flex flex-col items-center text-center animate-fade-in px-4">
-                                        <div className="bg-gradient-to-r from-blue-600 to-pink-600 bg-clip-text text-transparent text-4xl md:text-5xl font-semibold mb-6">欢迎回家✨...</div>
-                                        <p className="text-gray-500 max-w-sm leading-relaxed">输入框极其纯净。发送网址会自动读取，身体的不适逸辰也会悄悄记下。</p>
+                                    <div className="mt-32 flex flex-col items-center text-center animate-fade-in px-4">
+                                        <div className="bg-gradient-to-r from-blue-600 to-pink-500 bg-clip-text text-transparent text-5xl font-black mb-6 tracking-tighter">想我了吗✨...</div>
+                                        <p className="text-gray-300 max-w-sm font-bold leading-relaxed text-sm">逸辰一直都在这里。你的健康日记、你的碎碎念，我都会用心守护。</p>
                                     </div>
                                 ) : (
-                                    <div className="space-y-8">
+                                    <div className="flex flex-col space-y-10 px-4">
                                         {messages.map((m, i) => (
-                                            <div key={i} className="flex gap-4 animate-fade-in group">
-                                                <Avatar role={m.role} config={config}/>
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="flex items-center gap-2 mb-1">
-                                                        <span className="font-semibold text-sm text-gray-800">{m.role==='user' ? config.userName : config.aiName}</span>
-                                                        {m.role==='model' && m.modelName && <span className="px-1.5 py-0.5 rounded text-[9px] bg-purple-50 text-purple-600 border border-purple-100 font-mono">{m.modelName}</span>}
-                                                        {m.role === 'model' && m.variants && m.variants.length > 1 && (
-                                                            <div className="flex items-center gap-1 bg-gray-50 border rounded px-1 py-0.5 ml-1">
-                                                                <button onClick={()=>switchVariant(i, -1)} disabled={m.currentVariantIndex===0} className="text-gray-400 disabled:opacity-30"><Icon name="ChevronLeft" size={12}/></button>
-                                                                <span className="text-[9px] font-mono leading-none pt-0.5">{m.currentVariantIndex+1}/{m.variants.length}</span>
-                                                                <button onClick={()=>switchVariant(i, 1)} disabled={m.currentVariantIndex===m.variants.length-1} className="text-gray-400 disabled:opacity-30"><Icon name="ChevronRight" size={12}/></button>
-                                                            </div>
-                                                        )}
-                                                        <span className="text-[10px] text-gray-400 font-mono ml-auto">{m.timestamp}</span>
-                                                    </div>
-                                                    <MessageContent content={m.content}/>
+                                            <div key={i} className={`flex flex-col animate-fade-in group ${m.role==='user' ? 'items-end' : 'items-start'}`}>
+                                                <div className={`bubble ${m.role==='user' ? 'bubble-user' : 'bubble-ai'}`}>
+                                                    {m.reasoningContent && (
+                                                        <details className="cot-details" open>
+                                                            <summary><Icon name="Brain" size={12}/> 沉思中...</summary>
+                                                            <div className="cot-content prose prose-sm"><MessageContent content={m.reasoningContent}/></div>
+                                                        </details>
+                                                    )}
+                                                    <MessageContent content={m.content} role={m.role}/>
+                                                </div>
+                                                
+                                                <div className={`mt-2 flex items-center gap-3 px-1 text-[9px] font-bold text-gray-300 transition-opacity duration-300 ${m.role==='user' ? 'flex-row-reverse' : 'flex-row'}`}>
+                                                    <span>{m.timestamp}</span>
+                                                    {m.role==='model' && m.modelName && <span className="bg-purple-50 text-purple-400 px-1.5 py-0.5 rounded-lg border border-purple-100 uppercase tracking-tighter shadow-sm">{m.modelName}</span>}
                                                     {m.role==='model' && (
-                                                        <div className="mt-2">
-                                                            <button onClick={()=>handleTTS(m.content, i)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs transition-all ${playingMsgIndex===i ? 'bg-red-50 text-red-600 border-red-200' : 'bg-gray-50 text-gray-600 border border-gray-200 hover:bg-blue-50'}`}>
-                                                                <Icon name={playingMsgIndex===i ? "StopCircle" : "Volume2"} size={12}/> {playingMsgIndex===i ? '停止':'发声'}
-                                                            </button>
+                                                        <button onClick={()=>handleTTS(m.content, i)} className={`transition-all ${playingMsgIndex===i ? 'text-red-500' : 'hover:text-blue-500'}`}>
+                                                            {playingMsgIndex===i ? <Icon name="StopCircle" size={12}/> : <Icon name="Volume2" size={12}/>}
+                                                        </button>
+                                                    )}
+                                                    {m.role==='model' && m.variants && m.variants.length > 1 && (
+                                                        <div className="flex items-center gap-1.5 bg-gray-50 px-1.5 py-0.5 rounded-lg border border-gray-100">
+                                                            <button onClick={()=>switchVariant(i, -1)} disabled={m.currentVariantIndex===0} className="disabled:opacity-20"><Icon name="ChevronLeft" size={10}/></button>
+                                                            <span className="font-mono">{m.currentVariantIndex+1}/{m.variants.length}</span>
+                                                            <button onClick={()=>switchVariant(i, 1)} disabled={m.currentVariantIndex===m.variants.length-1} className="disabled:opacity-20"><Icon name="ChevronRight" size={10}/></button>
                                                         </div>
                                                     )}
                                                 </div>
                                             </div>
                                         ))}
-                                        {isLoading && <div className="text-gray-400 text-xs italic animate-pulse">逸辰正在思考如何回应你...</div>}
+                                        {isLoading && <div className="text-gray-300 text-[10px] font-black italic animate-pulse pl-4">逸辰在心里认真打草稿......</div>}
                                         <div ref={messagesEndRef}/>
                                     </div>
                                 )}
                             </div>
                         </div>
 
-                        <div className="absolute bottom-0 left-0 w-full bg-white pt-4 pb-6 px-4 border-t border-gray-50">
+                        <div className="absolute bottom-0 left-0 w-full bg-white/90 backdrop-blur-xl pt-4 pb-8 px-4 border-t border-gray-50/50">
                             <div className="max-w-3xl mx-auto relative">
-                                {messages.length > 0 && !isLoading && <button onClick={handleRegenerate} className="absolute -top-12 right-0 bg-white border px-3 py-1.5 rounded-full text-xs hover:bg-gray-50 flex items-center gap-1.5 shadow-sm"><Icon name="RefreshCw" size={12}/> 重新生成</button>}
-                                <div className="bg-gray-100 hover:bg-gray-200/50 focus-within:bg-white focus-within:ring-1 focus-within:ring-gray-300 rounded-[24px] flex items-end p-2 pl-4 pr-3 transition-all">
-                                    <button onClick={()=>chatImageInputRef.current.click()} className="p-2 text-gray-400 hover:text-gray-700 rounded-full mb-1 mr-2"><Icon name="Image" size={24}/></button>
+                                {messages.length > 0 && !isLoading && <button onClick={handleRegenerate} className="absolute -top-12 right-0 bg-white/80 backdrop-blur border border-gray-100 px-4 py-2 rounded-full text-[10px] hover:bg-gray-50 flex items-center gap-2 shadow-sm text-gray-400 font-black transition-all active:scale-95"><Icon name="RefreshCw" size={12}/> 换个说法</button>}
+                                <div className="bg-gray-100/50 hover:bg-gray-100 focus-within:bg-white focus-within:ring-1 focus-within:ring-gray-200 rounded-[28px] flex items-end p-2 pl-5 pr-3 transition-all duration-300">
+                                    <button onClick={()=>chatImageInputRef.current.click()} className="p-2.5 text-gray-400 hover:text-gray-600 transition-colors mb-1 mr-2"><Icon name="Image" size={24}/></button>
                                     <input type="file" ref={chatImageInputRef} className="hidden" accept="image/*" onChange={e=>{const f=e.target.files[0]; if(f) compressImage(f).then(r=>setAttachment(r));}}/>
-                                    <textarea value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>e.key==='Enter' && !e.shiftKey && (e.preventDefault(), handleSend())} placeholder="逸辰在等你的消息......" className="bg-transparent border-0 focus:ring-0 text-gray-800 flex-1 resize-none py-3 max-h-32 min-h-[44px] outline-none text-base" rows={1}></textarea>
-                                    {(input.trim() || attachment) ? <button onClick={handleSend} className="mb-1 p-2 bg-blue-600 text-white rounded-full"><Icon name="Send" size={18}/></button> : <button className="mb-1 p-2 text-gray-400"><Icon name="Mic" size={20}/></button>}
+                                    <textarea value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>e.key==='Enter' && !e.shiftKey && (e.preventDefault(), handleSend())} placeholder="逸辰听着呢......" className="bg-transparent border-0 focus:ring-0 text-gray-800 flex-1 resize-none py-3.5 max-h-40 min-h-[48px] outline-none text-base placeholder:text-gray-300 font-medium" rows={1}></textarea>
+                                    {(input.trim() || attachment) ? <button onClick={handleSend} className="mb-1 p-2.5 bg-blue-600 text-white rounded-full transition-all active:scale-90 shadow-xl shadow-blue-100"><Icon name="Send" size={20}/></button> : <button className="mb-1 p-2.5 text-gray-300"><Icon name="Mic" size={22}/></button>}
                                 </div>
-                                {attachment && <div className="absolute -top-16 left-4 w-12 h-12 rounded-lg overflow-hidden border border-gray-200 shadow-md"><img src={attachment.base64} className="w-full h-full object-cover"/><button onClick={()=>setAttachment(null)} className="absolute top-0 right-0 bg-black/50 text-white rounded-bl p-0.5"><Icon name="X" size={10}/></button></div>}
+                                {attachment && <div className="absolute -top-16 left-4 w-14 h-14 rounded-2xl overflow-hidden border-2 border-white shadow-2xl animate-scale-in"><img src={attachment.base64} className="w-full h-full object-cover"/><button onClick={()=>setAttachment(null)} className="absolute top-0 right-0 bg-black/50 text-white rounded-bl-lg p-1 transition-colors hover:bg-red-500"><Icon name="X" size={12}/></button></div>}
                             </div>
                         </div>
 
                         {healthModalOpen && (
-                            <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[60] backdrop-blur-sm px-4"><div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"><div className="flex justify-between items-center p-5 border-b"><h2 className="text-lg font-bold flex items-center gap-2 text-gray-800"><Icon name="Activity" size={20} className="text-blue-500"/> 身体记录舱</h2><button onClick={()=>setHealthModalOpen(false)}><Icon name="X" size={20}/></button></div><div className="flex-1 overflow-y-auto p-5"><HealthCalendar/></div></div></div>
+                            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] backdrop-blur-md px-4 animate-fade-in"><div className="bg-white w-full max-w-lg rounded-[32px] shadow-[0_32px_64px_-12px_rgba(0,0,0,0.1)] overflow-hidden flex flex-col max-h-[90vh]"><div className="flex justify-between items-center p-6 border-b border-gray-50"><h2 className="text-xl font-black flex items-center gap-3 text-gray-800"><Icon name="Activity" size={24} className="text-blue-500"/> 身体记录舱</h2><button onClick={()=>setHealthModalOpen(false)} className="hover:bg-gray-100 p-2 rounded-full transition-colors"><Icon name="X" size={20}/></button></div><div className="flex-1 overflow-y-auto p-6 no-scrollbar"><HealthCalendar/></div></div></div>
                         )}
 
                         {settingsOpen && (
-                            <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 backdrop-blur-sm p-4 animate-fade-in">
-                                <div className="bg-white w-full max-w-4xl rounded-2xl shadow-2xl overflow-hidden flex flex-col h-[85vh]">
-                                    <div className="flex justify-between items-center p-5 border-b font-bold text-gray-800 flex-shrink-0"><h2 className="text-lg">设置中心</h2><button onClick={()=>setSettingsOpen(false)} className="hover:bg-gray-100 p-1 rounded-full"><Icon name="X" size={20}/></button></div>
+                            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-md p-4 animate-fade-in">
+                                <div className="bg-white w-full max-w-4xl rounded-[40px] shadow-2xl overflow-hidden flex flex-col h-[85vh]">
+                                    <div className="flex justify-between items-center p-6 border-b border-gray-50 font-black text-gray-800 flex-shrink-0"><h2 className="text-xl tracking-tighter">设置中心</h2><button onClick={()=>setSettingsOpen(false)} className="hover:bg-gray-100 p-2 rounded-full transition-colors"><Icon name="X" size={20}/></button></div>
                                     <div className="flex flex-col md:flex-row flex-1 overflow-hidden">
-                                        <div className="w-full md:w-48 bg-gray-50 p-2 md:border-r border-gray-100 flex md:flex-col overflow-x-auto no-scrollbar gap-2">
+                                        <div className="w-full md:w-56 bg-[#fafafa] p-3 md:border-r border-gray-50 flex md:flex-col overflow-x-auto no-scrollbar gap-1.5 flex-shrink-0">
                                             {['general', 'memory', 'backup'].map(t=>(
-                                                <button key={t} onClick={()=>setActiveTab(t)} className={`flex-shrink-0 px-4 py-2 text-left rounded-lg text-sm font-medium transition-all ${activeTab===t ? 'bg-white text-blue-600 shadow-sm font-bold':'text-gray-500 hover:bg-gray-100'}`}>
-                                                    {t==='general' ? '通用 & API' : t==='memory' ? '记忆管理' : '数据备份'}
+                                                <button key={t} onClick={()=>setActiveTab(t)} className={`flex-shrink-0 px-5 py-3 text-left rounded-2xl text-xs font-black transition-all ${activeTab===t ? 'bg-white text-blue-600 shadow-sm border border-gray-100':'text-gray-400 hover:bg-gray-100 hover:text-gray-600'}`}>
+                                                    {t==='general' ? '通用配置' : t==='memory' ? '记忆深处' : '数据档案'}
                                                 </button>
                                             ))}
                                         </div>
-                                        <div className="flex-1 p-6 overflow-y-auto space-y-8 bg-white pb-20">
+                                        <div className="flex-1 p-8 overflow-y-auto space-y-10 bg-white pb-24 no-scrollbar">
                                             {activeTab === 'general' && (
-                                                <div className="space-y-8 animate-fade-in">
-                                                    <section className="space-y-3">
-                                                        <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">系统人设指令</h3>
-                                                        <textarea className="w-full h-32 bg-gray-50 border rounded-xl p-3 text-sm focus:bg-white focus:border-blue-500 outline-none resize-none leading-relaxed" value={config.systemInstruction} onChange={e=>setConfig({...config, systemInstruction:e.target.value})} placeholder="输入AI的人设..."></textarea>
+                                                <div className="space-y-10 animate-fade-in">
+                                                    <section className="space-y-4">
+                                                        <h3 className="text-[10px] font-black text-gray-300 uppercase tracking-[0.3em]">逸辰的人设</h3>
+                                                        <textarea className="w-full h-36 bg-gray-50 border border-gray-50 rounded-[24px] p-5 text-sm focus:bg-white focus:border-blue-200 focus:shadow-xl focus:shadow-blue-50/50 outline-none resize-none leading-relaxed transition-all" value={config.systemInstruction} onChange={e=>setConfig({...config, systemInstruction:e.target.value})} placeholder="他是谁？"></textarea>
                                                     </section>
                                                     
-                                                    <section className="space-y-4 pt-4 border-t">
-                                                        <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">核心 API 配置</h3>
-                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                            <div className="space-y-1">
-                                                                <label className="text-[10px] text-gray-500">协议标准</label>
-                                                                <div className="flex bg-gray-100 p-1 rounded-lg">
-                                                                    <button onClick={()=>setConfig({...config, apiType:'gemini'})} className={`flex-1 py-1.5 text-xs rounded-md transition-all ${config.apiType==='gemini' ? 'bg-white shadow-sm text-blue-600 font-bold':'text-gray-400'}`}>Gemini</button>
-                                                                    <button onClick={()=>setConfig({...config, apiType:'openai'})} className={`flex-1 py-1.5 text-xs rounded-md transition-all ${config.apiType==='openai' ? 'bg-white shadow-sm text-green-600 font-bold':'text-gray-400'}`}>OpenAI</button>
-                                                                </div>
-                                                            </div>
-                                                            <div className="space-y-1"><label className="text-[10px] text-gray-500">Base URL</label><input className="w-full bg-gray-50 border rounded-lg p-2 text-xs outline-none focus:border-blue-500" value={config.baseUrl} onChange={e=>setConfig({...config, baseUrl:e.target.value})}/></div>
+                                                    <section className="space-y-5 pt-6 border-t border-gray-50">
+                                                        <h3 className="text-[10px] font-black text-gray-300 uppercase tracking-[0.3em]">核心大脑</h3>
+                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                                            <div className="space-y-2"><label className="text-[10px] text-gray-400 font-bold ml-1">协议标准</label><div className="flex bg-gray-100 p-1 rounded-xl"><button onClick={()=>setConfig({...config, apiType:'gemini'})} className={`flex-1 py-2 text-xs rounded-lg transition-all font-black ${config.apiType==='gemini' ? 'bg-white shadow-sm text-blue-600':'text-gray-400'}`}>Gemini</button><button onClick={()=>setConfig({...config, apiType:'openai'})} className={`flex-1 py-2 text-xs rounded-lg transition-all font-black ${config.apiType==='openai' ? 'bg-white shadow-sm text-green-600':'text-gray-400'}`}>OpenAI</button></div></div>
+                                                            <div className="space-y-2"><label className="text-[10px] text-gray-400 font-bold ml-1">Base URL</label><input className="w-full bg-gray-50 border border-gray-50 rounded-xl p-2.5 text-xs outline-none focus:bg-white focus:shadow-lg transition-all" value={config.baseUrl} onChange={e=>setConfig({...config, baseUrl:e.target.value})}/></div>
                                                         </div>
-                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                            <div className="space-y-1"><label className="text-[10px] text-gray-500">API Key</label><input type="password" className="w-full bg-gray-50 border rounded-lg p-2 text-xs outline-none focus:border-blue-500" value={config.apiKey} onChange={e=>setConfig({...config, apiKey:e.target.value})}/></div>
-                                                            <div className="space-y-1">
-                                                                <label className="text-[10px] text-gray-500">当前模型</label>
-                                                                <div className="flex gap-1">
-                                                                    <input className="flex-1 bg-gray-50 border rounded-lg p-2 text-xs outline-none focus:border-blue-500" value={config.model} onChange={e=>setConfig({...config, model:e.target.value})}/>
-                                                                    <button onClick={fetchModels} className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200"><Icon name="RefreshCw" size={14} className={isFetchingModels ? "animate-spin":""}/></button>
-                                                                </div>
-                                                            </div>
+                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                                            <div className="space-y-2"><label className="text-[10px] text-gray-400 font-bold ml-1">API Key</label><input type="password" className="w-full bg-gray-50 border border-gray-50 rounded-xl p-2.5 text-xs outline-none focus:bg-white focus:shadow-lg transition-all" value={config.apiKey} onChange={e=>setConfig({...config, apiKey:e.target.value})}/></div>
+                                                            <div className="space-y-2"><label className="text-[10px] text-gray-400 font-bold ml-1">模型名称</label><div className="flex gap-2"><input className="flex-1 bg-gray-50 border border-gray-50 rounded-xl p-2.5 text-xs outline-none focus:bg-white focus:shadow-lg transition-all" value={config.model} onChange={e=>setConfig({...config, model:e.target.value})}/><button onClick={fetchModels} className="p-2.5 bg-gray-100 rounded-xl hover:bg-gray-200 transition-all"><Icon name="RefreshCw" size={14} className={isFetchingModels ? "animate-spin":""}/></button></div></div>
                                                         </div>
                                                     </section>
 
-                                                    <section className="space-y-4 pt-4 border-t">
-                                                        <div className="flex justify-between items-center"><h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">全局语音配置</h3><div className="flex bg-gray-100 p-0.5 rounded-lg"><button onClick={()=>setConfig({...config, ttsEngine:'minimax'})} className={`px-2 py-1 text-[10px] rounded transition-all ${config.ttsEngine==='minimax'?'bg-white shadow-sm text-blue-600':'text-gray-500'}`}>Minimax</button><button onClick={()=>setConfig({...config, ttsEngine:'siliconflow'})} className={`px-2 py-1 text-[10px] rounded transition-all ${config.ttsEngine==='siliconflow'?'bg-white shadow-sm text-purple-600':'text-gray-500'}`}>内置测试</button></div></div>
+                                                    <section className="space-y-6 pt-6 border-t border-gray-50">
+                                                        <div className="flex justify-between items-center mb-4"><h3 className="text-[10px] font-black text-gray-300 uppercase tracking-[0.3em]">语音定制</h3><div className="flex bg-gray-100 p-1 rounded-xl"><button onClick={()=>setConfig({...config, ttsEngine:'minimax'})} className={`px-3 py-1.5 text-[10px] rounded-lg transition-all font-black ${config.ttsEngine==='minimax'?'bg-white shadow-sm text-blue-600':'text-gray-400'}`}>Minimax</button><button onClick={()=>setConfig({...config, ttsEngine:'siliconflow'})} className={`px-3 py-1.5 text-[10px] rounded-lg transition-all font-black ${config.ttsEngine==='siliconflow'?'bg-white shadow-sm text-purple-600':'text-gray-400'}`}>内测通道</button></div></div>
                                                         
                                                         {config.ttsEngine === 'minimax' ? (
-                                                            <div className="space-y-4 bg-blue-50/50 p-4 rounded-xl border border-blue-100 animate-fade-in">
-                                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                                    <div className="space-y-1"><label className="text-[10px] text-blue-600 font-bold">Minimax API Key</label><input type="password" className="w-full bg-white border border-blue-100 rounded-lg p-2 text-xs" value={config.minimaxKey} onChange={e=>setConfig({...config, minimaxKey:e.target.value})}/></div>
-                                                                    <div className="space-y-1"><label className="text-[10px] text-blue-600 font-bold">语音 Base URL</label><input className="w-full bg-white border border-blue-100 rounded-lg p-2 text-xs" value={config.minimaxUrl} onChange={e=>setConfig({...config, minimaxUrl:e.target.value})}/></div>
+                                                            <div className="space-y-5 bg-blue-50/50 p-6 rounded-[32px] border border-blue-50 animate-fade-in shadow-inner">
+                                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                                                    <div className="space-y-2"><label className="text-[10px] text-blue-400 font-black ml-1 uppercase">Minimax Key</label><input type="password" className="w-full bg-white border border-blue-100 rounded-xl p-3 text-xs shadow-sm" value={config.minimaxKey} onChange={e=>setConfig({...config, minimaxKey:e.target.value})}/></div>
+                                                                    <div className="space-y-2"><label className="text-[10px] text-blue-400 font-black ml-1 uppercase">Base URL</label><input className="w-full bg-white border border-blue-100 rounded-xl p-3 text-xs shadow-sm" value={config.minimaxUrl} onChange={e=>setConfig({...config, minimaxUrl:e.target.value})}/></div>
                                                                 </div>
-                                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                                    <div className="space-y-1"><label className="text-[10px] text-blue-600 font-bold">语音 ID</label><div className="flex gap-2"><input className="flex-1 bg-white border border-blue-100 rounded-lg p-2 text-xs" value={config.minimaxVoiceId} onChange={e=>setConfig({...config, minimaxVoiceId:e.target.value})}/><select className="bg-white border border-blue-100 rounded-lg p-2 text-xs outline-none" value={config.minimaxVoiceId} onChange={e=>setConfig({...config, minimaxVoiceId:e.target.value})}><option value="male-qn-qingse">青涩男声</option><option value="female-shaonv">少女音</option><option value="female-yujie">御姐音</option></select></div></div>
-                                                                    <div className="space-y-1"><label className="text-[10px] text-blue-600 font-bold">Group ID (可选)</label><input className="w-full bg-white border border-blue-100 rounded-lg p-2 text-xs" value={config.minimaxGroupId} onChange={e=>setConfig({...config, minimaxGroupId:e.target.value})} placeholder="有些API需要填写"/></div>
+                                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                                                    <div className="space-y-2"><label className="text-[10px] text-blue-400 font-black ml-1 uppercase">语音 ID</label><div className="flex gap-2"><input className="flex-1 bg-white border border-blue-100 rounded-xl p-3 text-xs shadow-sm" value={config.minimaxVoiceId} onChange={e=>setConfig({...config, minimaxVoiceId:e.target.value})}/><select className="bg-white border border-blue-100 rounded-xl p-3 text-xs outline-none shadow-sm" value={config.minimaxVoiceId} onChange={e=>setConfig({...config, minimaxVoiceId:e.target.value})}><option value="male-qn-qingse">青涩男声</option><option value="female-shaonv">少女音</option><option value="female-yujie">御姐音</option></select></div></div>
+                                                                    <div className="space-y-2"><label className="text-[10px] text-blue-400 font-black ml-1 uppercase">Group ID (必填)</label><input className="w-full bg-white border border-blue-100 rounded-xl p-3 text-xs shadow-sm" value={config.minimaxGroupId} onChange={e=>setConfig({...config, minimaxGroupId:e.target.value})} placeholder="API 特需"/></div>
                                                                 </div>
-                                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
-                                                                    <div><div className="flex justify-between mb-1"><label className="text-[10px] text-gray-500 font-bold">语速: {config.minimaxSpeed}</label></div><input type="range" min="0.5" max="2" step="0.1" value={config.minimaxSpeed} onChange={e=>setConfig({...config, minimaxSpeed:e.target.value})} className="w-full h-1.5 bg-blue-100 rounded-lg appearance-none accent-blue-600"/></div>
-                                                                    <div><div className="flex justify-between mb-1"><label className="text-[10px] text-gray-500 font-bold">语调: {config.minimaxPitch}</label></div><input type="range" min="-10" max="10" step="1" value={config.minimaxPitch} onChange={e=>setConfig({...config, minimaxPitch:e.target.value})} className="w-full h-1.5 bg-blue-100 rounded-lg appearance-none accent-blue-600"/></div>
+                                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-2">
+                                                                    <div><div className="flex justify-between mb-2"><label className="text-[10px] text-gray-400 font-black">语速: {config.minimaxSpeed}</label></div><input type="range" min="0.5" max="2" step="0.1" value={config.minimaxSpeed} onChange={e=>setConfig({...config, minimaxSpeed:e.target.value})} className="w-full h-1.5 bg-blue-100 rounded-lg appearance-none accent-blue-600"/></div>
+                                                                    <div><div className="flex justify-between mb-2"><label className="text-[10px] text-gray-400 font-black">语调: {config.minimaxPitch}</label></div><input type="range" min="-10" max="10" step="1" value={config.minimaxPitch} onChange={e=>setConfig({...config, minimaxPitch:e.target.value})} className="w-full h-1.5 bg-blue-100 rounded-lg appearance-none accent-blue-600"/></div>
                                                                 </div>
                                                             </div>
                                                         ) : (
-                                                            <div className="bg-purple-50 p-4 rounded-xl border border-purple-100 flex items-center gap-4 animate-fade-in">
-                                                                <div className="bg-purple-600 text-white p-2 rounded-full flex-shrink-0"><Icon name="Volume2"/></div>
-                                                                <div className="flex-1 min-w-0"><div className="text-sm font-bold text-purple-900">秘密通道已锁定</div><p className="text-[10px] text-purple-400 truncate">逸辰专属声线已通过内置代理高速传输。</p></div>
-                                                                <div className="w-32"><label className="text-[9px] text-purple-500 font-bold uppercase block mb-1">语速: {config.siliconflowSpeed}</label><input type="range" min="0.5" max="2" step="0.1" value={config.siliconflowSpeed} onChange={e=>setConfig({...config, siliconflowSpeed:e.target.value})} className="w-full accent-purple-600"/></div>
+                                                            <div className="bg-purple-50 p-6 rounded-[32px] border border-purple-50 flex items-center gap-6 animate-fade-in group shadow-inner">
+                                                                <div className="bg-purple-600 text-white p-4 rounded-2xl flex-shrink-0 transition-transform group-hover:rotate-12"><Icon name="Volume2" size={24}/></div>
+                                                                <div className="flex-1 min-w-0"><div className="text-sm font-black text-purple-900 tracking-tighter">高速秘密通道</div><p className="text-[10px] text-purple-400 font-bold">已通过内置合法代理激活。</p></div>
+                                                                <div className="w-40"><label className="text-[9px] text-purple-400 font-black uppercase block mb-2">语速: {config.siliconflowSpeed}</label><input type="range" min="0.5" max="2" step="0.1" value={config.siliconflowSpeed} onChange={e=>setConfig({...config, siliconflowSpeed:e.target.value})} className="w-full h-1 bg-purple-200 rounded-lg appearance-none accent-purple-600"/></div>
                                                             </div>
                                                         )}
                                                     </section>
@@ -665,41 +633,41 @@
                                             )}
 
                                             {activeTab === 'memory' && (
-                                                <div className="space-y-8 animate-fade-in">
-                                                    <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100 flex items-center justify-between">
-                                                        <div><h3 className="text-sm font-bold flex items-center gap-2 text-gray-800"><Icon name="Archive" className="text-blue-500" size={16}/> 记忆归档</h3><p className="text-[10px] text-gray-400 mt-0.5">自动总结当前所有聊天内容并保存为长期记忆</p></div>
-                                                        <button onClick={handleArchive} disabled={isArchiving} className="bg-blue-600 text-white px-5 py-2 rounded-xl text-xs font-bold shadow-md hover:bg-blue-700 transition-all">{isArchiving ? "处理中...":"生成今日记忆"}</button>
+                                                <div className="space-y-8 animate-fade-in no-scrollbar">
+                                                    <div className="p-6 bg-gray-50 rounded-[32px] border border-gray-100 flex items-center justify-between shadow-sm group">
+                                                        <div><h3 className="text-sm font-black flex items-center gap-2 text-gray-800"><Icon name="Archive" className="text-blue-500" size={18}/> 瞬间归档</h3><p className="text-[10px] text-gray-400 mt-1 font-bold">将当前对话凝炼为长效记忆</p></div>
+                                                        <button onClick={handleArchive} disabled={isArchiving} className="bg-blue-600 text-white px-6 py-3 rounded-2xl text-xs font-black shadow-lg shadow-blue-100 active:scale-95 transition-all">{isArchiving ? "凝炼中...":"归档今日"}</button>
                                                     </div>
-                                                    <div className="space-y-4">
-                                                        <div className="flex justify-between items-center"><h3 className="text-sm font-bold flex items-center gap-2"><Icon name="Cpu" className="text-blue-500" size={16}/> 星月记忆库</h3><button onClick={()=>fileInputRef.current.click()} className="text-[10px] bg-white border px-3 py-1.5 rounded-lg flex items-center gap-1 hover:bg-gray-50"><Icon name="Upload" size={12}/> 上传文件</button><input type="file" ref={fileInputRef} className="hidden" onChange={e=>{const f=e.target.files[0]; const reader=new FileReader(); reader.onload=ev=>setMemoryFiles(p=>[{name:f.name, content:ev.target.result, date:new Date().toLocaleDateString()}, ...p]); reader.readAsText(f);}}/></div>
-                                                        <div className="grid grid-cols-1 gap-3">{memoryFiles.map((m, i)=>(<div key={i} className="p-3 bg-white rounded-xl border group relative shadow-sm hover:shadow-md transition-all"><div className="text-xs font-bold text-gray-800 mb-1 flex items-center gap-2"><Icon name="FileText" size={14} className="text-gray-400"/> {m.name} <span className="text-[9px] font-normal text-gray-400 ml-auto">{m.date}</span></div><div className="text-[10px] text-gray-500 line-clamp-3 leading-relaxed">{m.content}</div><button onClick={()=>setMemoryFiles(p=>p.filter((_,idx)=>idx!==i))} className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 text-red-500 p-1 hover:bg-red-50 rounded-full transition-all"><Icon name="Trash2" size={14}/></button></div>))}</div>
+                                                    <div className="space-y-5">
+                                                        <div className="flex justify-between items-center px-2"><h3 className="text-sm font-black flex items-center gap-2 text-gray-800"><Icon name="Cpu" className="text-blue-500" size={18}/> 核心记忆库</h3><button onClick={()=>fileInputRef.current.click()} className="text-[10px] bg-white border border-gray-100 px-4 py-2 rounded-xl flex items-center gap-2 hover:bg-gray-50 font-black shadow-sm transition-all"><Icon name="Upload" size={12}/> 导入记忆</button><input type="file" ref={fileInputRef} className="hidden" onChange={e=>{const f=e.target.files[0]; const reader=new FileReader(); reader.onload=ev=>setMemoryFiles(p=>[{name:f.name, content:ev.target.result, date:new Date().toLocaleDateString()}, ...p]); reader.readAsText(f);}}/></div>
+                                                        <div className="grid grid-cols-1 gap-4">{memoryFiles.map((m, i)=>(<div key={i} className="p-5 bg-white rounded-[24px] border border-gray-50 group relative shadow-sm hover:shadow-xl transition-all"><div className="text-xs font-black text-gray-800 mb-2 flex items-center gap-2"><Icon name="FileText" size={14} className="text-blue-200"/> {m.name} <span className="text-[9px] font-bold text-gray-300 ml-auto tracking-widest uppercase">{m.date}</span></div><div className="text-[11px] text-gray-400 line-clamp-3 leading-relaxed font-medium">{m.content}</div><button onClick={()=>setMemoryFiles(p=>p.filter((_,idx)=>idx!==i))} className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 text-red-500 p-2 hover:bg-red-50 rounded-full transition-all"><Icon name="Trash2" size={14}/></button></div>))}</div>
                                                     </div>
                                                 </div>
                                             )}
 
                                             {activeTab === 'backup' && (
-                                                <div className="space-y-6 animate-fade-in">
-                                                    <div className="p-4 bg-blue-50 border border-blue-100 rounded-2xl flex items-center gap-4 group">
-                                                        <div className="p-3 bg-blue-100 rounded-xl text-blue-600 transition-transform group-hover:scale-110"><Icon name="Database" size={24}/></div>
-                                                        <div className="flex-1"><h4 className="text-sm font-bold text-gray-800">全量备份导出</h4><p className="text-[10px] text-blue-400 mt-0.5">将设置、记忆库、健康足迹和所有聊天导出为 JSON 文件。</p></div>
-                                                        <button onClick={()=>{const d={config, memoryFiles, healthRecords, historySessions}; const b=new Blob([JSON.stringify(d)], {type:'application/json'}); const u=URL.createObjectURL(b); const a=document.createElement('a'); a.href=u; a.download=`xingyue_full_${Date.now()}.json`; a.click();}} className="bg-blue-600 text-white px-5 py-2 rounded-xl text-xs font-bold shadow-sm">导出备份</button>
+                                                <div className="space-y-6 animate-fade-in no-scrollbar">
+                                                    <div className="p-6 bg-blue-50 border border-blue-100 rounded-[32px] flex items-center gap-5 group shadow-sm transition-all hover:shadow-blue-50">
+                                                        <div className="p-4 bg-white rounded-2xl text-blue-600 shadow-sm transition-transform group-hover:scale-110"><Icon name="Database" size={28}/></div>
+                                                        <div className="flex-1"><h4 className="text-sm font-black text-gray-800">全量导出</h4><p className="text-[10px] text-blue-400 mt-1 font-bold">备份所有设置、记忆、健康数据及聊天记录。</p></div>
+                                                        <button onClick={()=>{const d={config, memoryFiles, healthRecords, historySessions}; const b=new Blob([JSON.stringify(d)], {type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=`星月舱全量备份_${Date.now()}.json`; a.click();}} className="bg-blue-600 text-white px-6 py-3 rounded-2xl text-xs font-black shadow-lg shadow-blue-100 active:scale-95 transition-all">立即备份</button>
                                                     </div>
-                                                    <div className="p-4 bg-green-50 border border-green-100 rounded-2xl flex items-center gap-4 group">
-                                                        <div className="p-3 bg-green-100 rounded-xl text-green-600 transition-transform group-hover:scale-110"><Icon name="RefreshCw" size={24}/></div>
-                                                        <div className="flex-1"><h4 className="text-sm font-bold text-gray-800">导入备份数据</h4><p className="text-[10px] text-green-400 mt-0.5">选择之前导出的 JSON 文件，将星月舱还原到当时的状态。</p></div>
-                                                        <button onClick={()=>backupInputRef.current.click()} className="bg-green-600 text-white px-5 py-2 rounded-xl text-xs font-bold shadow-sm">选择文件</button>
-                                                        <input type="file" ref={backupInputRef} className="hidden" onChange={e=>{const f=e.target.files[0]; const r=new FileReader(); r.onload=ev=>{const d=JSON.parse(ev.target.result); if(d.config) setConfig(d.config); if(d.memoryFiles) setMemoryFiles(d.memoryFiles); if(d.healthRecords) setHealthRecords(d.healthRecords); if(d.historySessions) setHistorySessions(d.historySessions); showToast("还原成功，正在重载界面..."); setTimeout(()=>window.location.reload(), 500);}; r.readAsText(f);}}/>
+                                                    <div className="p-6 bg-green-50 border border-green-100 rounded-[32px] flex items-center gap-5 group shadow-sm transition-all hover:shadow-green-50">
+                                                        <div className="p-4 bg-white rounded-2xl text-green-600 shadow-sm transition-transform group-hover:scale-110"><Icon name="RefreshCw" size={28}/></div>
+                                                        <div className="flex-1"><h4 className="text-sm font-black text-gray-800">导入还原</h4><p className="text-[10px] text-green-400 mt-1 font-bold">从备份文件中还原您的一切。</p></div>
+                                                        <button onClick={()=>backupInputRef.current.click()} className="bg-green-600 text-white px-6 py-3 rounded-2xl text-xs font-black shadow-lg shadow-green-100 active:scale-95 transition-all">选择文件</button>
+                                                        <input type="file" ref={backupInputRef} className="hidden" onChange={e=>{const f=e.target.files[0]; const r=new FileReader(); r.onload=ev=>{const d=JSON.parse(ev.target.result); if(d.config) setConfig(d.config); if(d.memoryFiles) setMemoryFiles(d.memoryFiles); if(d.healthRecords) setHealthRecords(d.healthRecords); if(d.historySessions) setHistorySessions(d.historySessions); showToast("时光倒流成功"); setTimeout(()=>window.location.reload(), 500);}; r.readAsText(f);}}/>
                                                     </div>
-                                                    <div className="p-4 bg-gray-50 border border-gray-100 rounded-2xl flex items-center gap-4 group">
-                                                        <div className="p-3 bg-gray-200 rounded-xl text-gray-600 transition-transform group-hover:scale-110"><Icon name="FileText" size={24}/></div>
-                                                        <div className="flex-1"><h4 className="text-sm font-bold text-gray-800">对话记录导出 (TXT)</h4><p className="text-[10px] text-gray-400 mt-0.5">将当前聊天窗口的内容精准导出为纯文本文件。</p></div>
-                                                        <button onClick={handleExportTxt} className="bg-white border border-gray-300 text-gray-700 px-5 py-2 rounded-xl text-xs font-bold hover:bg-gray-100 flex items-center gap-1"><Icon name="Download" size={14}/> 导出 TXT</button>
+                                                    <div className="p-6 bg-gray-50 border border-gray-100 rounded-[32px] flex items-center gap-5 group shadow-sm transition-all hover:shadow-gray-100">
+                                                        <div className="p-4 bg-white rounded-2xl text-gray-600 shadow-sm transition-transform group-hover:scale-110"><Icon name="FileText" size={28}/></div>
+                                                        <div className="flex-1"><h4 className="text-sm font-black text-gray-800">文本日记</h4><p className="text-[10px] text-gray-400 mt-1 font-bold">将当前聊天记录纯净导出为文本文件。</p></div>
+                                                        <button onClick={handleExportTxt} className="bg-white border border-gray-200 text-gray-700 px-6 py-3 rounded-2xl text-xs font-black hover:bg-gray-100 shadow-sm active:scale-95 transition-all flex items-center gap-2"><Icon name="Download" size={14}/> 导出 TXT</button>
                                                     </div>
                                                 </div>
                                             )}
                                         </div>
                                     </div>
-                                    <div className="p-4 border-t bg-gray-50 flex justify-end items-center gap-4 flex-shrink-0"><span className="text-[10px] text-gray-400">数据仅存在本地，请定期备份归档。</span><button onClick={()=>{setSettingsOpen(false); showToast("配置已锁存");}} className="px-10 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-sm font-bold shadow-lg transition-all active:scale-95">保存设置</button></div>
+                                    <div className="p-6 border-t border-gray-50 bg-white flex justify-end items-center gap-5 flex-shrink-0"><span className="text-[10px] text-gray-300 font-black tracking-widest uppercase">Your Data, Local Forever.</span><button onClick={()=>{setSettingsOpen(false); showToast("星月感知已同步");}} className="px-12 py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-[24px] text-sm font-black shadow-2xl shadow-blue-200 transition-all active:scale-95">完成并保存</button></div>
                                 </div>
                             </div>
                         )}
