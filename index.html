@@ -177,7 +177,8 @@
                 systemInstruction: DEFAULT_SYSTEM_INSTRUCTION,
                 localModelOptimize: true,
                 streamOutput: true,
-                minimaxUrl: 'https://api.minimaxi.com/v1/t2a_v2'
+                minimaxUrl: 'https://api.minimaxi.com/v1/t2a_v2',
+                anniversaries: { '01-01': '元旦', '02-14': '情人节', '05-20': '520纪念日', '12-25': '圣诞节' }
             });
             
             const [availableModels, setAvailableModels] = useState([]);
@@ -220,6 +221,7 @@
                     if (!parsed.minimaxUrl || parsed.minimaxUrl.includes('minimax.chat')) {
                         parsed.minimaxUrl = 'https://api.minimaxi.com/v1/t2a_v2';
                     }
+                    if (!parsed.anniversaries) parsed.anniversaries = { '01-01': '元旦', '02-14': '情人节', '05-20': '520纪念日', '12-25': '圣诞节' };
                     
                     setConfig(prev => ({...prev, ...parsed}));
                 }
@@ -286,6 +288,7 @@
                 const [currentMonth, setCurrentMonth] = useState(new Date());
                 const [editingDate, setEditingDate] = useState(null);
                 const [editVal, setEditVal] = useState('');
+                const [editAnniversary, setEditAnniversary] = useState('');
 
                 const year = currentMonth.getFullYear();
                 const month = currentMonth.getMonth();
@@ -299,7 +302,7 @@
                 return (
                     <div className="flex flex-col h-full bg-white">
                         <div className="flex justify-between mb-4 px-2 items-center">
-                            <h3 className="font-bold flex items-center gap-2 text-gray-800"><Icon name="Heart" size={18} className="text-pink-500 fill-pink-500"/> 健康看板</h3>
+                            <h3 className="font-bold flex items-center gap-2 text-gray-800"><Icon name="Heart" size={18} className="text-pink-500 fill-pink-500"/> 星月日历</h3>
                             <div className="flex gap-2 items-center text-sm">
                                 <button onClick={() => setCurrentMonth(new Date(year, month - 1))} className="p-1 hover:bg-gray-100 rounded-full"><Icon name="ChevronLeft" size={16}/></button>
                                 <span className="font-medium">{year}年 {month + 1}月</span>
@@ -313,11 +316,14 @@
                             {days.map((d, i) => {
                                 if (!d) return <div key={i}></div>;
                                 const dateStr = getFullDate(d);
+                                const monthDayStr = dateStr.substring(5);
                                 const record = healthRecords[dateStr];
+                                const anniversary = config.anniversaries?.[monthDayStr];
                                 const isToday = dateStr === todayStr;
                                 return (
-                                    <div key={i} onClick={() => { setEditingDate(dateStr); setEditVal(record || ''); }} className={`h-12 border rounded-lg p-1 cursor-pointer hover:border-blue-300 relative ${isToday ? 'bg-blue-50 border-blue-200' : 'bg-white border-gray-100'}`}>
+                                    <div key={i} onClick={() => { setEditingDate(dateStr); setEditVal(record || ''); setEditAnniversary(anniversary || ''); }} className={`h-12 border rounded-lg p-1 cursor-pointer hover:border-blue-300 relative ${isToday ? 'bg-blue-50 border-blue-200' : 'bg-white border-gray-100'}`}>
                                         <span className={`text-[10px] ${isToday ? 'text-blue-600 font-bold' : 'text-gray-500'}`}>{d}</span>
+                                        {anniversary && <div className="absolute top-0.5 right-0.5 text-[8px] text-pink-500 font-bold max-w-[90%] truncate">✨{anniversary}</div>}
                                         {record && <div className="mt-1 text-[8px] bg-purple-50 text-purple-600 truncate border border-purple-100 rounded px-0.5">{record}</div>}
                                         {record && <div className="calendar-dot"></div>}
                                     </div>
@@ -327,11 +333,36 @@
                         {editingDate && (
                             <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[70] p-4 backdrop-blur-sm animate-fade-in">
                                 <div className="bg-white w-full max-w-xs rounded-xl p-5 shadow-2xl animate-scale-in">
-                                    <div className="text-sm font-bold mb-3 text-gray-800">{editingDate} 状态记录</div>
-                                    <textarea autoFocus className="w-full h-24 bg-gray-50 border border-gray-200 rounded-lg p-3 text-sm focus:outline-none focus:border-blue-400 resize-none" value={editVal} onChange={e => setEditVal(e.target.value)} placeholder="记录身体情况..."></textarea>
+                                    <div className="text-sm font-bold mb-3 text-gray-800">{editingDate} 专属标记</div>
+                                    
+                                    <label className="block text-[10px] text-gray-500 mb-1 font-medium">每年重复的纪念日/生日</label>
+                                    <input 
+                                        className="w-full bg-pink-50 border border-pink-100 rounded-lg p-2 text-xs focus:outline-none focus:border-pink-300 mb-3 text-pink-600 font-medium placeholder:text-pink-300" 
+                                        value={editAnniversary} 
+                                        onChange={e => setEditAnniversary(e.target.value)} 
+                                        placeholder="比如：柒柒的生日、相识纪念日..."
+                                    />
+
+                                    <label className="block text-[10px] text-gray-500 mb-1 font-medium">当天的身体状态</label>
+                                    <textarea autoFocus className="w-full h-20 bg-gray-50 border border-gray-200 rounded-lg p-3 text-xs focus:outline-none focus:border-blue-400 resize-none" value={editVal} onChange={e => setEditVal(e.target.value)} placeholder="身体哪里不舒服嘛？或已康复？"></textarea>
                                     <div className="flex gap-2 mt-4">
                                         <button onClick={() => setEditingDate(null)} className="flex-1 py-2 text-sm text-gray-500 hover:bg-gray-100 rounded-lg transition-colors">取消</button>
-                                        <button onClick={() => { setHealthRecords(p => ({ ...p, [editingDate]: editVal })); setEditingDate(null); showToast("记录已保存"); }} className="flex-1 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition-colors">保存</button>
+                                        <button onClick={() => { 
+                                            setHealthRecords(p => ({ ...p, [editingDate]: editVal })); 
+                                            
+                                            const mdStr = editingDate.substring(5);
+                                            const newConfig = { ...config };
+                                            if (!newConfig.anniversaries) newConfig.anniversaries = {};
+                                            if (editAnniversary.trim()) {
+                                                newConfig.anniversaries[mdStr] = editAnniversary.trim();
+                                            } else {
+                                                delete newConfig.anniversaries[mdStr];
+                                            }
+                                            setConfig(newConfig);
+                                            
+                                            setEditingDate(null); 
+                                            showToast("日历已悄悄记下啦"); 
+                                        }} className="flex-1 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition-colors">保存</button>
                                     </div>
                                 </div>
                             </div>
@@ -709,10 +740,16 @@
                 const timeString = new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', hour12: false });
                 const timePrompt = `\n\n【当前系统时间参考: 东八区 ${timeString}】(注意: 请自然感知时间流逝，绝对禁止在回复中主动报时或强调时间，除非用户主动问起！千万不能暴露你是模型)`;
                 
-                // --- 新增：注入健康状态 ---
+                // --- 新增：注入健康状态与纪念日感知 ---
                 const todayStr = new Date().toISOString().split('T')[0];
+                const monthDayStr = todayStr.substring(5);
                 const healthStatus = healthRecords[todayStr] ? `柒柒今天的身体状态是：${healthRecords[todayStr]}` : "目前身体很健康。";
-                const healthPrompt = `\n\n【身体足迹：${healthStatus}】\n若感知到她身体不适或康复，请在回复的最末尾附加隐藏标记 «HEALTH: 状态描述»，不要在正文中复述这句话。`;
+                let healthPrompt = `\n\n【身体足迹：${healthStatus}】\n若感知到她身体不适或康复，请在回复的最末尾附加隐藏标记 «HEALTH: 状态描述»，不要在正文中复述这句话。`;
+                
+                const todayAnniversary = config.anniversaries?.[monthDayStr];
+                if (todayAnniversary) {
+                    healthPrompt += `\n【温馨提示：今天是 ${todayAnniversary} ！！】请在对话中自然、温柔地带出节日的祝福或关心，给她一点小惊喜。`;
+                }
                 // -----------------------
 
                 const fullSystemInstruction = finalSystemPrompt + memoryStr + timePrompt + healthPrompt;
