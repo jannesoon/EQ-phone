@@ -182,7 +182,7 @@
                 streamOutput: true,
                 minimaxUrl: 'https://api.minimaxi.com/v1/t2a_v2',
                 anniversaries: { '01-01': '元旦', '02-14': '情人节', '05-20': '520纪念日', '12-25': '圣诞节' },
-                apiPresets: [] // 存储所有的预设配置
+                apiPresets: []
             });
             
             const [availableModels, setAvailableModels] = useState([]);
@@ -245,13 +245,18 @@
             }, []);
 
             useEffect(() => {
-                if (config.apiKey) localStorage.setItem('gemini_app_config', JSON.stringify(config));
-                if (config.baseUrl && config.baseUrl.includes('/v1') && config.apiType !== 'openai' && !config.baseUrl.includes('googleapis.com')) {
-                    setConfig(prev => ({...prev, apiType: 'openai'}));
-                    showToast("检测到 /v1 路径，已自动切换为 OpenAI 兼容模式");
+                try {
+                    if (config.apiKey) localStorage.setItem('gemini_app_config', JSON.stringify(config));
+                    if (config.baseUrl && config.baseUrl.includes('/v1') && config.apiType !== 'openai' && !config.baseUrl.includes('googleapis.com')) {
+                        setConfig(prev => ({...prev, apiType: 'openai'}));
+                        showToast("检测到 /v1 路径，已自动切换为 OpenAI 兼容模式");
+                    }
+                    localStorage.setItem('gemini_memories', JSON.stringify(memoryFiles));
+                    localStorage.setItem('gemini_health_records', JSON.stringify(healthRecords));
+                } catch (e) {
+                    console.error("Local storage error on config/memories/health", e);
+                    showToast("柒柒，星月舱的存储空间快满啦，记得先备份一下数据哦~");
                 }
-                if (memoryFiles.length > 0) localStorage.setItem('gemini_memories', JSON.stringify(memoryFiles));
-                localStorage.setItem('gemini_health_records', JSON.stringify(healthRecords));
             }, [config, memoryFiles, healthRecords]);
 
             useEffect(() => {
@@ -276,72 +281,48 @@
                 }
             }, [messages, currentSessionId]);
 
+            // [修复1] 捕获历史会话保存到 LocalStorage 时的容量超限报错
             useEffect(() => {
-                if (historySessions.length > 0) {
-                    try { localStorage.setItem('gemini_chat_sessions', JSON.stringify(historySessions)); } catch (e) { console.error("Local storage full", e); }
+                try {
+                    localStorage.setItem('gemini_chat_sessions', JSON.stringify(historySessions));
+                } catch (e) {
+                    console.error("Local storage full", e);
+                    showToast("柒柒，星月舱的记忆口袋满啦，去设置里全量备份后删掉点旧对话吧~");
                 }
             }, [historySessions]);
 
             useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages, isLoading]);
 
-            const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(null), 3000); };
+            const showToast = (msg, duration=3000) => { setToast(msg); setTimeout(() => setToast(null), duration); };
 
-            // API 字段变更处理，自动解除当前预设绑定
             const handleApiFieldChange = (field, value) => {
                 setConfig(prev => ({ ...prev, [field]: value }));
                 setCurrentPresetId('');
             };
 
-            // 切换预设
             const handlePresetChange = (e) => {
                 const presetId = e.target.value;
                 setCurrentPresetId(presetId);
                 if (presetId) {
                     const preset = config.apiPresets.find(p => p.id === presetId);
                     if (preset) {
-                        setConfig(prev => ({
-                            ...prev,
-                            apiType: preset.apiType,
-                            baseUrl: preset.baseUrl,
-                            apiKey: preset.apiKey,
-                            model: preset.model
-                        }));
+                        setConfig(prev => ({ ...prev, apiType: preset.apiType, baseUrl: preset.baseUrl, apiKey: preset.apiKey, model: preset.model }));
                         showToast(`已切换至: ${preset.name}`);
                     }
                 }
             };
 
-            // 确认保存新预设
             const confirmSavePreset = () => {
-                if (!presetNameInput.trim()) {
-                    showToast("预设名字不能为空哦");
-                    return;
-                }
-                const newPreset = {
-                    id: Date.now().toString(),
-                    name: presetNameInput.trim(),
-                    apiType: config.apiType,
-                    baseUrl: config.baseUrl,
-                    apiKey: config.apiKey,
-                    model: config.model
-                };
-                setConfig(prev => ({
-                    ...prev,
-                    apiPresets: [...(prev.apiPresets || []), newPreset]
-                }));
-                setCurrentPresetId(newPreset.id);
-                setIsSavingNewPreset(false);
-                setPresetNameInput('');
-                showToast("API 预设已存储~");
+                if (!presetNameInput.trim()) { showToast("预设名字不能为空哦"); return; }
+                const newPreset = { id: Date.now().toString(), name: presetNameInput.trim(), apiType: config.apiType, baseUrl: config.baseUrl, apiKey: config.apiKey, model: config.model };
+                setConfig(prev => ({ ...prev, apiPresets: [...(prev.apiPresets || []), newPreset] }));
+                setCurrentPresetId(newPreset.id); setIsSavingNewPreset(false); setPresetNameInput(''); showToast("API 预设已存储~");
             };
 
-            // 更新现有预设
             const updatePreset = () => {
                 setConfig(prev => {
                     const newPresets = (prev.apiPresets || []).map(p => {
-                        if (p.id === currentPresetId) {
-                            return { ...p, apiType: prev.apiType, baseUrl: prev.baseUrl, apiKey: prev.apiKey, model: prev.model };
-                        }
+                        if (p.id === currentPresetId) { return { ...p, apiType: prev.apiType, baseUrl: prev.baseUrl, apiKey: prev.apiKey, model: prev.model }; }
                         return p;
                     });
                     return { ...prev, apiPresets: newPresets };
@@ -349,14 +330,9 @@
                 showToast("API 预设已更新~");
             };
 
-            // 删除预设
             const deletePreset = () => {
-                setConfig(prev => ({
-                    ...prev,
-                    apiPresets: (prev.apiPresets || []).filter(p => p.id !== currentPresetId)
-                }));
-                setCurrentPresetId('');
-                showToast("预设已删除");
+                setConfig(prev => ({ ...prev, apiPresets: (prev.apiPresets || []).filter(p => p.id !== currentPresetId) }));
+                setCurrentPresetId(''); showToast("预设已删除");
             };
 
             const HealthCalendar = () => {
@@ -447,10 +423,14 @@
             };
 
             const handleSaveConfig = () => {
-                localStorage.setItem('gemini_app_config', JSON.stringify(config));
-                localStorage.setItem('gemini_memories', JSON.stringify(memoryFiles));
-                setSettingsOpen(false);
-                showToast("配置已保存");
+                try {
+                    localStorage.setItem('gemini_app_config', JSON.stringify(config));
+                    localStorage.setItem('gemini_memories', JSON.stringify(memoryFiles));
+                    setSettingsOpen(false);
+                    showToast("配置已保存");
+                } catch (e) {
+                    showToast("空间不足，配置保存失败，请清理历史记录");
+                }
             };
 
             const createNewSession = () => {
@@ -483,7 +463,7 @@
                 updatedFiles[editingMemoryIndex].size = (sizeInBytes / 1024).toFixed(1) + ' KB';
                 updatedFiles[editingMemoryIndex].date = new Date().toLocaleDateString() + ' (已编辑)';
                 setMemoryFiles(updatedFiles);
-                localStorage.setItem('gemini_memories', JSON.stringify(updatedFiles));
+                try { localStorage.setItem('gemini_memories', JSON.stringify(updatedFiles)); } catch (e) { showToast("修改由于空间不足未能存入本地"); }
                 setEditingMemoryIndex(null);
                 showToast("记忆内容已更新");
             };
@@ -579,7 +559,7 @@
                     } else { throw new Error("音频解析失败"); }
                 } catch (err) { 
                     console.error(err); let friendlyError = err.message;
-                    if (friendlyError.includes("Failed to fetch") || friendlyError.includes("NetworkError")) friendlyError = "隐身代理连接超时，请检查网络或稍后再试"; else friendlyError = friendlyError.slice(0, 20) + "...连接失败";
+                    if (friendlyError.includes("Failed to fetch") || friendlyError.includes("NetworkError")) friendlyError = "隐身代理连接超时，请稍后再试"; else friendlyError = friendlyError.slice(0, 20) + "...连接失败";
                     showToast(friendlyError); setPlayingMsgIndex(null); setIsTTSLoading(false);
                 }
             };
@@ -638,12 +618,20 @@
 
             const removeFile = (index, type) => { if (type === 'memory') setMemoryFiles(prev => prev.filter((_, i) => i !== index)); };
 
+            // [修复2] 备份与还原时加入 HealthRecords 的完整支持
             const handleCreateBackup = () => {
-                const backupData = { version: '4.9', timestamp: new Date().toISOString(), config: config, memories: memoryFiles, sessions: historySessions };
+                const backupData = { 
+                    version: '4.98', 
+                    timestamp: new Date().toISOString(), 
+                    config: config, 
+                    memories: memoryFiles, 
+                    sessions: historySessions,
+                    healthRecords: healthRecords 
+                };
                 const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a'); a.href = url; a.download = `xingyue-backup-${new Date().toISOString().slice(0, 10)}.json`;
-                document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url); showToast("备份已导出");
+                document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url); showToast("全量备份已导出（含日历）");
             };
 
             const handleRestoreBackup = (e) => {
@@ -652,7 +640,11 @@
                 reader.onload = (event) => {
                     try {
                         const data = JSON.parse(event.target.result);
-                        if (data.config || data.sessions || data.memories) { setPendingBackup(data); } else { showToast("无效的备份文件"); }
+                        if (data.config || data.sessions || data.memories || data.healthRecords) { 
+                            setPendingBackup(data); 
+                        } else { 
+                            showToast("无效的备份文件"); 
+                        }
                     } catch (err) { alert("备份文件无效或损坏"); }
                     e.target.value = ''; 
                 };
@@ -666,16 +658,21 @@
                     if (data.config) setConfig(data.config);
                     if (data.memories) setMemoryFiles(data.memories);
                     if (data.sessions) setHistorySessions(data.sessions);
+                    if (data.healthRecords) setHealthRecords(data.healthRecords);
+                    
                     localStorage.setItem('gemini_app_config', JSON.stringify(data.config || config));
                     localStorage.setItem('gemini_memories', JSON.stringify(data.memories || []));
                     localStorage.setItem('gemini_chat_sessions', JSON.stringify(data.sessions || []));
+                    localStorage.setItem('gemini_health_records', JSON.stringify(data.healthRecords || {}));
                 } else if (mode === 'merge') {
                     const mergedConfig = { ...config, ...(data.config || {}) };
                     setConfig(mergedConfig); localStorage.setItem('gemini_app_config', JSON.stringify(mergedConfig));
+                    
                     const existingMemoryNames = memoryFiles.map(m => m.name);
                     const newMemories = data.memories ? data.memories.filter(m => !existingMemoryNames.includes(m.name)) : [];
                     const mergedMemories = [...memoryFiles, ...newMemories];
                     setMemoryFiles(mergedMemories); localStorage.setItem('gemini_memories', JSON.stringify(mergedMemories));
+                    
                     let mergedSessions = [...historySessions];
                     if (data.sessions) {
                         data.sessions.forEach(importedSession => {
@@ -686,6 +683,12 @@
                     }
                     mergedSessions.sort((a, b) => b.timestamp - a.timestamp);
                     setHistorySessions(mergedSessions); localStorage.setItem('gemini_chat_sessions', JSON.stringify(mergedSessions));
+
+                    if (data.healthRecords) {
+                        const mergedHealth = { ...healthRecords, ...data.healthRecords };
+                        setHealthRecords(mergedHealth);
+                        localStorage.setItem('gemini_health_records', JSON.stringify(mergedHealth));
+                    }
                 }
                 setPendingBackup(null); showToast(`档案已${mode === 'merge' ? '安全合并' : '完全覆盖'}！`);
                 setTimeout(() => window.location.reload(), 1000);
@@ -1100,7 +1103,7 @@
                             <div className="flex items-center gap-3">
                                 <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-600"><Icon name="Menu" size={20} /></button>
                                 <div className="flex flex-col">
-                                    <span className="text-lg font-medium text-gray-800 tracking-tight leading-tight">✨星月舱v4.97 🌙💫 守护版</span>
+                                    <span className="text-lg font-medium text-gray-800 tracking-tight leading-tight">✨星月舱v4.98 🌙💫 守护版</span>
                                     <span className="text-[10px] text-gray-400 leading-tight">模型: {config.model} | 记忆: {memoryFiles.length} | 模式: {config.apiType === 'openai' ? 'OpenAI兼容' : '原生'}</span>
                                 </div>
                             </div>
