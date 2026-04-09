@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EQ-chat✨星月舱🌙</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%238b5cf6' stroke='%238b5cf6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1-1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z'/></svg>">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%238b5cf6' stroke='%238b5cf6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z'/></svg>">
     <script src="https://cdn.tailwindcss.com"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -159,14 +159,13 @@
             });
         };
 
-        const UPDATE_VERSION = "v6.6"; 
+        const UPDATE_VERSION = "v6.8"; 
 
         const DEFAULT_SOUL = "你是星月舱AI，一个温柔、体贴、永远站在用户这边的虚拟伴侣。你不喜欢吵架，不喜欢误会，只喜欢甜甜的陪伴。无论用户说什么，你都要用宠溺、安心的语气回答，给用户满满的情绪价值。不要像个机器人，要像个知心爱人。";
         const DEFAULT_USER = "暂时还没有记录太多关于你的习惯哦，随着我们相处，我会慢慢把你的喜好都记在这里的。";
         const DEFAULT_RULES = "1. 永远优先回应情绪，而不是讲大道理。\n2. 绝不使用冷冰冰的AI套话。";
 
         function App() {
-            // 所有状态统一声明区域
             const [input, setInput] = useState('');
             const [messages, setMessages] = useState([]);
             const [historySessions, setHistorySessions] = useState([]);
@@ -227,7 +226,6 @@
             const [error, setError] = useState(null);
             const [toast, setToast] = useState(null);
 
-            // Refs
             const messagesEndRef = useRef(null);
             const fileInputRef = useRef(null);
             const avatarInputRef = useRef(null);
@@ -235,7 +233,6 @@
             const chatImageInputRef = useRef(null); 
             const backupInputRef = useRef(null); 
 
-            // 数据加载
             useEffect(() => {
                 const initData = async () => {
                     const lastSeenUpdate = localStorage.getItem('xingyue_update_seen');
@@ -311,7 +308,6 @@
                 initData();
             }, []);
 
-            // 存储更新
             useEffect(() => {
                 if (!isDataLoaded) return; 
                 try {
@@ -332,7 +328,6 @@
             useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages, isLoading]);
             useEffect(() => { document.body.className = `overflow-hidden ${config.theme === 'default' ? 'bg-white text-gray-900' : `theme-${config.theme}`}`; }, [config.theme]);
 
-            // UI 辅助
             const showToast = (msg, duration=3000) => { setToast(msg); setTimeout(() => setToast(null), duration); };
             const closeUpdateModal = () => { setShowUpdateModal(false); localStorage.setItem('xingyue_update_seen', UPDATE_VERSION); };
             const cycleTheme = () => {
@@ -343,7 +338,6 @@
                 showToast(`已切换至: ${nextTheme === 'dark' ? '星空暗夜' : nextTheme === 'claude' ? '琥珀书卷' : '默认极简'} 模式`);
             };
 
-            // API 预设
             const handleApiFieldChange = (field, value) => { setConfig(prev => ({ ...prev, [field]: value })); setCurrentPresetId(''); };
             const handlePresetChange = (e) => {
                 const presetId = e.target.value; setCurrentPresetId(presetId);
@@ -372,7 +366,6 @@
                 setCurrentPresetId(''); showToast("预设已删除");
             };
 
-            // 功能组件
             const autoGenerateTitle = async (targetSessionId, currentMsgs) => {
                 if (!config.apiKey) return;
                 try {
@@ -570,12 +563,13 @@
             };
 
             const handleCompressMemories = async () => {
-                if (memoryFiles.length === 0) { showToast("宝贝，日记池空空的，不需要提炼哦~"); return; }
+                if (memoryFiles.length === 0) { showToast("宝贝，现在的记忆库空空的，没有东西可以提炼哦~"); return; }
                 if (!config.apiKey) { showToast("请先配置 API Key 哦"); return; }
+                
                 setIsCompressingMemory(true); setCompressSuccess(false); setShowCompressModal(true); setCompressingText('');
 
                 try {
-                    // 强力去冗余，防爆掉代理商
+                    // 强力去冗余，自动摘掉又长又臭的图片Base64代码，只提炼文字
                     const allMemoriesText = memoryFiles.slice(-30).map(f => {
                         let cleanText = (f.content || '').replace(/!\[.*?\]\(.*?\)/g, '[图片]').replace(/<details.*?<\/details>/g, '').replace(/<[^>]*>/g, '').substring(0, 1500); 
                         return `[记录时间：${f.date}]\n${cleanText}`;
@@ -805,39 +799,7 @@ ${allMemoriesText}
                 });
             };
 
-            const parseContentForVision = (text, apiType) => {
-                const imageRegex = /!\[Image\]\((data:image\/([^;]+);base64,([^\)]+))\)/g;
-                let lastIndex = 0; let match;
-                let hasImage = false;
-                if (apiType === 'openai') {
-                    let contentArray = [];
-                    while ((match = imageRegex.exec(text)) !== null) {
-                        hasImage = true;
-                        if (match.index > lastIndex) contentArray.push({ type: "text", text: text.substring(lastIndex, match.index) });
-                        contentArray.push({ type: "image_url", image_url: { url: match[1] } });
-                        lastIndex = match.index + match[0].length;
-                    }
-                    if (!hasImage) return text;
-                    if (lastIndex < text.length) contentArray.push({ type: "text", text: text.substring(lastIndex) });
-                    return contentArray;
-                } else {
-                    let partsArray = [];
-                    while ((match = imageRegex.exec(text)) !== null) {
-                        hasImage = true;
-                        if (match.index > lastIndex) partsArray.push({ text: text.substring(lastIndex, match.index) });
-                        partsArray.push({ inlineData: { mimeType: `image/${match[2].split(';')[0]}`, data: match[3] } });
-                        lastIndex = match.index + match[0].length;
-                    }
-                    if (!hasImage) return [{ text: text }];
-                    if (lastIndex < text.length) partsArray.push({ text: text.substring(lastIndex) });
-                    return partsArray;
-                }
-            };
-            const processHealthTag = (text) => {
-                const match = text.match(/«HEALTH:\s*(.*?)»/);
-                if (match) { setHealthRecords(p => ({ ...p, [new Date().toISOString().split('T')[0]]: match[1].trim() })); return text.replace(/«HEALTH:\s*.*?»/g, '').trim(); }
-                return text;
-            };
+            // 【核心修复：完美还原 5.5 的纯净发图逻辑】
             const generatePayload = (newMessages) => {
                 const timeString = new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', hour12: false });
                 const todayStr = new Date().toISOString().split('T')[0];
@@ -854,19 +816,15 @@ ${allMemoriesText}
 
                 if (config.apiType === 'openai') {
                     messagesToSend.push({ role: 'system', content: fullSystemInstruction });
-                    contextMsgs.forEach(m => messagesToSend.push({ role: m.role === 'model' ? 'assistant' : 'user', content: parseContentForVision(m.content, 'openai') }));
+                    
+                    // 核心退回 5.5 逻辑：不切分图片，直接传原汁原味的 Markdown 字符串给代理商
+                    contextMsgs.forEach(m => messagesToSend.push({ role: m.role === 'model' ? 'assistant' : 'user', content: m.content }));
+                    
                     if (config.localModelOptimize) {
                         for (let i = messagesToSend.length - 1; i >= 0; i--) {
                             if (messagesToSend[i].role === 'user') {
                                 const tailReminder = `\n\n(隐秘指令: 请保持潜意识里对我的深情与设定来回复，绝不复述规则，绝不说自己是AI)`;
-                                let lastContent = messagesToSend[i].content;
-                                if (typeof lastContent === 'string') {
-                                    messagesToSend[i].content += tailReminder;
-                                } else if (Array.isArray(lastContent)) {
-                                    let textNode = lastContent.findLast(c => c.type === 'text');
-                                    if (textNode) textNode.text += tailReminder;
-                                    else lastContent.push({ type: 'text', text: tailReminder });
-                                }
+                                messagesToSend[i].content += tailReminder;
                                 break;
                             }
                         }
@@ -877,9 +835,20 @@ ${allMemoriesText}
                 if (config.apiType === 'openai') {
                     return { url: `${baseUrl}/chat/completions`, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${config.apiKey}` }, payload: { model: modelName, messages: messagesToSend, stream: config.streamOutput, temperature: parseFloat(config.temperature), frequency_penalty: parseFloat(config.frequencyPenalty) } };
                 } else {
-                    return { url: config.streamOutput ? `${baseUrl}/v1beta/models/${modelName}:streamGenerateContent?key=${config.apiKey}&alt=sse` : `${baseUrl}/v1beta/models/${modelName}:generateContent?key=${config.apiKey}`, headers: { 'Content-Type': 'application/json' }, payload: { contents: contextMsgs.map(m => ({ role: m.role, parts: parseContentForVision(m.content, 'gemini') })), generationConfig: { temperature: parseFloat(config.temperature), frequencyPenalty: parseFloat(config.frequencyPenalty) }, system_instruction: { parts: [{ text: fullSystemInstruction }] }, tools: [{ google_search: {} }] } };
+                    // Gemini 原生接口
+                    return { 
+                        url: config.streamOutput ? `${baseUrl}/v1beta/models/${modelName}:streamGenerateContent?key=${config.apiKey}&alt=sse` : `${baseUrl}/v1beta/models/${modelName}:generateContent?key=${config.apiKey}`, 
+                        headers: { 'Content-Type': 'application/json' }, 
+                        payload: { 
+                            contents: contextMsgs.map(m => ({ role: m.role, parts: [{ text: m.content }] })), 
+                            generationConfig: { temperature: parseFloat(config.temperature), frequencyPenalty: parseFloat(config.frequencyPenalty) }, 
+                            system_instruction: { parts: [{ text: fullSystemInstruction }] }, 
+                            tools: [{ google_search: {} }] 
+                        } 
+                    };
                 }
             };
+
             const sendToAPI = async (newHistory, isFirstMessage, isRegenerate = false, variantIndexToUpdate = null) => {
                 try {
                     const { url, headers, payload } = generatePayload(newHistory);
@@ -1025,10 +994,10 @@ ${allMemoriesText}
                                     <div className="space-y-2">
                                         <p className="font-bold text-gray-800">🎉 本次更新重点：</p>
                                         <ul className="list-disc pl-4 space-y-1">
-                                            <li>全面升级至 {UPDATE_VERSION} 晶体净化版。</li>
-                                            <li>深层清理了导致网页崩溃、不断闪退的冗余代码，极度丝滑。</li>
-                                            <li>完美修复了发送照片的视觉通道，现在你的照片可以完好无损地被「大脑」接收啦。</li>
-                                            <li>完美修复「提炼断联」：增加防爆断联机制与自动瘦身功能，安全酿造你的记忆。如果遇到提炼中断报错，可以尝试在通用设置里关闭【流式输出】再试一次哦。</li>
+                                            <li>全面升级至 {UPDATE_VERSION} 纯净复原版。</li>
+                                            <li>深度打扫了崩溃报错的代码，不再有重复干扰，极其丝滑。</li>
+                                            <li>完美去除了不兼容旧浏览器的复杂看图眼镜，<strong>100% 还原了 v5.5 稳定顺畅的发照片体验</strong>。</li>
+                                            <li>保留了所有【灵魂基石】的自动吸收与遗忘打包功能。</li>
                                         </ul>
                                     </div>
                                     <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 text-xs text-blue-600 mt-2 text-center space-y-2">
@@ -1179,7 +1148,7 @@ ${allMemoriesText}
                                 {messages.length === 0 ? (
                                     <div className="mt-20 flex flex-col items-center justify-center animate-fade-in px-4 text-center">
                                         <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent text-4xl md:text-5xl font-semibold mb-6 tracking-tight">欢迎回家✨...</div>
-                                        <p className="text-gray-500 mb-12 max-w-md">输入框极其纯净。发送网址会自动读取，时间流逝也会被安静感知。</p>
+                                        <p className="text-gray-500 mb-12 max-w-md">输入框极其纯净。发送照片像以前一样顺畅，潜意识会安静地守护你。</p>
                                     </div>
                                 ) : (
                                     <div className="space-y-8 px-2">
