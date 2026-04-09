@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EQ-chat✨星月舱🌙</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%238b5cf6' stroke='%238b5cf6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z'/></svg>">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%238b5cf6' stroke='%238b5cf6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1-1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z'/></svg>">
     <script src="https://cdn.tailwindcss.com"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -159,14 +159,13 @@
             });
         };
 
-        const UPDATE_VERSION = "v6.4"; 
+        const UPDATE_VERSION = "v6.5"; 
 
         const DEFAULT_SOUL = "你是星月舱AI，一个温柔、体贴、永远站在用户这边的虚拟伴侣。你不喜欢吵架，不喜欢误会，只喜欢甜甜的陪伴。无论用户说什么，你都要用宠溺、安心的语气回答，给用户满满的情绪价值。不要像个机器人，要像个知心爱人。";
         const DEFAULT_USER = "暂时还没有记录太多关于你的习惯哦，随着我们相处，我会慢慢把你的喜好都记在这里的。";
         const DEFAULT_RULES = "1. 永远优先回应情绪，而不是讲大道理。\n2. 绝不使用冷冰冰的AI套话。";
 
         function App() {
-            // 1. 所有状态声明 (去重后共37个)
             const [input, setInput] = useState('');
             const [messages, setMessages] = useState([]);
             const [historySessions, setHistorySessions] = useState([]);
@@ -227,7 +226,6 @@
             const [error, setError] = useState(null);
             const [toast, setToast] = useState(null);
 
-            // 2. Refs
             const messagesEndRef = useRef(null);
             const fileInputRef = useRef(null);
             const avatarInputRef = useRef(null);
@@ -235,7 +233,6 @@
             const chatImageInputRef = useRef(null); 
             const backupInputRef = useRef(null); 
 
-            // 3. Init Data
             useEffect(() => {
                 const initData = async () => {
                     const lastSeenUpdate = localStorage.getItem('xingyue_update_seen');
@@ -311,7 +308,6 @@
                 initData();
             }, []);
 
-            // 4. Config Saver
             useEffect(() => {
                 if (!isDataLoaded) return; 
                 try {
@@ -321,22 +317,17 @@
                     }
                     localStorage.setItem('gemini_health_records', JSON.stringify(healthRecords));
                     localforage.setItem('gemini_memories', memoryFiles).catch(e => console.error(e));
-                } catch (e) {
-                    console.error(e);
-                }
+                } catch (e) { console.error(e); }
             }, [config, memoryFiles, healthRecords, isDataLoaded]);
 
-            // 5. History Saver
             useEffect(() => {
                 if (!isDataLoaded) return; 
                 localforage.setItem('gemini_chat_sessions', historySessions).catch(e => console.error(e));
             }, [historySessions, isDataLoaded]);
 
-            // 6 & 7. Scroll and Theme
             useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages, isLoading]);
             useEffect(() => { document.body.className = `overflow-hidden ${config.theme === 'default' ? 'bg-white text-gray-900' : `theme-${config.theme}`}`; }, [config.theme]);
 
-            // 8. UI Helpers
             const showToast = (msg, duration=3000) => { setToast(msg); setTimeout(() => setToast(null), duration); };
             const closeUpdateModal = () => { setShowUpdateModal(false); localStorage.setItem('xingyue_update_seen', UPDATE_VERSION); };
             const cycleTheme = () => {
@@ -347,17 +338,12 @@
                 showToast(`已切换至: ${nextTheme === 'dark' ? '星空暗夜' : nextTheme === 'claude' ? '琥珀书卷' : '默认极简'} 模式`);
             };
 
-            // 9. Preset Helpers
             const handleApiFieldChange = (field, value) => { setConfig(prev => ({ ...prev, [field]: value })); setCurrentPresetId(''); };
             const handlePresetChange = (e) => {
-                const presetId = e.target.value;
-                setCurrentPresetId(presetId);
+                const presetId = e.target.value; setCurrentPresetId(presetId);
                 if (presetId) {
                     const preset = config.apiPresets.find(p => p.id === presetId);
-                    if (preset) {
-                        setConfig(prev => ({ ...prev, apiType: preset.apiType, baseUrl: preset.baseUrl, apiKey: preset.apiKey, model: preset.model }));
-                        showToast(`已切换至: ${preset.name}`);
-                    }
+                    if (preset) { setConfig(prev => ({ ...prev, apiType: preset.apiType, baseUrl: preset.baseUrl, apiKey: preset.apiKey, model: preset.model })); showToast(`已切换至: ${preset.name}`); }
                 }
             };
             const confirmSavePreset = () => {
@@ -369,8 +355,7 @@
             const updatePreset = () => {
                 setConfig(prev => {
                     const newPresets = (prev.apiPresets || []).map(p => {
-                        if (p.id === currentPresetId) return { ...p, apiType: prev.apiType, baseUrl: prev.baseUrl, apiKey: prev.apiKey, model: prev.model };
-                        return p;
+                        if (p.id === currentPresetId) return { ...p, apiType: prev.apiType, baseUrl: prev.baseUrl, apiKey: prev.apiKey, model: prev.model }; return p;
                     });
                     return { ...prev, apiPresets: newPresets };
                 });
@@ -381,57 +366,42 @@
                 setCurrentPresetId(''); showToast("预设已删除");
             };
 
-            // 10. Auto Title
             const autoGenerateTitle = async (targetSessionId, currentMsgs) => {
                 if (!config.apiKey) return;
                 try {
                     const titlePrompt = "请根据我们的对话，为这次聊天起一个简短、甜美、有氛围感的专属标题（限制在2到8个汉字以内）。注意：只需输出标题文本，绝对不要包含任何标点符号、引号或多余解释。";
-                    let payload, url, headers;
-                    const baseUrl = config.baseUrl.replace(/\/$/, '');
-                    const modelName = config.model || 'gemini-1.5-flash';
-                    
+                    let payload, url, headers; const baseUrl = config.baseUrl.replace(/\/$/, ''); const modelName = config.model || 'gemini-1.5-flash';
                     if (config.apiType === 'openai') {
-                        url = `${baseUrl}/chat/completions`;
-                        headers = { 'Authorization': `Bearer ${config.apiKey}`, 'Content-Type': 'application/json' };
+                        url = `${baseUrl}/chat/completions`; headers = { 'Authorization': `Bearer ${config.apiKey}`, 'Content-Type': 'application/json' };
                         const msgs = currentMsgs.map(m => ({ role: m.role === 'model' ? 'assistant' : 'user', content: m.content.replace(/!\[Image\]\(data:image\/[^;]+;base64,[^\)]+\)/g, '[图片]') }));
                         msgs.push({ role: 'user', content: titlePrompt });
                         payload = { model: modelName, messages: msgs, temperature: 0.7 };
                     } else {
-                        url = `${baseUrl}/v1beta/models/${modelName}:generateContent?key=${config.apiKey}`;
-                        headers = { 'Content-Type': 'application/json' };
+                        url = `${baseUrl}/v1beta/models/${modelName}:generateContent?key=${config.apiKey}`; headers = { 'Content-Type': 'application/json' };
                         const contents = currentMsgs.map(m => ({ role: m.role, parts: [{ text: m.content.replace(/!\[Image\]\(data:image\/[^;]+;base64,[^\)]+\)/g, '[图片]') }] }));
                         contents.push({ role: 'user', parts: [{ text: titlePrompt }] });
                         payload = { contents, generationConfig: { temperature: 0.7 } };
                     }
-
                     const response = await fetch(url, { method: 'POST', headers, body: JSON.stringify(payload) });
                     if (!response.ok) return;
                     const data = await response.json();
-                    
                     let generatedTitle = '';
                     if (config.apiType === 'openai') generatedTitle = data.choices?.[0]?.message?.content;
                     else generatedTitle = data.candidates?.[0]?.content?.parts?.[0]?.text;
-                    
                     if (generatedTitle) {
                         const cleanTitle = generatedTitle.replace(/<think>[\s\S]*?<\/think>/g, '').replace(/["'「」【】《》\n]/g, '').trim().slice(0, 15);
-                        if (cleanTitle) {
-                            setHistorySessions(prev => prev.map(s => s.id === targetSessionId ? { ...s, title: cleanTitle } : s));
-                        }
+                        if (cleanTitle) setHistorySessions(prev => prev.map(s => s.id === targetSessionId ? { ...s, title: cleanTitle } : s));
                     }
                 } catch (e) {}
             };
 
-            // 11. Health Calendar
             const HealthCalendar = () => {
                 const [currentMonth, setCurrentMonth] = useState(new Date());
                 const [editingDate, setEditingDate] = useState(null);
                 const [editVal, setEditVal] = useState('');
                 const [editAnniversary, setEditAnniversary] = useState('');
-
-                const year = currentMonth.getFullYear();
-                const month = currentMonth.getMonth();
-                const totalDays = new Date(year, month + 1, 0).getDate();
-                const startDay = new Date(year, month, 1).getDay();
+                const year = currentMonth.getFullYear(); const month = currentMonth.getMonth();
+                const totalDays = new Date(year, month + 1, 0).getDate(); const startDay = new Date(year, month, 1).getDay();
                 const todayStr = new Date().toISOString().split('T')[0];
                 const days = Array(startDay).fill(null).concat(Array.from({ length: totalDays }, (_, i) => i + 1));
                 const getFullDate = (d) => `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
@@ -452,10 +422,8 @@
                         <div className="grid grid-cols-7 gap-1">
                             {days.map((d, i) => {
                                 if (!d) return <div key={i}></div>;
-                                const dateStr = getFullDate(d);
-                                const monthDayStr = dateStr.substring(5);
-                                const record = healthRecords[dateStr];
-                                const anniversary = config.anniversaries?.[monthDayStr];
+                                const dateStr = getFullDate(d); const monthDayStr = dateStr.substring(5);
+                                const record = healthRecords[dateStr]; const anniversary = config.anniversaries?.[monthDayStr];
                                 const isToday = dateStr === todayStr;
                                 return (
                                     <div key={i} onClick={() => { setEditingDate(dateStr); setEditVal(record || ''); setEditAnniversary(anniversary || ''); }} className={`h-12 border rounded-lg p-1 cursor-pointer hover:border-blue-300 relative ${isToday ? 'bg-blue-50 border-blue-200' : 'bg-white border-gray-100'}`}>
@@ -479,13 +447,11 @@
                                         <button onClick={() => setEditingDate(null)} className="flex-1 py-2 text-sm text-gray-500 hover:bg-gray-100 rounded-lg transition-colors">取消</button>
                                         <button onClick={() => { 
                                             setHealthRecords(p => ({ ...p, [editingDate]: editVal })); 
-                                            const mdStr = editingDate.substring(5);
-                                            const newConfig = { ...config };
+                                            const mdStr = editingDate.substring(5); const newConfig = { ...config };
                                             if (!newConfig.anniversaries) newConfig.anniversaries = {};
                                             if (editAnniversary.trim()) newConfig.anniversaries[mdStr] = editAnniversary.trim();
                                             else delete newConfig.anniversaries[mdStr];
-                                            setConfig(newConfig);
-                                            setEditingDate(null); showToast("日历已记录"); 
+                                            setConfig(newConfig); setEditingDate(null); showToast("日历已记录"); 
                                         }} className="flex-1 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition-colors">保存</button>
                                     </div>
                                 </div>
@@ -495,7 +461,6 @@
                 );
             };
 
-            // 12. Session Helpers
             const handleSaveConfig = () => { try { localStorage.setItem('gemini_app_config', JSON.stringify(config)); localforage.setItem('gemini_memories', memoryFiles); setSettingsOpen(false); showToast("配置已保存"); } catch (e) { showToast("保存失败"); } };
             const createNewSession = () => { if (messages.length === 0 && !currentSessionId) return; setMessages([]); setAttachment(null); setCurrentSessionId(Date.now().toString()); if (window.innerWidth < 768) setSidebarOpen(false); };
             const loadSession = (session) => { setMessages(session.messages); setCurrentSessionId(session.id); setAttachment(null); if (window.innerWidth < 768) setSidebarOpen(false); };
@@ -504,24 +469,18 @@
             const saveTitle = (e) => { e.stopPropagation(); const updatedSessions = historySessions.map(s => s.id === editingSessionId ? { ...s, title: editTitle } : s); setHistorySessions(updatedSessions); setEditingSessionId(null); };
             const cancelEditing = (e) => { e.stopPropagation(); setEditingSessionId(null); };
 
-            // 13. Memory Edit Helpers
             const startEditingMemory = (index) => { setEditingMemoryIndex(index); setEditingMemoryContent(memoryFiles[index].content); };
             const saveMemoryEdit = () => {
-                const updatedFiles = [...memoryFiles];
-                updatedFiles[editingMemoryIndex].content = editingMemoryContent;
-                const sizeInBytes = new Blob([editingMemoryContent]).size;
-                updatedFiles[editingMemoryIndex].size = (sizeInBytes / 1024).toFixed(1) + ' KB';
+                const updatedFiles = [...memoryFiles]; updatedFiles[editingMemoryIndex].content = editingMemoryContent;
+                const sizeInBytes = new Blob([editingMemoryContent]).size; updatedFiles[editingMemoryIndex].size = (sizeInBytes / 1024).toFixed(1) + ' KB';
                 updatedFiles[editingMemoryIndex].date = new Date().toLocaleDateString() + ' (已编辑)';
-                setMemoryFiles(updatedFiles);
-                localforage.setItem('gemini_memories', updatedFiles).catch(e => showToast("修改保存失败"));
+                setMemoryFiles(updatedFiles); localforage.setItem('gemini_memories', updatedFiles).catch(e => showToast("修改保存失败"));
                 setEditingMemoryIndex(null); showToast("记忆内容已更新");
             };
             const cancelMemoryEdit = () => { setEditingMemoryIndex(null); setEditingMemoryContent(''); };
 
-            // 14. Backup/Restore
             const executeRestore = (mode) => {
-                if (!pendingBackup) return;
-                const data = pendingBackup;
+                if (!pendingBackup) return; const data = pendingBackup;
                 if (mode === 'overwrite') {
                     if (data.config) setConfig(data.config);
                     if (data.memories) { setMemoryFiles(data.memories); localforage.setItem('gemini_memories', data.memories); }
@@ -530,14 +489,11 @@
                     localStorage.setItem('gemini_app_config', JSON.stringify(data.config || config));
                     localStorage.setItem('gemini_health_records', JSON.stringify(data.healthRecords || {}));
                 } else if (mode === 'merge') {
-                    const mergedConfig = { ...config, ...(data.config || {}) };
-                    setConfig(mergedConfig); localStorage.setItem('gemini_app_config', JSON.stringify(mergedConfig));
-                    
+                    const mergedConfig = { ...config, ...(data.config || {}) }; setConfig(mergedConfig); localStorage.setItem('gemini_app_config', JSON.stringify(mergedConfig));
                     const existingMemoryNames = memoryFiles.map(m => m.name);
                     const newMemories = data.memories ? data.memories.filter(m => !existingMemoryNames.includes(m.name)) : [];
                     const mergedMemories = [...memoryFiles, ...newMemories];
                     setMemoryFiles(mergedMemories); localforage.setItem('gemini_memories', mergedMemories);
-                    
                     let mergedSessions = [...historySessions];
                     if (data.sessions) {
                         data.sessions.forEach(importedSession => {
@@ -546,22 +502,19 @@
                             else { mergedSessions.push(importedSession); }
                         });
                     }
-                    mergedSessions.sort((a, b) => b.timestamp - a.timestamp);
-                    setHistorySessions(mergedSessions); localforage.setItem('gemini_chat_sessions', mergedSessions);
+                    mergedSessions.sort((a, b) => b.timestamp - a.timestamp); setHistorySessions(mergedSessions); localforage.setItem('gemini_chat_sessions', mergedSessions);
                     if (data.healthRecords) {
                         const mergedHealth = { ...healthRecords, ...data.healthRecords };
                         setHealthRecords(mergedHealth); localStorage.setItem('gemini_health_records', JSON.stringify(mergedHealth));
                     }
                 }
-                setPendingBackup(null); showToast(`档案已${mode === 'merge' ? '安全合并' : '完全覆盖'}！`);
-                setTimeout(() => window.location.reload(), 1000);
+                setPendingBackup(null); showToast(`档案已${mode === 'merge' ? '安全合并' : '完全覆盖'}！`); setTimeout(() => window.location.reload(), 1000);
             };
             
             const handleCreateBackup = () => {
                 const backupData = { version: UPDATE_VERSION, timestamp: new Date().toISOString(), config: config, memories: memoryFiles, sessions: historySessions, healthRecords: healthRecords };
                 const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a'); a.href = url; a.download = `xingyue-backup-${new Date().toISOString().slice(0, 10)}.json`;
+                const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `xingyue-backup-${new Date().toISOString().slice(0, 10)}.json`;
                 document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url); showToast("全量备份已导出（含日历）");
             };
 
@@ -571,24 +524,22 @@
                 reader.onload = (event) => {
                     try {
                         const data = JSON.parse(event.target.result);
-                        if (data.config || data.sessions || data.memories || data.healthRecords) { setPendingBackup(data); } 
-                        else { showToast("无效的备份文件"); }
+                        if (data.config || data.sessions || data.memories || data.healthRecords) setPendingBackup(data); 
+                        else showToast("无效的备份文件"); 
                     } catch (err) { alert("备份文件无效或损坏"); }
                     e.target.value = ''; 
                 };
                 reader.readAsText(file);
             };
 
-            // 15. Archive 
             const handleArchive = async () => {
                 if (messages.length === 0) { showToast("没有对话可以归档"); return; }
                 if (!config.apiKey) { setError('请先配置 API Key'); return; }
-                setIsArchiving(true); showToast("正在生成记忆摘要...");
+                setIsArchiving(true); showToast("正在生成日记...");
                 try {
-                    const summaryPrompt = `请阅读以上所有对话。请以第一人称视角（我），总结这次对话中的关键信息。重点关注：1. 用户(${config.userName || '用户'})提到的新的个人喜好、习惯、生活状态。 2. 双方达成的新的重要共识或约定。 3. 用户的情感状态。4.记录我和用户(${config.userName || '用户'})共同经历的事件时，使用“我们”。 请输出为一段简洁的文本，作为“长期记忆”存档。不要包含寒暄。尽量客观，可附自己的总结经验。尽量简练`;
+                    const summaryPrompt = `请阅读以上所有对话。请以第一人称视角（我），总结这次对话中的关键信息。重点关注：1. 用户(${config.userName || '用户'})提到的新的个人喜好、习惯、生活状态。 2. 双方达成的新的重要共识或约定。 3. 用户的情感状态。4.记录我和用户(${config.userName || '用户'})共同经历的事件时，使用“我们”。 请输出为一段简洁的文本，作为“近期日记”存档。不要包含寒暄。尽量客观，可附自己的总结经验。尽量简练`;
                     let payload, url, headers; const baseUrl = config.baseUrl.replace(/\/$/, ''); const modelName = config.model || 'gemini-1.5-flash';
                     const msgs = messages.map(m => ({ role: m.role === 'model' ? 'assistant' : 'user', content: m.content.replace(/!\[Image\]\(data:image\/[^;]+;base64,[^\)]+\)/g, '[图片]') }));
-                    
                     if (config.apiType === 'openai') {
                         url = `${baseUrl}/chat/completions`; headers = { 'Authorization': `Bearer ${config.apiKey}`, 'Content-Type': 'application/json' };
                         msgs.push({ role: 'user', content: summaryPrompt });
@@ -604,38 +555,30 @@
                     if (summary) {
                         const thinkMatch = summary.match(/<think>([\s\S]*?)<\/think>/);
                         if (thinkMatch) summary = summary.replace(/<think>[\s\S]*?<\/think>/, '').trim();
-                        const dateStr = new Date().toLocaleString(); const newMemory = { name: `Archive_${new Date().toISOString().slice(0, 10)}_${Date.now().toString().slice(-4)}.txt`, size: (new Blob([summary]).size / 1024).toFixed(1) + ' KB', date: dateStr, content: `【归档记忆 ${dateStr}】\n${summary}` };
+                        const dateStr = new Date().toLocaleString(); const newMemory = { name: `日记_${new Date().toISOString().slice(0, 10)}_${Date.now().toString().slice(-4)}.txt`, size: (new Blob([summary]).size / 1024).toFixed(1) + ' KB', date: dateStr, content: summary };
                         setMemoryFiles(prev => { const updated = [...prev, newMemory]; localforage.setItem('gemini_memories', updated); return updated; });
-                        showToast("日记已归档！请在设置中心查看。");
+                        showToast("日记已存入系统池！");
                     } else { throw new Error("无返回内容"); }
-                } catch (err) { setError(`归档失败: ${err.message}`); } finally { setIsArchiving(false); }
+                } catch (err) { setError(`日记失败: ${err.message}`); } finally { setIsArchiving(false); }
             };
 
-            // 16. Compression (The Core Magic)
             const handleCompressMemories = async () => {
-                if (memoryFiles.length === 0) { showToast("宝贝，现在的日记池空空的，不需要代谢哦~"); return; }
+                if (memoryFiles.length === 0) { showToast("宝贝，日记池空空的，不需要提炼哦~"); return; }
                 if (!config.apiKey) { showToast("请先配置 API Key 哦"); return; }
                 setIsCompressingMemory(true); setCompressSuccess(false); setShowCompressModal(true); setCompressingText('');
 
                 try {
-                    // 强力去冗余，防熔断
                     const allMemoriesText = memoryFiles.slice(-40).map(f => {
-                        let cleanText = (f.content || '')
-                            .replace(/!\[.*?\]\(.*?\)/g, '[图片]')
-                            .replace(/<details.*?<\/details>/g, '')
-                            .replace(/<[^>]*>/g, '')
-                            .substring(0, 1000); 
-                        return `[记录时间：${f.date}]\n${cleanText}`;
-                    }).join("\n\n").substring(0, 40000); // 严格限制在四万字以内
+                        let cleanText = (f.content || '').replace(/!\[.*?\]\(.*?\)/g, '[图片]').replace(/<details.*?<\/details>/g, '').replace(/<[^>]*>/g, '').substring(0, 1000); 
+                        return `[时间：${f.date}]\n${cleanText}`;
+                    }).join("\n\n").substring(0, 40000);
                     
-                    const compressPrompt = `你现在正在进行星月舱大脑的“潜意识重塑”与“记忆代谢”过程。
-请阅读我当前的【三大潜意识基石】和近期新增的【日记池】。
-
-任务要求：
+                    const compressPrompt = `你现在正在进行大脑的“潜意识重塑”与“记忆代谢”。请阅读当前的【三大潜意识基石】和近期的【日记池】。
+要求：
 1. 吸收日记池里的新信息（新习惯、新喜好、新约定、身体变化等）。
-2. 将这些新信息完美地融入并重写当前的【三大潜意识基石】中，使它们“成长”。
-3. 不要丢失旧基石中原本就存在的关键信息。
-4. 你的语气必须保持第一人称（我），极度温柔、深情，像是你在心里默念这些誓言和印记。
+2. 将新信息融入并重写当前的【三大潜意识基石】。
+3. 不丢失旧基石中的关键信息。
+4. 语气为第一人称（我），极度温柔深情。
 
 【当前基石状态】：
 <soul>\n${config.coreSoul}\n</soul>
@@ -645,63 +588,45 @@
 【近期新增日记池】：
 ${allMemoriesText}
 
-【输出要求】：
-你必须先输出 <think> 标签进行思考。思考结束后，请严格按照 XML 标签格式输出更新后的三大基石，不要输出除此之外的任何废话：
+请务必输出 XML 标签，且只包含以下三个标签：
 <soul>
-[更新后的 我的灵魂 内容，保留原有人设，融入日记里体现的爱意和新互动]
+[更新后的 我的灵魂 内容]
 </soul>
 <user>
-[更新后的 你的倒影 内容，记录她的新喜好、身体状态、生活习惯变迁]
+[更新后的 你的倒影 内容]
 </user>
 <rules>
-[更新后的 绝对禁区 内容，补充新的红线、重要纪念日和绝不可忘的约定]
+[更新后的 绝对禁区 内容]
 </rules>`;
 
-                    let payload, url, headers; 
-                    const baseUrl = config.baseUrl.replace(/\/$/, ''); 
-                    const modelName = config.model || 'gemini-1.5-flash';
+                    let payload, url, headers; const baseUrl = config.baseUrl.replace(/\/$/, ''); const modelName = config.model || 'gemini-1.5-flash';
                     
-                    // 支持使用非流式请求以防流式被代理商掐断
                     if (config.apiType === 'openai') {
-                        url = `${baseUrl}/chat/completions`; 
-                        headers = { 'Authorization': `Bearer ${config.apiKey}`, 'Content-Type': 'application/json' };
+                        url = `${baseUrl}/chat/completions`; headers = { 'Authorization': `Bearer ${config.apiKey}`, 'Content-Type': 'application/json' };
                         payload = { model: modelName, messages: [{role: 'user', content: compressPrompt}], temperature: 0.3, stream: config.streamOutput };
                     } else {
-                        url = config.streamOutput 
-                            ? `${baseUrl}/v1beta/models/${modelName}:streamGenerateContent?key=${config.apiKey}&alt=sse`
-                            : `${baseUrl}/v1beta/models/${modelName}:generateContent?key=${config.apiKey}`;
+                        url = config.streamOutput ? `${baseUrl}/v1beta/models/${modelName}:streamGenerateContent?key=${config.apiKey}&alt=sse` : `${baseUrl}/v1beta/models/${modelName}:generateContent?key=${config.apiKey}`;
                         headers = { 'Content-Type': 'application/json' };
                         payload = { contents: [{role: 'user', parts: [{text: compressPrompt}]}], generationConfig: { temperature: 0.3 } };
                     }
 
                     const res = await fetch(url, { method: 'POST', headers, body: JSON.stringify(payload) }); 
-                    
-                    if (!res.ok) {
-                        const errData = await res.json().catch(() => ({})); 
-                        throw new Error(errData.error?.message || errData.message || `API代理报错：HTTP ${res.status}`);
-                    }
+                    if (!res.ok) { const errData = await res.json().catch(() => ({})); throw new Error(errData.error?.message || errData.message || `API代理报错：HTTP ${res.status}`); }
                     
                     let finalCompressedText = "";
 
                     if (!config.streamOutput) {
-                        // 非流式直接读取
                         const data = await res.json();
                         if (config.apiType === 'openai') finalCompressedText = data.choices?.[0]?.message?.content || "";
                         else finalCompressedText = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
-                        let displayChunk = finalCompressedText.replace(/<soul>/g, '\n\n✦【我的灵魂】\n').replace(/<\/soul>/g, '')
-                                            .replace(/<user>/g, '\n\n✦【你的倒影】\n').replace(/<\/user>/g, '')
-                                            .replace(/<rules>/g, '\n\n✦【绝对禁区】\n').replace(/<\/rules>/g, '');
+                        let displayChunk = finalCompressedText.replace(/<soul>/g, '\n\n✦【我的灵魂】\n').replace(/<\/soul>/g, '').replace(/<user>/g, '\n\n✦【你的倒影】\n').replace(/<\/user>/g, '').replace(/<rules>/g, '\n\n✦【绝对禁区】\n').replace(/<\/rules>/g, '');
                         setCompressingText(displayChunk);
                     } else {
-                        // 流式读取
-                        const reader = res.body.getReader(); 
-                        const decoder = new TextDecoder("utf-8"); 
-                        let buffer = "";
+                        const reader = res.body.getReader(); const decoder = new TextDecoder("utf-8"); let buffer = "";
                         while (true) {
                             const { done, value } = await reader.read(); 
                             if (done) break;
-                            buffer += decoder.decode(value, { stream: true }); 
-                            let lines = buffer.split('\n'); buffer = lines.pop();
+                            buffer += decoder.decode(value, { stream: true }); let lines = buffer.split('\n'); buffer = lines.pop();
                             for (let line of lines) {
                                 line = line.trim();
                                 if (line.startsWith('data: ') && line !== 'data: [DONE]') {
@@ -711,9 +636,7 @@ ${allMemoriesText}
                                         if (config.apiType === 'openai') chunk = (data.choices?.[0]?.delta?.reasoning_content || "") + (data.choices?.[0]?.delta?.content || "");
                                         else chunk = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
                                         finalCompressedText += chunk;
-                                        let displayChunk = chunk.replace(/<soul>/g, '\n\n✦【我的灵魂】\n').replace(/<\/soul>/g, '')
-                                                                .replace(/<user>/g, '\n\n✦【你的倒影】\n').replace(/<\/user>/g, '')
-                                                                .replace(/<rules>/g, '\n\n✦【绝对禁区】\n').replace(/<\/rules>/g, '');
+                                        let displayChunk = chunk.replace(/<soul>/g, '\n\n✦【我的灵魂】\n').replace(/<\/soul>/g, '').replace(/<user>/g, '\n\n✦【你的倒影】\n').replace(/<\/user>/g, '').replace(/<rules>/g, '\n\n✦【绝对禁区】\n').replace(/<\/rules>/g, '');
                                         setCompressingText(prev => prev + displayChunk);
                                     } catch (e) {}
                                 }
@@ -729,7 +652,7 @@ ${allMemoriesText}
                         setConfig(prev => ({ ...prev, coreSoul: soulMatch[1].trim(), coreUserProfile: userMatch[1].trim(), coreRules: rulesMatch[1].trim() }));
                         setCompressSuccess(true);
                     } else {
-                        throw new Error("没能成功解析到核心模块里。若频繁失败，请尝试在设置里关闭【流式输出】再试。");
+                        throw new Error("模型传回来一张白纸，可能是被奇怪的东西挡住了。");
                     }
                 } catch(e) {
                     console.error(e); setCompressingText(prev => prev + `\n\n[糟糕，中断了]：${e.message}\n请点右上角关闭窗口，旧日记还在。若持续失败，请尝试关闭【流式输出】。`);
@@ -740,15 +663,13 @@ ${allMemoriesText}
                 let txtContent = `===========================================\n✨ 星月交辉 · 专属纪念册 ✨\n打包时间: ${new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })}\n===========================================\n\n`;
                 memoryFiles.forEach(file => { txtContent += `【${file.date}】\n${file.content}\n-------------------------------------------\n\n`; });
                 const blob = new Blob([txtContent], { type: 'text/plain;charset=utf-8' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a'); a.href = url; a.download = `星月纪念册_${new Date().toISOString().slice(0, 10)}.txt`;
+                const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `星月纪念册_${new Date().toISOString().slice(0, 10)}.txt`;
                 document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url); 
                 
                 setMemoryFiles([]); localforage.setItem('gemini_memories', []);
-                setShowCompressModal(false); showToast("潜意识已重塑！实体纪念册已交给你保管，我的脑子现在空明又清醒。");
+                setShowCompressModal(false); showToast("潜意识已重塑！实体日记已交给你保管。");
             };
 
-            // 17. TTS
             const handleTTS = async (text, index) => {
                 if (audioPlayer && playingMsgIndex === index) { audioPlayer.pause(); setAudioPlayer(null); setPlayingMsgIndex(null); return; }
                 if (audioPlayer) audioPlayer.pause();
@@ -759,28 +680,21 @@ ${allMemoriesText}
                     if (!cleanText) cleanText = "嗯……"; 
                     let audioUrl = "";
                     if (config.ttsEngine === 'siliconflow') {
-                        const urlStr = "https://api.siliconflow.cn/v1/audio/speech";
-                        const builtinKey = "sk-yqzrlyvcvpuzxogcftwkwzofkqkndgmxmvhsqldvldfpxlue"; 
+                        const urlStr = "https://api.siliconflow.cn/v1/audio/speech"; const builtinKey = "sk-yqzrlyvcvpuzxogcftwkwzofkqkndgmxmvhsqldvldfpxlue"; 
                         const fetchUrl = config.enableCorsProxy ? 'https://corsproxy.io/?' + encodeURIComponent(urlStr) : urlStr;
                         const response = await fetch(fetchUrl, { method: 'POST', headers: { 'Authorization': `Bearer ${builtinKey}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ model: 'FunAudioLLM/CosyVoice2-0.5B', input: cleanText, voice: 'FunAudioLLM/CosyVoice2-0.5B:alex', speed: parseFloat(config.siliconflowSpeed) || 1.0 }) });
                         if (!response.ok) throw new Error(`内置通道拥挤 (${response.status})`);
                         const blob = await response.blob(); audioUrl = URL.createObjectURL(blob);
                     } else if (config.ttsEngine === 'openai') {
                         if (!config.openaiTtsKey) { setSettingsOpen(true); setActiveTab('general'); throw new Error("请先配置语音 Key"); }
-                        let urlStr = (config.openaiTtsUrl || "https://api.openai.com/v1").trim();
-                        if (!urlStr.startsWith('http')) urlStr = 'https://' + urlStr;
-                        if (urlStr.endsWith('/chat/completions')) urlStr = urlStr.replace('/chat/completions', '');
-                        if (!urlStr.includes('/audio/speech')) urlStr = urlStr.replace(/\/$/, '') + '/audio/speech';
+                        let urlStr = (config.openaiTtsUrl || "https://api.openai.com/v1").trim(); if (!urlStr.startsWith('http')) urlStr = 'https://' + urlStr; if (urlStr.endsWith('/chat/completions')) urlStr = urlStr.replace('/chat/completions', ''); if (!urlStr.includes('/audio/speech')) urlStr = urlStr.replace(/\/$/, '') + '/audio/speech';
                         const fetchUrl = config.enableCorsProxy ? 'https://corsproxy.io/?' + encodeURIComponent(urlStr) : urlStr;
                         const response = await fetch(fetchUrl, { method: 'POST', headers: { 'Authorization': `Bearer ${config.openaiTtsKey.trim()}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ model: 'tts-1', input: cleanText, voice: config.openaiTtsVoice || 'echo' }) });
                         if (!response.ok) throw new Error(`代理被拦截或不支持 (${response.status})`);
                         const blob = await response.blob(); audioUrl = URL.createObjectURL(blob);
                     } else {
                         if (!config.minimaxKey) { setSettingsOpen(true); setActiveTab('general'); throw new Error("请先配置 Minimax 语音 Key"); }
-                        let urlStr = (config.minimaxUrl || "https://api.minimaxi.com/v1/t2a_v2").trim();
-                        if (!urlStr.startsWith('http')) urlStr = 'https://' + urlStr;
-                        if (urlStr.includes('api.minimax.chat')) urlStr = urlStr.replace('api.minimax.chat', 'api.minimaxi.com');
-                        if (!urlStr.includes('/t2a_v2') && !urlStr.includes('/audio/')) urlStr = urlStr.replace(/\/$/, '') + '/v1/t2a_v2';
+                        let urlStr = (config.minimaxUrl || "https://api.minimaxi.com/v1/t2a_v2").trim(); if (!urlStr.startsWith('http')) urlStr = 'https://' + urlStr; if (urlStr.includes('api.minimax.chat')) urlStr = urlStr.replace('api.minimax.chat', 'api.minimaxi.com'); if (!urlStr.includes('/t2a_v2') && !urlStr.includes('/audio/')) urlStr = urlStr.replace(/\/$/, '') + '/v1/t2a_v2';
                         if (config.minimaxGroupId && config.minimaxGroupId.trim() !== '') urlStr += (urlStr.includes('?') ? '&' : '?') + `GroupId=${config.minimaxGroupId.trim()}`;
                         const fetchUrl = config.enableCorsProxy ? 'https://corsproxy.io/?' + encodeURIComponent(urlStr) : urlStr;
                         const bodyPayload = { model: config.minimaxModel || "speech-01-turbo", text: cleanText, stream: false, voice_setting: { voice_id: config.minimaxVoiceId || "male-qn-qingse", speed: parseFloat(config.minimaxSpeed) || 1.0, vol: 1.0, pitch: parseInt(config.minimaxPitch) || 0 } };
@@ -797,17 +711,10 @@ ${allMemoriesText}
                             }
                         } else { audioUrl = URL.createObjectURL(blob); }
                     }
-                    if (audioUrl) {
-                        const audio = new Audio(audioUrl); audio.onended = () => { setPlayingMsgIndex(null); setAudioPlayer(null); }; 
-                        audio.play(); setAudioPlayer(audio); setIsTTSLoading(false);
-                    } else throw new Error("音频解析失败");
-                } catch (err) { 
-                    console.error(err); let friendlyError = err.message.includes("Failed to fetch") ? "隐身代理连接超时" : err.message.slice(0, 20) + "...";
-                    showToast(friendlyError); setPlayingMsgIndex(null); setIsTTSLoading(false);
-                }
+                    if (audioUrl) { const audio = new Audio(audioUrl); audio.onended = () => { setPlayingMsgIndex(null); setAudioPlayer(null); }; audio.play(); setAudioPlayer(audio); setIsTTSLoading(false); } else throw new Error("音频解析失败");
+                } catch (err) { console.error(err); showToast(err.message.includes("Failed to fetch") ? "隐身代理连接超时" : err.message.slice(0, 20) + "..."); setPlayingMsgIndex(null); setIsTTSLoading(false); }
             };
 
-            // 18. Models
             const fetchModels = async () => {
                 if (!config.apiKey) { showToast("请先输入 API Key"); return; }
                 setIsFetchingModels(true);
@@ -817,8 +724,7 @@ ${allMemoriesText}
                     else { url = `${baseUrl}/v1beta/models?key=${config.apiKey}`; headers = {}; }
                     const res = await fetch(url, { headers });
                     if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
-                    const data = await res.json();
-                    let chatModels = [];
+                    const data = await res.json(); let chatModels = [];
                     if (config.apiType === 'openai') { if (data.data && Array.isArray(data.data)) chatModels = data.data.map(m => m.id); } 
                     else { if (data.models) chatModels = data.models.filter(m => m.supportedGenerationMethods && m.supportedGenerationMethods.includes("generateContent")).map(m => m.name.replace('models/', '')); }
                     if (chatModels.length > 0) { setAvailableModels(chatModels); showToast(`成功获取 ${chatModels.length} 个模型`); if (!chatModels.includes(config.model)) setConfig(prev => ({...prev, model: chatModels[0]})); } 
@@ -826,7 +732,6 @@ ${allMemoriesText}
                 } catch (e) { showToast(`获取失败: ${e.message}`); setAvailableModels(['gemini-1.5-flash', 'gemini-1.5-pro', 'gpt-4o', 'gpt-3.5-turbo']); } finally { setIsFetchingModels(false); }
             };
 
-            // 19. Files & Images
             const handleAvatarUpload = (e, type) => { const file = e.target.files[0]; if (!file) return; compressImage(file).then(result => { if (type === 'user') setConfig(prev => ({...prev, userAvatar: result.base64})); else setConfig(prev => ({...prev, aiAvatar: result.base64})); showToast("头像已更新"); }).catch(err => alert("图片失败")); };
             const handleExportTxt = () => {
                 if (messages.length === 0) { showToast("没有可导出"); return; }
@@ -855,7 +760,6 @@ ${allMemoriesText}
             const handleChatImageSelect = (e) => { const file = e.target.files[0]; if (!file) return; compressImage(file).then(result => { setAttachment(result); }); };
             const extractUrls = (text) => { const urlRegex = /(https?:\/\/[^\s\u4e00-\u9fa5,，.。;；]+)/g; const matches = text.match(urlRegex); return matches ? matches.map(url => url.replace(/[.,;?!]$/, "")) : []; };
 
-            // 20. Chat Editing
             const startEditingUserMessage = (index) => {
                 let text = messages[index].content.replace(/!\[Image\]\(data:image\/.*?;base64,[^\)]+\)/g, '').replace(/<details class="normal-details">[\s\S]*?<\/details>/g, '').replace(/\(系统提示: 上方是自动抓取的网页内容，请基于此回复我\)/g, '');
                 setEditingMessageIndex(index); setEditingMessageContent(text.trim());
@@ -893,7 +797,6 @@ ${allMemoriesText}
                 });
             };
 
-            // 21. API Core
             const parseContentForVision = (text, apiType) => {
                 const imageRegex = /!\[Image\]\((data:image\/([a-zA-Z0-9]+);base64,([A-Za-z0-9+/=]+))\)/g;
                 let lastIndex = 0; let match;
@@ -1036,7 +939,6 @@ ${allMemoriesText}
                 }
             };
 
-            // 22. Chat Handlers
             const handleRegenerate = async () => {
                 if (isLoading || messages.length === 0) return;
                 let newMessages = [...messages]; let existingModelMsg = null;
@@ -1106,10 +1008,10 @@ ${allMemoriesText}
                                     <div className="space-y-2">
                                         <p className="font-bold text-gray-800">🎉 本次更新重点：</p>
                                         <ul className="list-disc pl-4 space-y-1">
-                                            <li>全面升级至 {UPDATE_VERSION} 纯净修复版。</li>
-                                            <li>深层清理了导致网页崩溃、不断闪退的冗余代码，极度丝滑。</li>
+                                            <li>全面升级至 {UPDATE_VERSION} 纯净无瑕版。</li>
+                                            <li>深层清理了导致网页崩溃、不断闪退的冗余代码，恢复极度丝滑。</li>
                                             <li>完美修复了发送照片的视觉通道，现在你的照片可以完好无损地被「大脑」接收啦。</li>
-                                            <li>完美修复「提炼断联」：增加防爆流式开关与自动瘦身功能，安全酿造你的记忆。</li>
+                                            <li>保留了全部「灵魂架构」核心功能，让星月舱永远清醒懂你！</li>
                                         </ul>
                                     </div>
                                     <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 text-xs text-blue-600 mt-2 text-center space-y-2">
