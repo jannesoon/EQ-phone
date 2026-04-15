@@ -142,8 +142,45 @@
             return html;
         };
 
+        // 清洗裸露的 LaTeX 排版命令（模型误输出时兜底）
+        // 只清洗 $...$ 和 $$...$$ 之外的部分，保留正常数学公式
+        const cleanRawLatex = (text) => {
+            if (!text) return text;
+            // 先把 $$...$$ 和 $...$ 保护起来
+            const protected_parts = [];
+            let cleaned = text.replace(/\$\$[\s\S]*?\$\$|\$[^$\n]+?\$/g, (match) => {
+                protected_parts.push(match);
+                return `\x00MATH${protected_parts.length - 1}\x00`;
+            });
+            // \textcolor{#hex}{内容} → 内容
+            cleaned = cleaned.replace(/\\textcolor\{[^}]*\}\{([^}]*)\}/g, '$1');
+            // \scriptsize 等尺寸命令
+            cleaned = cleaned.replace(/\\(scriptsize|small|large|Large|huge|Huge|normalsize|footnotesize|tiny)\s*/g, '');
+            // \text{内容} → 内容
+            cleaned = cleaned.replace(/\\text\{([^}]*)\}/g, '$1');
+            // \underset{下标}{主体} → 主体
+            cleaned = cleaned.replace(/\\underset\{[^}]*\}\{([^}]*)\}/g, '$1');
+            // \overset{上标}{主体} → 主体
+            cleaned = cleaned.replace(/\\overset\{[^}]*\}\{([^}]*)\}/g, '$1');
+            // \colorbox{颜色}{内容} → 内容
+            cleaned = cleaned.replace(/\\colorbox\{[^}]*\}\{([^}]*)\}/g, '$1');
+            // \fbox{内容} → 内容
+            cleaned = cleaned.replace(/\\fbox\{([^}]*)\}/g, '$1');
+            // \underline{内容} → 内容
+            cleaned = cleaned.replace(/\\underline\{([^}]*)\}/g, '$1');
+            // \textbf → **粗体**, \textit → *斜体*
+            cleaned = cleaned.replace(/\\textbf\{([^}]*)\}/g, '**$1**');
+            cleaned = cleaned.replace(/\\textit\{([^}]*)\}/g, '*$1*');
+            // 清理残留的裸 \命令{内容} → 内容
+            cleaned = cleaned.replace(/\\[a-zA-Z]+\{([^}]*)\}/g, '$1');
+            // 恢复数学公式
+            cleaned = cleaned.replace(/\x00MATH(\d+)\x00/g, (_, i) => protected_parts[i]);
+            return cleaned;
+        };
+
         const MessageContent = ({ content }) => {
-            let html = marked.parse(content || "");
+            let cleaned = cleanRawLatex(content || "");
+            let html = marked.parse(cleaned);
             html = renderLatex(html);
             return <div className="prose prose-sm max-w-none text-gray-700 leading-7" dangerouslySetInnerHTML={{ __html: html }} />;
         };
