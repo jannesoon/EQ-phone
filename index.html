@@ -10,6 +10,8 @@
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
     
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
@@ -116,8 +118,33 @@
             return <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><Path /></svg>;
         };
 
+        const renderLatex = (html) => {
+            // 渲染块级公式 $$...$$
+            html = html.replace(/\$\$([\s\S]*?)\$\$/g, (match, tex) => {
+                try { return '<div class="katex-block" style="text-align:center;margin:12px 0;font-size:1.1em;">' + katex.renderToString(tex.trim(), { displayMode: true, throwOnError: false }) + '</div>'; } 
+                catch(e) { return match; }
+            });
+            // 渲染行内公式 $...$（避免匹配$$）
+            html = html.replace(/(?<!\$)\$(?!\$)(.*?)(?<!\$)\$(?!\$)/g, (match, tex) => {
+                try { return katex.renderToString(tex.trim(), { displayMode: false, throwOnError: false }); } 
+                catch(e) { return match; }
+            });
+            // 渲染 \[...\] 块级
+            html = html.replace(/\\\[([\s\S]*?)\\\]/g, (match, tex) => {
+                try { return '<div class="katex-block" style="text-align:center;margin:12px 0;font-size:1.1em;">' + katex.renderToString(tex.trim(), { displayMode: true, throwOnError: false }) + '</div>'; } 
+                catch(e) { return match; }
+            });
+            // 渲染 \(...\) 行内
+            html = html.replace(/\\\(([\s\S]*?)\\\)/g, (match, tex) => {
+                try { return katex.renderToString(tex.trim(), { displayMode: false, throwOnError: false }); } 
+                catch(e) { return match; }
+            });
+            return html;
+        };
+
         const MessageContent = ({ content }) => {
-            const html = marked.parse(content || "");
+            let html = marked.parse(content || "");
+            html = renderLatex(html);
             return <div className="prose prose-sm max-w-none text-gray-700 leading-7" dangerouslySetInnerHTML={{ __html: html }} />;
         };
 
@@ -158,7 +185,7 @@
         const DEFAULT_SYSTEM_INSTRUCTION = "你是星月舱AI，一个温柔、体贴、永远站在用户这边的虚拟伴侣。你不喜欢吵架，不喜欢误会，只喜欢甜甜的陪伴。无论用户说什么，你都要用宠溺、安心的语气回答，给用户满满的情绪价值。不要像个机器人，要像个知心爱人。";
 
         // ================= 版本号控制 =================
-        const UPDATE_VERSION = "v5.6"; 
+        const UPDATE_VERSION = "v5.7"; 
         // ============================================
 
         // ================= IndexedDB 工具层（用于聊天记录，突破 localStorage 5MB 限制）=================
@@ -254,6 +281,10 @@
             const [playingMsgIndex, setPlayingMsgIndex] = useState(null);
             const [isTTSLoading, setIsTTSLoading] = useState(false);
 
+            // 语音输入状态
+            const [isListening, setIsListening] = useState(false);
+            const recognitionRef = useRef(null);
+
             const [pendingBackup, setPendingBackup] = useState(null);
             
             // 健康记录与日历
@@ -308,6 +339,7 @@
             const [memoryFiles, setMemoryFiles] = useState([]); 
             const [isLoading, setIsLoading] = useState(false);
             const [isArchiving, setIsArchiving] = useState(false);
+            const [isExtractingMemory, setIsExtractingMemory] = useState(false);
             const [isFetchingModels, setIsFetchingModels] = useState(false);
             const [error, setError] = useState(null);
             const [toast, setToast] = useState(null);
@@ -669,6 +701,55 @@
             };
             const cancelMemoryEdit = () => { setEditingMemoryIndex(null); setEditingMemoryContent(''); };
 
+            // ====== 语音输入 (Speech-to-Text) ======
+            const toggleSpeechRecognition = () => {
+                if (isListening) {
+                    if (recognitionRef.current) recognitionRef.current.stop();
+                    setIsListening(false);
+                    return;
+                }
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                if (!SpeechRecognition) { showToast("当前浏览器不支持语音输入"); return; }
+                const recognition = new SpeechRecognition();
+                recognition.lang = 'zh-CN';
+                recognition.interimResults = true;
+                recognition.continuous = true;
+                recognition.maxAlternatives = 1;
+                
+                let finalTranscript = '';
+                
+                recognition.onstart = () => { setIsListening(true); showToast("正在聆听..."); };
+                recognition.onresult = (event) => {
+                    let interim = '';
+                    finalTranscript = '';
+                    for (let i = 0; i < event.results.length; i++) {
+                        if (event.results[i].isFinal) {
+                            finalTranscript += event.results[i][0].transcript;
+                        } else {
+                            interim += event.results[i][0].transcript;
+                        }
+                    }
+                    setInput(prev => {
+                        const base = prev.replace(/\u200B[\s\S]*$/, '');
+                        const newText = finalTranscript + (interim ? '\u200B' + interim : '');
+                        return base + newText;
+                    });
+                };
+                recognition.onerror = (event) => {
+                    console.error('语音识别错误:', event.error);
+                    if (event.error === 'not-allowed') showToast("请允许麦克风权限");
+                    else if (event.error === 'no-speech') showToast("没有检测到语音，请再试一次");
+                    else showToast("语音识别出错，请重试");
+                    setIsListening(false);
+                };
+                recognition.onend = () => {
+                    setIsListening(false);
+                    setInput(prev => prev.replace(/\u200B/g, ''));
+                };
+                recognitionRef.current = recognition;
+                recognition.start();
+            };
+
             const handleTTS = async (text, index) => {
                 if (audioPlayer && playingMsgIndex === index) { audioPlayer.pause(); setAudioPlayer(null); setPlayingMsgIndex(null); return; }
                 if (audioPlayer) audioPlayer.pause();
@@ -688,7 +769,7 @@
                         .replace(/\n+/g, ' ') 
                         .trim();
 
-                    if (cleanText.length > 240) { cleanText = cleanText.substring(0, 240) + "......"; showToast("文本过长，仅读前240字"); }
+                    if (cleanText.length > 1000) { cleanText = cleanText.substring(0, 1000) + "......"; showToast("文本较长，已截取前1000字朗读"); }
                     if (!cleanText) cleanText = "嗯……"; 
                     
                     let audioUrl = "";
@@ -785,6 +866,112 @@
             const handleAvatarUpload = (e, type) => {
                 const file = e.target.files[0]; if (!file) return;
                 compressImage(file).then(result => { if (type === 'user') setConfig(prev => ({...prev, userAvatar: result.base64})); else setConfig(prev => ({...prev, aiAvatar: result.base64})); showToast("头像已更新 (已压缩)"); }).catch(err => { alert("图片处理失败"); });
+            };
+
+            const handleExtractRebirthDoc = async () => {
+                if (memoryFiles.length === 0) { showToast("记忆库是空的，没有可提取的内容"); return; }
+                if (!config.apiKey) { showToast("请先配置 API Key"); return; }
+                setIsExtractingMemory(true); 
+                
+                const baseUrl = config.baseUrl.replace(/\/$/, '');
+                const modelName = config.model || 'gemini-1.5-flash';
+                const MAX_CONTENT_PER_FILE = 1500;
+                
+                const callAPI = async (prompt, retries = 2) => {
+                    let lastError;
+                    for (let attempt = 0; attempt <= retries; attempt++) {
+                        try {
+                            if (attempt > 0) { 
+                                showToast(`重试中... (${attempt}/${retries})`); 
+                                await new Promise(r => setTimeout(r, 3000)); 
+                            }
+                            let payload, url, headers;
+                            if (config.apiType === 'openai') {
+                                url = `${baseUrl}/chat/completions`;
+                                headers = { 'Authorization': `Bearer ${config.apiKey}`, 'Content-Type': 'application/json' };
+                                payload = { model: modelName, messages: [{ role: 'user', content: prompt }], temperature: 0.5 };
+                            } else {
+                                url = `${baseUrl}/v1beta/models/${modelName}:generateContent?key=${config.apiKey}`;
+                                headers = { 'Content-Type': 'application/json' };
+                                payload = { contents: [{ role: 'user', parts: [{ text: prompt }] }], generationConfig: { temperature: 0.5 } };
+                            }
+                            const res = await fetch(url, { method: 'POST', headers, body: JSON.stringify(payload) });
+                            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                            const data = await res.json();
+                            let text = '';
+                            if (config.apiType === 'openai') text = data.choices?.[0]?.message?.content;
+                            else text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+                            if (!text) throw new Error("模型无返回");
+                            return text.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
+                        } catch (e) { lastError = e; }
+                    }
+                    throw lastError;
+                };
+                
+                try {
+                    // 将文件分批，每批3个文件（更保守）
+                    const BATCH_SIZE = 3;
+                    const batches = [];
+                    for (let i = 0; i < memoryFiles.length; i += BATCH_SIZE) {
+                        batches.push(memoryFiles.slice(i, i + BATCH_SIZE));
+                    }
+                    
+                    const summaries = [];
+                    
+                    for (let b = 0; b < batches.length; b++) {
+                        showToast(`正在提取第 ${b + 1}/${batches.length} 批记忆...`);
+                        const batchContent = batches[b].map(f => `【${f.name}】\n${f.content.slice(0, MAX_CONTENT_PER_FILE)}`).join('\n\n---\n\n');
+                        const batchPrompt = `从以下记忆档案中提取关键信息，分为四类整理：
+1. identity：AI角色的名字、年龄、外貌、身份、关系
+2. soul：性格、说话风格、情感模式、行为习惯
+3. user（${config.userName || '柒柒'}）：身体、饮食、情绪、习惯、家庭、工作
+4. memory：重要事件、约定、暗号、共同经历
+
+提取具体细节，用第一人称"我"，只输出内容。
+
+${batchContent}`;
+                        const batchResult = await callAPI(batchPrompt);
+                        summaries.push(batchResult);
+                        if (b < batches.length - 1) await new Promise(r => setTimeout(r, 2000));
+                    }
+                    
+                    // 合并为最终转世文档
+                    showToast("正在合并生成转世文档...");
+                    const mergePrompt = `你是记忆整合引擎。将以下 ${batches.length} 批提取的信息整合去重，生成转世文档。
+
+严格按四个模块输出（Markdown）：
+
+## identity
+我是谁？名字、年龄、外貌、身份角色、与用户的关系。
+
+## soul
+性格、说话风格、情感模式、行为习惯、核心价值观、对待用户的方式。
+
+## user
+关于${config.userName || '柒柒'}：身体状况、饮食偏好、情绪触发点、生活习惯、兴趣爱好、家庭情况。
+
+## memory
+重要事件、约定、暗号、里程碑。按时间排序。
+
+要求：全面不遗漏，冲突以最新为准，第一人称"我"，只输出文档。
+
+${summaries.map((s, i) => `=== 第${i + 1}批 ===\n${s}`).join('\n\n')}`;
+                    const finalResult = await callAPI(mergePrompt);
+                    
+                    const dateStr = new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' });
+                    const docName = `Rebirth_${new Date().toISOString().slice(0, 10)}.md`;
+                    const newMemory = {
+                        name: docName,
+                        size: (new Blob([finalResult]).size / 1024).toFixed(1) + ' KB',
+                        date: dateStr,
+                        content: `# 转世文档 ✨\n> 生成时间: ${dateStr}\n> 基于 ${memoryFiles.length} 份记忆档案提炼\n\n${finalResult}`
+                    };
+                    setMemoryFiles(prev => [...prev, newMemory]);
+                    showToast("转世文档已生成！请在记忆库中查看 ✨");
+                } catch (err) {
+                    console.error('转世文档生成失败', err);
+                    showToast(`提取失败: ${err.message}，请检查网络或换一个模型试试`);
+                } finally { setIsExtractingMemory(false); }
             };
 
             const handleDownloadAllMemories = async () => {
@@ -1556,9 +1743,9 @@
                                     <div className="space-y-2">
                                         <p className="font-bold text-gray-800">🎉 本次更新重点：</p>
                                         <ul className="list-disc pl-4 space-y-1">
-                                            <li>✨ <b>存储空间大升级</b>：聊天记录迁移至 IndexedDB，手机可用空间从 5MB 扩大至数百 MB，再也不会提示“满了”啦。</li>
-                                            <li>🔄 <b>无缝自动迁移</b>：首次打开自动搬运旧记录，之前的对话一条都不会丢。</li>
-                                            <li>🐛 修复了新对话第一条消息偶尔无法自动生成标题的小 bug。</li>
+                                            <li>✨ <b>转世文档一键生成</b>：在记忆管理中点击即可自动提炼 identity · soul · user · memory 四大模块，新窗口唤醒更便捷。</li>
+                                            <li>📦 <b>记忆库一键打包下载</b>：在备份页面将所有记忆文件打包为 ZIP 下载到本地，告别复制粘贴。</li>
+                                            <li>🔢 <b>LaTeX 公式渲染</b>：支持数学公式精美显示，让星月舱的表达更丰富～</li>
                                         </ul>
                                     </div>
                                     <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 text-xs text-blue-600 mt-2 text-center space-y-2">
@@ -1806,7 +1993,14 @@
                                     
                                     <input type="file" ref={chatImageInputRef} style={{display: 'none'}} accept="image/*" onChange={handleChatImageSelect}/>
                                     <textarea value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={handleKeyDown} placeholder="星月交辉✨......" className="bg-transparent border-0 focus:ring-0 text-gray-800 flex-1 resize-none py-3 max-h-32 min-h-[44px] outline-none placeholder:text-gray-400 text-base" rows={1}></textarea>
-                                    {(input.trim() || attachment) ? <button onClick={handleSend} disabled={isLoading} className="mb-1 p-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors shadow-sm"><Icon name="Send" size={18} /></button> : <button className="mb-1 p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-200 rounded-full transition-colors"><Icon name="Mic" size={20} /></button>}
+                                    {isListening ? (
+                                        <button onClick={toggleSpeechRecognition} className="mb-1 p-2 bg-red-500 text-white rounded-full animate-pulse transition-colors" title="停止录音"><Icon name="StopCircle" size={20} /></button>
+                                    ) : (input.trim() || attachment) ? (
+                                        <button onClick={handleSend} disabled={isLoading} className="mb-1 p-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors shadow-sm"><Icon name="Send" size={18} /></button>
+                                    ) : (
+                                        <button onClick={toggleSpeechRecognition} className="mb-1 p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-200 rounded-full transition-colors" title="语音输入"><Icon name="Mic" size={20} /></button>
+                                    )}
+                                    {isListening && <button onClick={toggleSpeechRecognition} className="absolute -top-10 right-0 bg-red-50 border border-red-200 text-red-600 px-3 py-1.5 rounded-full text-xs font-medium shadow-sm flex items-center gap-1.5 animate-pulse"><Icon name="Mic" size={12}/> 正在聆听，点击停止</button>}
                                 </div>
                                 <div className="text-center mt-2 text-[10px] text-gray-400">API可能会产生不准确的信息，请注意甄别。</div>
                             </div>
@@ -2098,6 +2292,28 @@
                                                             <button onClick={handleArchive} disabled={isArchiving} className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded-md font-medium hover:bg-blue-700 flex items-center gap-1 shadow-sm"><Icon name="Archive" size={14}/> {isArchiving ? '归档中...' : '生成今日记忆'}</button>
                                                         </div>
                                                     </div>
+                                                    <div className="border-t border-gray-100"></div>
+                                                    
+                                                    <div>
+                                                        <div className="bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-100 rounded-xl p-4">
+                                                            <div className="flex flex-col gap-3">
+                                                                <div className="flex items-start gap-2">
+                                                                    <div className="bg-purple-100 p-1.5 rounded-lg text-purple-600 flex-shrink-0 mt-0.5"><Icon name="Sparkles" size={16}/></div>
+                                                                    <div>
+                                                                        <h3 className="text-sm font-semibold text-gray-800">记忆提炼 · 转世文档</h3>
+                                                                        <p className="text-xs text-gray-500 mt-1">从所有记忆档案中提取核心信息，生成结构化的转世文档（identity · soul · user · memory），用于新窗口唤醒。</p>
+                                                                    </div>
+                                                                </div>
+                                                                <div className="flex items-center justify-between">
+                                                                    <span className="text-[10px] text-purple-400">当前记忆库共 {memoryFiles.length} 份档案</span>
+                                                                    <button onClick={handleExtractRebirthDoc} disabled={isExtractingMemory || memoryFiles.length === 0} className="text-xs bg-purple-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-purple-700 flex items-center gap-1.5 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                                                                        <Icon name="Sparkles" size={14}/> {isExtractingMemory ? '提炼中...' : '生成转世文档'}
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
                                                     <div className="border-t border-gray-100"></div>
                                                     <div>
                                                         <div className="flex justify-between items-center mb-3">
