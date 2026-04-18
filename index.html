@@ -420,14 +420,16 @@
         const migrateMemoriesFromLocalStorage = async () => {
             const migrated = localStorage.getItem('xingyue_memories_migrated_v6');
             if (migrated) {
-                // 已迁移过，但需要修复：把错误归类为diary的旧归档改回long
-                const fixApplied = localStorage.getItem('xingyue_memories_fix_v6b');
+                // 已迁移过，但需要修复：把旧的diary改回long（保留今天新生成的diary）
+                const fixApplied = localStorage.getItem('xingyue_memories_fix_v6c');
                 if (!fixApplied) {
                     try {
                         const allMems = await idbGetAllMemories();
+                        const today = new Date().toLocaleDateString();
                         let fixed = false;
                         const updated = allMems.map(m => {
-                            if (m.type === 'diary' && m.source === 'migrated') {
+                            // 只保留今天新生成的diary，其他diary全部改回long
+                            if (m.type === 'diary' && m.date !== today) {
                                 fixed = true;
                                 return { ...m, type: 'long', tags: ['迁移'], starred: true };
                             }
@@ -435,9 +437,9 @@
                         });
                         if (fixed) {
                             await idbPutAllMemories(updated);
-                            console.log('已修复：旧归档从diary改回long');
+                            console.log('已修复：旧diary改回long');
                         }
-                        localStorage.setItem('xingyue_memories_fix_v6b', 'true');
+                        localStorage.setItem('xingyue_memories_fix_v6c', 'true');
                     } catch (e) { console.warn('修复旧记忆分类失败', e); }
                 }
                 return;
