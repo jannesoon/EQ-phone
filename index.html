@@ -419,25 +419,46 @@
         // 将旧的 localStorage memories 迁移到 IndexedDB 新三层结构
         const migrateMemoriesFromLocalStorage = async () => {
             const migrated = localStorage.getItem('xingyue_memories_migrated_v6');
-            if (migrated) return; // 已迁移过，跳过
+            if (migrated) {
+                // 已迁移过，但需要修复：把错误归类为diary的旧归档改回long
+                const fixApplied = localStorage.getItem('xingyue_memories_fix_v6b');
+                if (!fixApplied) {
+                    try {
+                        const allMems = await idbGetAllMemories();
+                        let fixed = false;
+                        const updated = allMems.map(m => {
+                            if (m.type === 'diary' && m.source === 'migrated') {
+                                fixed = true;
+                                return { ...m, type: 'long', tags: ['迁移'], starred: true };
+                            }
+                            return m;
+                        });
+                        if (fixed) {
+                            await idbPutAllMemories(updated);
+                            console.log('已修复：旧归档从diary改回long');
+                        }
+                        localStorage.setItem('xingyue_memories_fix_v6b', 'true');
+                    } catch (e) { console.warn('修复旧记忆分类失败', e); }
+                }
+                return;
+            }
             const old = localStorage.getItem('gemini_memories');
-            if (!old) { localStorage.setItem('xingyue_memories_migrated_v6', 'true'); return; }
+            if (!old) { localStorage.setItem('xingyue_memories_migrated_v6', 'true'); localStorage.setItem('xingyue_memories_fix_v6b', 'true'); return; }
             try {
                 const oldFiles = JSON.parse(old);
-                if (!Array.isArray(oldFiles) || oldFiles.length === 0) { localStorage.setItem('xingyue_memories_migrated_v6', 'true'); return; }
+                if (!Array.isArray(oldFiles) || oldFiles.length === 0) { localStorage.setItem('xingyue_memories_migrated_v6', 'true'); localStorage.setItem('xingyue_memories_fix_v6b', 'true'); return; }
                 const newMemories = oldFiles.map((file, idx) => {
                     const isPersona = file.name && (file.name.includes('Rebirth') || file.name.includes('转世') || file.name.includes('Persona') || file.name.includes('人格'));
-                    const isDiary = file.name && (file.name.includes('Archive') || file.name.includes('Diary') || file.name.includes('归档') || file.name.includes('日记'));
-                    let type = 'long'; // 默认当长期记忆
+                    // 旧归档全部归为long（不再区分diary），因为旧归档里混有重要数据
+                    let type = 'long';
                     if (isPersona) type = 'persona';
-                    else if (isDiary) type = 'diary';
                     return {
                         id: `mem_${Date.now()}_${idx}`,
                         type: type,
                         content: file.content || '',
                         source: 'migrated',
                         date: file.date ? file.date.replace(' (已编辑)', '') : new Date().toLocaleDateString(),
-                        tags: isPersona ? ['人格'] : isDiary ? ['日记'] : ['迁移'],
+                        tags: isPersona ? ['人格'] : ['迁移'],
                         starred: type === 'long',
                         name: file.name || `记忆_${idx}`,
                         size: file.size || '0 KB'
@@ -445,7 +466,8 @@
                 });
                 await idbPutAllMemories(newMemories);
                 localStorage.setItem('xingyue_memories_migrated_v6', 'true');
-                console.log(`成功迁移 ${newMemories.length} 条旧记忆到 IndexedDB`);
+                localStorage.setItem('xingyue_memories_fix_v6b', 'true');
+                console.log(`成功迁移 ${newMemories.length} 条旧记忆到 IndexedDB（全部归为长期记忆）`);
             } catch (e) {
                 console.warn('迁移旧记忆失败', e);
             }
@@ -1596,11 +1618,11 @@ ${summaries.map((s, i) => `=== 第${i + 1}批 ===\n${s}`).join('\n\n')}`;
                         } catch { return false; }
                     };
 
-                    // 1. 长期记忆：全部注入
+                    // 1. 长期记忆：全部注入，每条最多800字
                     const longMems = memories.filter(m => m.type === 'long');
                     if (longMems.length > 0) {
                         memoryStr += `\n\n【长期记忆（核心信息）】当前时间: ${todayStrForPrompt}\n`;
-                        memoryStr += longMems.map(m => `- ${m.content.slice(0, 500)}`).join("\n");
+                        memoryStr += longMems.map(m => `- ${m.content.slice(0, 800)}`).join("\n");
                     }
 
                     // 2. 短期记忆：只带最近7天
@@ -1626,9 +1648,9 @@ ${summaries.map((s, i) => `=== 第${i + 1}批 ===\n${s}`).join('\n\n')}`;
                         memoryStr = `\n\n【人格档案（身份核心）】\n${personaMems[0].content.slice(0, 2000)}` + memoryStr;
                     }
 
-                    // Token 控制：总量上限约 3000 字
-                    if (memoryStr.length > 3000) {
-                        memoryStr = memoryStr.slice(0, 3000) + "\n...(记忆过长，已截取核心部分)";
+                    // Token 控制：总量上限约 5000 字
+                    if (memoryStr.length > 5000) {
+                        memoryStr = memoryStr.slice(0, 5000) + "\n...(记忆过长，已截取核心部分)";
                     }
                 }
 
@@ -2015,7 +2037,7 @@ ${summaries.map((s, i) => `=== 第${i + 1}批 ===\n${s}`).join('\n\n')}`;
                     }
 
                     const res = await fetch(url, { method: 'POST', headers, body: JSON.stringify(payload) });
-                    if (!res.ok) { console.warn('自动提取失败:', res.status); isExtractingRef.current = false; return; }
+                    if (!res.ok) { console.warn('自动提取失败:', res.status); showToast(`记忆提取API错误: ${res.status}`, 3000); isExtractingRef.current = false; return; }
                     const data = await res.json();
 
                     let resultText = '';
@@ -2027,6 +2049,7 @@ ${summaries.map((s, i) => `=== 第${i + 1}批 ===\n${s}`).join('\n\n')}`;
 
                     if (!resultText || resultText === '无' || resultText.includes('"无"')) {
                         console.log('自动提取：本轮无新信息');
+                        showToast('📝 记忆扫描完成，本轮无新信息');
                         isExtractingRef.current = false;
                         return;
                     }
@@ -2039,6 +2062,7 @@ ${summaries.map((s, i) => `=== 第${i + 1}批 ===\n${s}`).join('\n\n')}`;
                         if (jsonMatch) extracted = JSON.parse(jsonMatch[0]);
                     } catch (e) {
                         console.warn('自动提取JSON解析失败:', resultText);
+                        showToast('记忆提取：返回格式异常', 3000);
                         isExtractingRef.current = false;
                         return;
                     }
@@ -2064,9 +2088,11 @@ ${summaries.map((s, i) => `=== 第${i + 1}批 ===\n${s}`).join('\n\n')}`;
                     if (newMems.length > 0) {
                         setMemories(prev => [...prev, ...newMems]);
                         console.log(`自动提取：新增 ${newMems.length} 条短期记忆`);
+                        showToast(`✨ 悄悄记住了 ${newMems.length} 条新记忆`);
                     }
                 } catch (e) {
                     console.warn('自动提取记忆异常:', e);
+                    showToast(`记忆提取异常: ${e.message}`, 3000);
                 } finally {
                     isExtractingRef.current = false;
                 }
