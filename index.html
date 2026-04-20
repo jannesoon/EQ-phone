@@ -1078,8 +1078,8 @@ ${batchContent}`;
                     let finalResult;
 
                     // 防止 prompt 超长：截断 PP 和摘要
-                    const MAX_PP_LENGTH = 6000;
-                    const MAX_SUMMARY_LENGTH = 4000;
+                    const MAX_PP_LENGTH = 8000;
+                    const MAX_SUMMARY_LENGTH = 5000;
                     const truncatedPP = existingPPContent.length > MAX_PP_LENGTH ? existingPPContent.slice(0, MAX_PP_LENGTH) + '\n\n... (PP内容过长，已截断)' : existingPPContent;
                     const truncatedSummary = newInfoSummary.length > MAX_SUMMARY_LENGTH ? newInfoSummary.slice(0, MAX_SUMMARY_LENGTH) + '\n\n... (摘要过长，已截断)' : newInfoSummary;
 
