@@ -441,6 +441,10 @@
             const [isLoading, setIsLoading] = useState(false);
             const [isArchiving, setIsArchiving] = useState(false);
             const [isExtractingMemory, setIsExtractingMemory] = useState(false);
+            const [showJournalSelector, setShowJournalSelector] = useState(false);
+            const [selectedJournalIndices, setSelectedJournalIndices] = useState([]);
+            const [showDeleteProcessedModal, setShowDeleteProcessedModal] = useState(false);
+            const [processedJournalIndices, setProcessedJournalIndices] = useState([]);
             const [isFetchingModels, setIsFetchingModels] = useState(false);
             const [error, setError] = useState(null);
             const [toast, setToast] = useState(null);
@@ -990,21 +994,31 @@
             };
 
             const handleExtractRebirthDoc = async () => {
-                if (memoryFiles.length === 0) { showToast("记忆库是空的，没有可提取的内容"); return; }
+                const journalFiles = memoryFiles.filter(f => f.type === 'journal');
+                if (journalFiles.length === 0) { showToast("没有日志可供提炼"); return; }
                 if (!config.apiKey) { showToast("请先配置 API Key"); return; }
-                setIsExtractingMemory(true); 
-                
+                // 打开日志选择弹窗
+                const journalIndices = memoryFiles.map((f, i) => f.type === 'journal' ? i : -1).filter(i => i !== -1);
+                setSelectedJournalIndices(journalIndices); // 默认全选
+                setShowJournalSelector(true);
+            };
+
+            const executeIncrementalPPUpdate = async () => {
+                setShowJournalSelector(false);
+                if (selectedJournalIndices.length === 0) { showToast("请至少选择一篇日志"); return; }
+                setIsExtractingMemory(true);
+
                 const baseUrl = config.baseUrl.replace(/\/$/, '');
                 const modelName = config.model || 'gemini-1.5-flash';
                 const MAX_CONTENT_PER_FILE = 1500;
-                
+
                 const callAPI = async (prompt, retries = 2) => {
                     let lastError;
                     for (let attempt = 0; attempt <= retries; attempt++) {
                         try {
-                            if (attempt > 0) { 
-                                showToast(`重试中... (${attempt}/${retries})`); 
-                                await new Promise(r => setTimeout(r, 3000)); 
+                            if (attempt > 0) {
+                                showToast(`重试中... (${attempt}/${retries})`);
+                                await new Promise(r => setTimeout(r, 3000));
                             }
                             let payload, url, headers;
                             if (config.apiType === 'openai') {
@@ -1028,21 +1042,24 @@
                     }
                     throw lastError;
                 };
-                
+
                 try {
-                    // 将文件分批，每批3个文件（更保守）
+                    const selectedJournals = selectedJournalIndices.map(i => memoryFiles[i]);
+                    const existingPP = memoryFiles.filter(f => f.type === 'core');
+                    const existingPPContent = existingPP.length > 0 ? existingPP.map(f => f.content).join('\n\n---\n\n') : '';
+
+                    // 分批提取日志信息
                     const BATCH_SIZE = 3;
                     const batches = [];
-                    for (let i = 0; i < memoryFiles.length; i += BATCH_SIZE) {
-                        batches.push(memoryFiles.slice(i, i + BATCH_SIZE));
+                    for (let i = 0; i < selectedJournals.length; i += BATCH_SIZE) {
+                        batches.push(selectedJournals.slice(i, i + BATCH_SIZE));
                     }
-                    
+
                     const summaries = [];
-                    
                     for (let b = 0; b < batches.length; b++) {
-                        showToast(`正在提取第 ${b + 1}/${batches.length} 批记忆...`);
+                        showToast(`正在提取第 ${b + 1}/${batches.length} 批日志...`);
                         const batchContent = batches[b].map(f => `【${f.name}】\n${f.content.slice(0, MAX_CONTENT_PER_FILE)}`).join('\n\n---\n\n');
-                        const batchPrompt = `从以下记忆档案中提取关键信息，分为四类整理：
+                        const batchPrompt = `从以下日志中提取关键信息，分为四类：
 1. identity：AI角色的名字、年龄、外貌、身份、关系
 2. soul：性格、说话风格、情感模式、行为习惯
 3. user（${config.userName || '柒柒'}）：身体、饮食、情绪、习惯、家庭、工作
@@ -1055,10 +1072,48 @@ ${batchContent}`;
                         summaries.push(batchResult);
                         if (b < batches.length - 1) await new Promise(r => setTimeout(r, 2000));
                     }
-                    
-                    // 合并为最终转世文档
-                    showToast("正在合并生成转世文档...");
-                    const mergePrompt = `你是记忆整合引擎。将以下 ${batches.length} 批提取的信息整合去重，生成转世文档。
+
+                    const newInfoSummary = summaries.join('\n\n');
+
+                    let finalResult;
+
+                    if (existingPPContent) {
+                        // ===== 增量模式：对比现有PP，只更新差异 =====
+                        showToast("正在与现有PP对比，增量更新...");
+                        const incrementalPrompt = `你是人设档案更新引擎。下面是【现有的人设档案PP】和【从新日志中提取的信息】。
+
+请对比两者，执行以下操作：
+1. 如果新信息中有PP里没有的内容 → 新增到对应模块
+2. 如果新信息与PP里的内容冲突 → 以新信息为准更新
+3. 如果PP里的内容在新信息中没有提及 → 原样保留，不要删除
+4. 去重，不要重复记录相同的信息
+
+严格按四个模块输出完整的更新后PP（Markdown）：
+
+## identity
+我是谁？名字、年龄、外貌、身份角色、与用户的关系。
+
+## soul
+性格、说话风格、情感模式、行为习惯、核心价值观、对待用户的方式。
+
+## user
+关于${config.userName || '柒柒'}：身体状况、饮食偏好、情绪触发点、生活习惯、兴趣爱好、家庭情况。
+
+## memory
+重要事件、约定、暗号、里程碑。按时间排序。
+
+要求：第一人称"我"，只输出完整文档，不要解释过程。
+
+===== 现有PP =====
+${existingPPContent}
+
+===== 新日志提取的信息 =====
+${newInfoSummary}`;
+                        finalResult = await callAPI(incrementalPrompt);
+                    } else {
+                        // ===== 全新生成模式（没有现有PP）=====
+                        showToast("正在生成全新PP...");
+                        const createPrompt = `你是记忆整合引擎。将以下提取的信息整合去重，生成人设档案。
 
 严格按四个模块输出（Markdown）：
 
@@ -1074,26 +1129,75 @@ ${batchContent}`;
 ## memory
 重要事件、约定、暗号、里程碑。按时间排序。
 
-要求：全面不遗漏，冲突以最新为准，第一人称"我"，只输出文档。
+要求：全面不遗漏，第一人称"我"，只输出文档。
 
-${summaries.map((s, i) => `=== 第${i + 1}批 ===\n${s}`).join('\n\n')}`;
-                    const finalResult = await callAPI(mergePrompt);
-                    
+${newInfoSummary}`;
+                        finalResult = await callAPI(createPrompt);
+                    }
+
                     const dateStr = new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' });
-                    const docName = `Rebirth_${new Date().toISOString().slice(0, 10)}.md`;
-                    const newMemory = {
-                        name: docName,
-                        size: (new Blob([finalResult]).size / 1024).toFixed(1) + ' KB',
-                        date: dateStr,
-                        content: `# 转世文档 ✨\n> 生成时间: ${dateStr}\n> 基于 ${memoryFiles.length} 份记忆档案提炼\n\n${finalResult}`,
-                        type: 'core'
-                    };
-                    setMemoryFiles(prev => [...prev, newMemory]);
-                    showToast("转世文档已生成！请在记忆库中查看 ✨");
+
+                    if (existingPP.length > 0) {
+                        // 增量模式：更新现有PP的内容
+                        const ppIndex = memoryFiles.findIndex(f => f.type === 'core');
+                        const updatedFiles = [...memoryFiles];
+                        updatedFiles[ppIndex] = {
+                            ...updatedFiles[ppIndex],
+                            content: `# 人设档案 PP ✨\n> 最后更新: ${dateStr}\n> 增量更新，基于 ${selectedJournals.length} 篇日志\n\n${finalResult}`,
+                            size: (new Blob([finalResult]).size / 1024).toFixed(1) + ' KB',
+                            date: dateStr + ' (已更新)'
+                        };
+                        setMemoryFiles(updatedFiles);
+                        showToast("PP 档案已增量更新！✨");
+                    } else {
+                        // 全新模式：创建新PP
+                        const docName = `PP_${new Date().toISOString().slice(0, 10)}.md`;
+                        const newMemory = {
+                            name: docName,
+                            size: (new Blob([finalResult]).size / 1024).toFixed(1) + ' KB',
+                            date: dateStr,
+                            content: `# 人设档案 PP ✨\n> 生成时间: ${dateStr}\n> 基于 ${selectedJournals.length} 篇日志提炼\n\n${finalResult}`,
+                            type: 'core'
+                        };
+                        setMemoryFiles(prev => [...prev, newMemory]);
+                        showToast("PP 档案已生成！✨");
+                    }
+
+                    // 自动下载已处理的日志
+                    try {
+                        const textEncoder = new TextEncoder();
+                        if (selectedJournals.length === 1) {
+                            const file = selectedJournals[0];
+                            const blob = new Blob([file.content], { type: 'text/plain;charset=utf-8' });
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement('a'); a.href = url; a.download = file.name;
+                            document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+                        } else {
+                            // 简单拼接为一个文件下载
+                            const combined = selectedJournals.map(f => `========== ${f.name} (${f.date}) ==========\n${f.content}`).join('\n\n\n');
+                            const blob = new Blob([combined], { type: 'text/plain;charset=utf-8' });
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement('a'); a.href = url; a.download = `processed-journals-${new Date().toISOString().slice(0, 10)}.txt`;
+                            document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+                        }
+                        showToast(`已下载 ${selectedJournals.length} 篇已处理日志`);
+                    } catch(e) { console.error('下载日志失败', e); }
+
+                    // 弹窗询问是否删除已处理的日志
+                    setProcessedJournalIndices(selectedJournalIndices);
+                    setShowDeleteProcessedModal(true);
+
                 } catch (err) {
-                    console.error('转世文档生成失败', err);
-                    showToast(`提取失败: ${err.message}，请检查网络或换一个模型试试`);
+                    console.error('PP更新失败', err);
+                    showToast(`更新失败: ${err.message}，请检查网络或换一个模型试试`);
                 } finally { setIsExtractingMemory(false); }
+            };
+
+            const deleteProcessedJournals = () => {
+                setMemoryFiles(prev => prev.filter((_, i) => !processedJournalIndices.includes(i)));
+                setShowDeleteProcessedModal(false);
+                setProcessedJournalIndices([]);
+                showToast("已清理已处理的日志 ✨");
             };
 
             const handleDownloadAllMemories = async () => {
@@ -1956,6 +2060,77 @@ ${summaries.map((s, i) => `=== 第${i + 1}批 ===\n${s}`).join('\n\n')}`;
                         </div>
                     )}
 
+                    {/* --- 日志选择弹窗 --- */}
+                    {showJournalSelector && (
+                        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[60] backdrop-blur-sm animate-fade-in px-4">
+                            <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden flex flex-col max-h-[80vh]">
+                                <div className="p-5 border-b border-gray-100 flex items-center gap-3">
+                                    <div className="bg-purple-100 p-2 rounded-lg text-purple-600"><Icon name="Sparkles" size={20}/></div>
+                                    <div>
+                                        <h3 className="text-base font-semibold text-gray-800">选择要提炼的日志</h3>
+                                        <p className="text-xs text-gray-400 mt-0.5">
+                                            {memoryFiles.filter(f => f.type === 'core').length > 0 ? '增量模式：将与现有PP对比，只更新差异' : '全新生成：将从选中日志创建PP档案'}
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="flex-1 overflow-y-auto p-4 space-y-2">
+                                    <div className="flex justify-between items-center mb-2">
+                                        <span className="text-xs text-gray-500">已选 {selectedJournalIndices.length} / {memoryFiles.filter(f => f.type === 'journal').length} 篇</span>
+                                        <div className="flex gap-2">
+                                            <button onClick={() => setSelectedJournalIndices(memoryFiles.map((f, i) => f.type === 'journal' ? i : -1).filter(i => i !== -1))} className="text-[10px] text-purple-500 hover:text-purple-700">全选</button>
+                                            <button onClick={() => setSelectedJournalIndices([])} className="text-[10px] text-gray-400 hover:text-gray-600">全不选</button>
+                                        </div>
+                                    </div>
+                                    {memoryFiles.map((file, i) => file.type === 'journal' && (
+                                        <label key={i} className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${selectedJournalIndices.includes(i) ? 'bg-purple-50 border-purple-200' : 'bg-gray-50 border-gray-200 hover:bg-gray-100'}`}>
+                                            <input type="checkbox" checked={selectedJournalIndices.includes(i)} onChange={(e) => {
+                                                if (e.target.checked) setSelectedJournalIndices(prev => [...prev, i]);
+                                                else setSelectedJournalIndices(prev => prev.filter(idx => idx !== i));
+                                            }} className="mt-0.5 accent-purple-600"/>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="text-xs font-medium text-gray-700 truncate">{file.name}</div>
+                                                <div className="text-[9px] text-gray-400">{file.date} · {file.size}</div>
+                                                <div className="text-[10px] text-gray-500 mt-1 line-clamp-2">{file.content.slice(0, 100)}...</div>
+                                            </div>
+                                        </label>
+                                    ))}
+                                </div>
+                                <div className="p-4 border-t border-gray-100 bg-gray-50 flex justify-between">
+                                    <button onClick={() => setShowJournalSelector(false)} className="px-4 py-2 text-sm text-gray-500 hover:text-gray-800 transition-colors">取消</button>
+                                    <button onClick={executeIncrementalPPUpdate} disabled={selectedJournalIndices.length === 0} className="px-5 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-sm font-medium shadow-sm disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1.5">
+                                        <Icon name="Sparkles" size={14}/> 开始提炼 ({selectedJournalIndices.length}篇)
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* --- 删除已处理日志确认弹窗 --- */}
+                    {showDeleteProcessedModal && (
+                        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[60] backdrop-blur-sm animate-fade-in px-4">
+                            <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full overflow-hidden flex flex-col">
+                                <div className="p-5 border-b border-gray-100 flex items-center gap-3">
+                                    <div className="bg-blue-100 p-2 rounded-lg text-blue-600"><Icon name="Archive" size={20}/></div>
+                                    <div>
+                                        <h3 className="text-base font-semibold text-gray-800">PP已更新，日志已下载</h3>
+                                        <p className="text-xs text-gray-400 mt-0.5">是否删除这 {processedJournalIndices.length} 篇已处理的日志？</p>
+                                    </div>
+                                </div>
+                                <div className="p-5 space-y-3">
+                                    <p className="text-sm text-gray-600 leading-relaxed">日志已打包下载到本地，删除后可减少记忆库体积，降低每次对话的 token 消耗。</p>
+                                    <div className="flex flex-col gap-2">
+                                        <button onClick={deleteProcessedJournals} className="w-full p-3 bg-red-50 hover:bg-red-100 text-red-700 rounded-xl text-sm font-medium transition-colors border border-red-200 flex items-center justify-center gap-2">
+                                            <Icon name="Trash2" size={14}/> 删除这些日志
+                                        </button>
+                                        <button onClick={() => { setShowDeleteProcessedModal(false); setProcessedJournalIndices([]); }} className="w-full p-3 bg-gray-50 hover:bg-gray-100 text-gray-600 rounded-xl text-sm font-medium transition-colors border border-gray-200">
+                                            保留不删
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     <div className={`${sidebarOpen ? 'w-[280px]' : 'w-0'} bg-gray-50 transition-all duration-300 flex flex-col flex-shrink-0 relative border-r border-gray-200`}>
                         <div className="p-4 pt-6 space-y-2">
                             <button onClick={createNewSession} className="flex items-center gap-3 bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-3 rounded-full transition-colors w-full shadow-sm"><Icon name="Plus" className="text-gray-600" /><span className="text-sm font-medium">新对话</span></button>
@@ -2470,7 +2645,7 @@ ${summaries.map((s, i) => `=== 第${i + 1}批 ===\n${s}`).join('\n\n')}`;
                                                                 </div>
                                                                 <div className="flex gap-2">
                                                                     <button onClick={handleExtractRebirthDoc} disabled={isExtractingMemory || memoryFiles.filter(f=>f.type==='journal').length === 0} className="text-[10px] bg-purple-600 text-white px-3 py-1.5 rounded-lg font-medium hover:bg-purple-700 flex items-center gap-1 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
-                                                                        <Icon name="Sparkles" size={12}/> {isExtractingMemory ? '提炼中...' : '从日志提炼PP'}
+                                                                        <Icon name="Sparkles" size={12}/> {isExtractingMemory ? '提炼中...' : memoryFiles.filter(f=>f.type==='core').length > 0 ? '增量更新PP' : '从日志生成PP'}
                                                                     </button>
                                                                     <button onClick={() => fileInputRef.current.click()} className="text-[10px] bg-purple-50 text-purple-600 px-2 py-1.5 rounded-lg font-medium hover:bg-purple-100 flex items-center gap-1"><Icon name="Upload" size={12}/> 上传</button>
                                                                     <input type="file" ref={fileInputRef} className="hidden" onChange={(e) => handleFileUpload(e, 'memory')} />
