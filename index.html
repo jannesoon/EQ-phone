@@ -286,7 +286,7 @@
 
         // ================= IndexedDB 工具层（用于聊天记录，突破 localStorage 5MB 限制）=================
         const DB_NAME = 'xingyue_db';
-        const DB_VERSION = 1;
+        const DB_VERSION = 2;
         const STORE_SESSIONS = 'chat_sessions';
 
         const openDB = () => new Promise((resolve, reject) => {
@@ -451,6 +451,7 @@
             const aiAvatarInputRef = useRef(null);
             const chatImageInputRef = useRef(null); 
             const backupInputRef = useRef(null); 
+            const isInitializedRef = useRef(false);
 
             useEffect(() => {
                 // 检查版本更新弹窗
@@ -515,9 +516,11 @@
                 if (storedHealth) setHealthRecords(JSON.parse(storedHealth));
                 
                 if (window.innerWidth < 768) setSidebarOpen(false);
+                isInitializedRef.current = true;
             }, []);
 
             useEffect(() => {
+                if (!isInitializedRef.current) return; // 初始化完成前不写入，防止空数据覆盖
                 try {
                     if (config.apiKey) localStorage.setItem('gemini_app_config', JSON.stringify(config));
                     if (config.baseUrl && config.baseUrl.includes('/v1') && config.apiType !== 'openai' && !config.baseUrl.includes('googleapis.com')) {
