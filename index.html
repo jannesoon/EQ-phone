@@ -503,11 +503,12 @@
                 // 先迁移旧的 localStorage 记录到 IndexedDB，再读取
                 migrateSessionsFromLocalStorage().then(() => {
                     idbGetAllSessions().then(sessions => {
+                        console.log('[星月舱] 从 IndexedDB 读取会话:', sessions?.length, '条');
                         if (sessions && sessions.length > 0) {
                             sessions.sort((a, b) => b.timestamp - a.timestamp);
                             setHistorySessions(sessions);
                         }
-                    }).catch(e => console.error('读取聊天记录失败', e));
+                    }).catch(e => console.error('[星月舱] 读取聊天记录失败', e));
                 });
                 
                 const storedHealth = localStorage.getItem('gemini_health_records');
@@ -552,7 +553,12 @@
                         }
                         // 同步到 IndexedDB
                         const sessionToSave = updatedSessions.find(s => s.id === currentSessionId);
-                        if (sessionToSave) idbPutSession(sessionToSave).catch(e => console.error('保存会话到 IndexedDB 失败', e));
+                        if (sessionToSave) {
+                            console.log('[星月舱] 保存会话到 IndexedDB:', currentSessionId, '消息数:', sessionToSave.messages?.length);
+                            idbPutSession(sessionToSave).then(() => {
+                                console.log('[星月舱] IndexedDB 写入成功');
+                            }).catch(e => console.error('[星月舱] 保存会话到 IndexedDB 失败', e));
+                        }
                         return updatedSessions;
                     });
                 }
@@ -1260,59 +1266,73 @@ ${summaries.map((s, i) => `=== 第${i + 1}批 ===\n${s}`).join('\n\n')}`;
                 reader.readAsText(file);
             };
 
-            const executeRestore = (mode) => {
+            const executeRestore = async (mode) => {
                 if (!pendingBackup) return;
                 const data = pendingBackup;
+                
+                // 先迁移旧格式记忆
+                const migratedMemories = (data.memories || []).map(f => ({...f, type: f.type || 'journal'}));
+                
+                // 获取 sessions：可能在 data.sessions 或者极旧版本放在其他地方
+                let sessionsToRestore = data.sessions || [];
+                
                 if (mode === 'overwrite') {
-                    if (data.config) setConfig(data.config);
-                    if (data.memories) setMemoryFiles(data.memories.map(f => ({...f, type: f.type || 'journal'})));
-                    if (data.longTermMemories) setLongTermMemories(data.longTermMemories);
-                    if (data.sessions) {
-                        setHistorySessions(data.sessions);
-                        idbPutAllSessions(data.sessions).catch(e => console.error('还原会话到 IndexedDB 失败', e));
-                    }
-                    if (data.healthRecords) setHealthRecords(data.healthRecords);
-                    
+                    // 先写 localStorage（在 reload 前确保持久化）
                     localStorage.setItem('gemini_app_config', JSON.stringify(data.config || config));
-                    localStorage.setItem('gemini_memories', JSON.stringify(data.memories || []));
+                    localStorage.setItem('gemini_memories', JSON.stringify(migratedMemories));
                     localStorage.setItem('xingyue_long_term_memories', JSON.stringify(data.longTermMemories || []));
                     localStorage.setItem('gemini_health_records', JSON.stringify(data.healthRecords || {}));
+                    
+                    // 兼容：如果极旧版本的 sessions 还在 localStorage 格式里
+                    // 也写一份到 localStorage 以便 migrate 逻辑拾取
+                    if (sessionsToRestore.length > 0) {
+                        try { 
+                            await idbPutAllSessions(sessionsToRestore); 
+                        } catch(e) { 
+                            console.error('还原会话到 IndexedDB 失败，尝试 localStorage 回退', e);
+                            localStorage.setItem('gemini_chat_sessions', JSON.stringify(sessionsToRestore));
+                        }
+                    }
                 } else if (mode === 'merge') {
                     const mergedConfig = { ...config, ...(data.config || {}) };
-                    setConfig(mergedConfig); localStorage.setItem('gemini_app_config', JSON.stringify(mergedConfig));
+                    localStorage.setItem('gemini_app_config', JSON.stringify(mergedConfig));
                     
                     const existingMemoryNames = memoryFiles.map(m => m.name);
-                    const newMemories = data.memories ? data.memories.filter(m => !existingMemoryNames.includes(m.name)).map(f => ({...f, type: f.type || 'journal'})) : [];
+                    const newMemories = migratedMemories.filter(m => !existingMemoryNames.includes(m.name));
                     const mergedMemories = [...memoryFiles, ...newMemories];
-                    setMemoryFiles(mergedMemories); localStorage.setItem('gemini_memories', JSON.stringify(mergedMemories));
+                    localStorage.setItem('gemini_memories', JSON.stringify(mergedMemories));
 
                     if (data.longTermMemories) {
                         const existingLTM = longTermMemories.map(m => m.content);
                         const newLTM = data.longTermMemories.filter(m => !existingLTM.includes(m.content));
                         const mergedLTM = [...longTermMemories, ...newLTM];
-                        setLongTermMemories(mergedLTM); localStorage.setItem('xingyue_long_term_memories', JSON.stringify(mergedLTM));
+                        localStorage.setItem('xingyue_long_term_memories', JSON.stringify(mergedLTM));
                     }
                     
                     let mergedSessions = [...historySessions];
-                    if (data.sessions) {
-                        data.sessions.forEach(importedSession => {
+                    if (sessionsToRestore.length > 0) {
+                        sessionsToRestore.forEach(importedSession => {
                             const existingIdx = mergedSessions.findIndex(s => s.id === importedSession.id);
                             if (existingIdx > -1) { if (importedSession.messages.length > mergedSessions[existingIdx].messages.length) { mergedSessions[existingIdx] = importedSession; } } 
                             else { mergedSessions.push(importedSession); }
                         });
                     }
                     mergedSessions.sort((a, b) => b.timestamp - a.timestamp);
-                    setHistorySessions(mergedSessions);
-                    idbPutAllSessions(mergedSessions).catch(e => console.error('合并会话到 IndexedDB 失败', e));
+                    try { 
+                        await idbPutAllSessions(mergedSessions); 
+                    } catch(e) { 
+                        console.error('合并会话到 IndexedDB 失败', e); 
+                        localStorage.setItem('gemini_chat_sessions', JSON.stringify(mergedSessions));
+                    }
 
                     if (data.healthRecords) {
                         const mergedHealth = { ...healthRecords, ...data.healthRecords };
-                        setHealthRecords(mergedHealth);
                         localStorage.setItem('gemini_health_records', JSON.stringify(mergedHealth));
                     }
                 }
-                setPendingBackup(null); showToast(`档案已${mode === 'merge' ? '安全合并' : '完全覆盖'}！`);
-                setTimeout(() => window.location.reload(), 1000);
+                setPendingBackup(null); 
+                showToast(`档案已${mode === 'merge' ? '安全合并' : '完全覆盖'}！即将刷新...（${sessionsToRestore.length}条会话）`);
+                setTimeout(() => window.location.reload(), 800);
             };
 
             const handleArchive = async () => {
