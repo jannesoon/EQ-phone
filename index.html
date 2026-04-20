@@ -1012,23 +1012,23 @@
                 const modelName = config.model || 'gemini-1.5-flash';
                 const MAX_CONTENT_PER_FILE = 1500;
 
-                const callAPI = async (prompt, retries = 2) => {
+                const callAPI = async (prompt, retries = 3) => {
                     let lastError;
                     for (let attempt = 0; attempt <= retries; attempt++) {
                         try {
                             if (attempt > 0) {
                                 showToast(`重试中... (${attempt}/${retries})`);
-                                await new Promise(r => setTimeout(r, 3000));
+                                await new Promise(r => setTimeout(r, 4000));
                             }
                             let payload, url, headers;
                             if (config.apiType === 'openai') {
                                 url = `${baseUrl}/chat/completions`;
                                 headers = { 'Authorization': `Bearer ${config.apiKey}`, 'Content-Type': 'application/json' };
-                                payload = { model: modelName, messages: [{ role: 'user', content: prompt }], temperature: 0.5 };
+                                payload = { model: modelName, messages: [{ role: 'user', content: prompt }], temperature: 0.5, max_tokens: 4096 };
                             } else {
                                 url = `${baseUrl}/v1beta/models/${modelName}:generateContent?key=${config.apiKey}`;
                                 headers = { 'Content-Type': 'application/json' };
-                                payload = { contents: [{ role: 'user', parts: [{ text: prompt }] }], generationConfig: { temperature: 0.5 } };
+                                payload = { contents: [{ role: 'user', parts: [{ text: prompt }] }], generationConfig: { temperature: 0.5, maxOutputTokens: 4096 } };
                             }
                             const res = await fetch(url, { method: 'POST', headers, body: JSON.stringify(payload) });
                             if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -1077,6 +1077,12 @@ ${batchContent}`;
 
                     let finalResult;
 
+                    // 防止 prompt 超长：截断 PP 和摘要
+                    const MAX_PP_LENGTH = 6000;
+                    const MAX_SUMMARY_LENGTH = 4000;
+                    const truncatedPP = existingPPContent.length > MAX_PP_LENGTH ? existingPPContent.slice(0, MAX_PP_LENGTH) + '\n\n... (PP内容过长，已截断)' : existingPPContent;
+                    const truncatedSummary = newInfoSummary.length > MAX_SUMMARY_LENGTH ? newInfoSummary.slice(0, MAX_SUMMARY_LENGTH) + '\n\n... (摘要过长，已截断)' : newInfoSummary;
+
                     if (existingPPContent) {
                         // ===== 增量模式：对比现有PP，只更新差异 =====
                         showToast("正在与现有PP对比，增量更新...");
@@ -1105,10 +1111,10 @@ ${batchContent}`;
 要求：第一人称"我"，只输出完整文档，不要解释过程。
 
 ===== 现有PP =====
-${existingPPContent}
+${truncatedPP}
 
 ===== 新日志提取的信息 =====
-${newInfoSummary}`;
+${truncatedSummary}`;
                         finalResult = await callAPI(incrementalPrompt);
                     } else {
                         // ===== 全新生成模式（没有现有PP）=====
@@ -1131,7 +1137,7 @@ ${newInfoSummary}`;
 
 要求：全面不遗漏，第一人称"我"，只输出文档。
 
-${newInfoSummary}`;
+${truncatedSummary}`;
                         finalResult = await callAPI(createPrompt);
                     }
 
