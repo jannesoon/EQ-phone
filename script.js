@@ -623,9 +623,32 @@
                         if (sessionToSave) {
                             pendingSaveSessionRef.current = sessionToSave;
                             if (idbSaveTimerRef.current) clearTimeout(idbSaveTimerRef.current);
-                            idbSaveTimerRef.current = setTimeout(() => {
+                            idbSaveTimerRef.current = setTimeout(async () => {
                                 const toSave = pendingSaveSessionRef.current;
                                 if (toSave) {
+                                    // ★ 关键修复：写入前先读数据库里的最新 title
+                                    // 因为 autoGenerateTitle 可能在 React 渲染间隔写入了"星月夜话"
+                                    // 但 React state 还没拿到，会用旧的"第一句话"覆盖回去
+                                    try {
+                                        const db = await openDB();
+                                        const tx = db.transaction(STORE_SESSIONS, 'readonly');
+                                        const store = tx.objectStore(STORE_SESSIONS);
+                                        const getReq = store.get(toSave.id);
+                                        await new Promise((resolve) => {
+                                            getReq.onsuccess = () => {
+                                                const dbLatest = getReq.result;
+                                                // 数据库的 title 是权威的——只要存在且不是"新对话"占位，就用它
+                                                if (dbLatest?.title && dbLatest.title !== '新对话') {
+                                                    toSave.title = dbLatest.title;
+                                                }
+                                                resolve();
+                                            };
+                                            getReq.onerror = () => resolve();
+                                        });
+                                    } catch (e) {
+                                        console.warn('[星月舱] 读数据库 title 失败，使用 React state 的 title', e);
+                                    }
+                                    
                                     idbPutSession(toSave).then(() => {
                                         // ★ 写入成功后更新会话数快照，作为下次启动的"已知正常状态"基线
                                         try { localStorage.setItem('xingyue_last_session_count', String(updatedSessions.length)); } catch(e) {}
