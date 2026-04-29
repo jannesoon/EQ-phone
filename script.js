@@ -277,6 +277,42 @@
             });
         };
 
+        // ★ 安全写入：先读数据库现有 title，如果数据库里已经有非占位标题，
+        // 强制保留它，不让外部传入的 title 覆盖
+        // 用于所有兜底保存路径（visibilitychange、createNewSession、loadSession 等）
+        // 这是修复"刷新后标题被覆盖"的最终大招——不依赖任何 React state/闭包/ref，
+        // 只信任数据库自己的当前值
+        const idbPutSessionSafe = async (session) => {
+            const db = await openDB();
+            return new Promise((resolve, reject) => {
+                const txRead = db.transaction(STORE_SESSIONS, 'readonly');
+                const getReq = txRead.objectStore(STORE_SESSIONS).get(session.id);
+                getReq.onsuccess = () => {
+                    const dbExisting = getReq.result;
+                    // 如果数据库里已有这个会话，且已有非占位 title，强制用数据库的 title
+                    if (dbExisting?.title && dbExisting.title !== '新对话') {
+                        session.title = dbExisting.title;
+                    }
+                    // 同样保护 createdAt（避免被刷新成 Date.now()）
+                    if (dbExisting?.createdAt) {
+                        session.createdAt = dbExisting.createdAt;
+                    }
+                    // 写入
+                    const txWrite = db.transaction(STORE_SESSIONS, 'readwrite');
+                    txWrite.objectStore(STORE_SESSIONS).put(session);
+                    txWrite.oncomplete = () => resolve();
+                    txWrite.onerror = () => reject(txWrite.error);
+                };
+                getReq.onerror = () => {
+                    // 读失败，退化为直接写
+                    const txWrite = db.transaction(STORE_SESSIONS, 'readwrite');
+                    txWrite.objectStore(STORE_SESSIONS).put(session);
+                    txWrite.oncomplete = () => resolve();
+                    txWrite.onerror = () => reject(txWrite.error);
+                };
+            });
+        };
+
         const idbDeleteSession = async (id) => {
             const db = await openDB();
             return new Promise((resolve, reject) => {
@@ -545,14 +581,15 @@
                     if (sid && msgs && msgs.length > 0) {
                         // 同步触发一次 IndexedDB 写入（浏览器可能拒绝异步，但最大努力）
                         try {
-                            const existing = historySessions.find(s => s.id === sid);
-                            idbPutSession({
+                            // ★★★ 关键修复：用 idbPutSessionSafe 函数
+                            // 它会先读数据库现有 title，强制保留——
+                            // 即使 ref 里的 historySessions 因为时序问题不准，
+                            // 数据库里的 title 也不会被覆盖
+                            idbPutSessionSafe({
                                 id: sid,
-                                // ★ 必须优先用 existing.title——否则会覆盖柒柒手动改过的标题
-                                title: existing?.title || msgs[0]?.content?.slice(0, 20).replace(/!\[.*?\]\(.*?\)/g, '[图片]') || '新对话',
+                                title: '新对话', // 占位 —— Safe 会自动用数据库里的真 title 替换
                                 messages: msgs,
-                                timestamp: Date.now(),
-                                createdAt: existing?.createdAt || sid // 兼容旧数据
+                                timestamp: Date.now()
                             });
                         } catch(e) {}
                     }
@@ -623,34 +660,12 @@
                         if (sessionToSave) {
                             pendingSaveSessionRef.current = sessionToSave;
                             if (idbSaveTimerRef.current) clearTimeout(idbSaveTimerRef.current);
-                            idbSaveTimerRef.current = setTimeout(async () => {
+                            idbSaveTimerRef.current = setTimeout(() => {
                                 const toSave = pendingSaveSessionRef.current;
                                 if (toSave) {
-                                    // ★ 关键修复：写入前先读数据库里的最新 title
-                                    // 因为 autoGenerateTitle 可能在 React 渲染间隔写入了"星月夜话"
-                                    // 但 React state 还没拿到，会用旧的"第一句话"覆盖回去
-                                    try {
-                                        const db = await openDB();
-                                        const tx = db.transaction(STORE_SESSIONS, 'readonly');
-                                        const store = tx.objectStore(STORE_SESSIONS);
-                                        const getReq = store.get(toSave.id);
-                                        await new Promise((resolve) => {
-                                            getReq.onsuccess = () => {
-                                                const dbLatest = getReq.result;
-                                                // 数据库的 title 是权威的——只要存在且不是"新对话"占位，就用它
-                                                if (dbLatest?.title && dbLatest.title !== '新对话') {
-                                                    toSave.title = dbLatest.title;
-                                                }
-                                                resolve();
-                                            };
-                                            getReq.onerror = () => resolve();
-                                        });
-                                    } catch (e) {
-                                        console.warn('[星月舱] 读数据库 title 失败，使用 React state 的 title', e);
-                                    }
-                                    
-                                    idbPutSession(toSave).then(() => {
-                                        // ★ 写入成功后更新会话数快照，作为下次启动的"已知正常状态"基线
+                                    // ★ 用 idbPutSessionSafe ——它内部会先读数据库 title 强制保留
+                                    // 比直接读 + 写两步更原子，避免中间被 autoGenerateTitle 抢插
+                                    idbPutSessionSafe(toSave).then(() => {
                                         try { localStorage.setItem('xingyue_last_session_count', String(updatedSessions.length)); } catch(e) {}
                                     }).catch(e => console.error('[星月舱] 节流保存会话到 IndexedDB 失败', e));
                                     pendingSaveSessionRef.current = null;
@@ -670,7 +685,7 @@
                         clearTimeout(idbSaveTimerRef.current);
                         const toSave = pendingSaveSessionRef.current;
                         if (toSave) {
-                            idbPutSession(toSave).catch(e => console.error('[星月舱] 卸载时 flush 失败', e));
+                            idbPutSessionSafe(toSave).catch(e => console.error('[星月舱] 卸载时 flush 失败', e));
                             pendingSaveSessionRef.current = null;
                         }
                     }
@@ -914,7 +929,7 @@
                 }
                 // 切换前，强制把当前会话 flush 到 IndexedDB，防止流式未完成就被顶掉
                 if (currentSessionId && messages.length > 0) {
-                    const existing = historySessions.find(s => s.id === currentSessionId);
+                    const existing = historySessionsRef.current.find(s => s.id === currentSessionId);
                     const sessionToFlush = {
                         id: currentSessionId,
                         title: existing?.title || messages[0]?.content.slice(0, 20).replace(/!\[.*?\]\(.*?\)/g, '[图片]') || '新对话',
@@ -922,7 +937,7 @@
                         timestamp: Date.now(),
                         createdAt: existing?.createdAt || currentSessionId
                     };
-                    try { await idbPutSession(sessionToFlush); console.log('[星月舱] 切换前已 flush 当前会话'); }
+                    try { await idbPutSessionSafe(sessionToFlush); console.log('[星月舱] 切换前已 flush 当前会话'); }
                     catch (e) { console.error('[星月舱] 切换前 flush 失败', e); }
                 }
                 setMessages([]); setAttachments([]); setCurrentSessionId(Date.now().toString());
@@ -938,7 +953,7 @@
                 }
                 // 切换前也 flush 当前正在跑的会话
                 if (currentSessionId && currentSessionId !== session.id && messages.length > 0) {
-                    const existing = historySessions.find(s => s.id === currentSessionId);
+                    const existing = historySessionsRef.current.find(s => s.id === currentSessionId);
                     const sessionToFlush = {
                         id: currentSessionId,
                         title: existing?.title || messages[0]?.content.slice(0, 20).replace(/!\[.*?\]\(.*?\)/g, '[图片]') || '新对话',
@@ -946,7 +961,7 @@
                         timestamp: Date.now(),
                         createdAt: existing?.createdAt || currentSessionId
                     };
-                    try { await idbPutSession(sessionToFlush); }
+                    try { await idbPutSessionSafe(sessionToFlush); }
                     catch (e) { console.error('[星月舱] loadSession 前 flush 失败', e); }
                 }
                 setMessages(session.messages); setCurrentSessionId(session.id); setAttachments([]);
@@ -1867,6 +1882,32 @@ ${batchContent}`;
                 setEditingMessageContent(text.trim());
             };
 
+            // ★ AI 消息编辑：纯本地修改，不重新生成
+            // 用于柒柒手动删掉 AI 回复里的多余内容（比如某些模型蹦出的"user"字样）
+            const startEditingAIMessage = (index) => {
+                let text = messages[index].content;
+                setEditingMessageIndex(index);
+                setEditingMessageContent(text);
+            };
+
+            // ★ 提交 AI 消息的编辑：只改 messages 和数据库，不调 API
+            const submitEditedAIMessage = async (index) => {
+                if (!editingMessageContent.trim()) {
+                    setEditingMessageIndex(null);
+                    return;
+                }
+                const newContent = editingMessageContent;
+                setMessages(prev => {
+                    const newMsgs = [...prev];
+                    newMsgs[index] = { ...newMsgs[index], content: newContent };
+                    return newMsgs;
+                });
+                setEditingMessageIndex(null);
+                setEditingMessageContent('');
+                showToast('已修改');
+                // messages 变化会触发节流保存自动落库，不用手动写
+            };
+
             const submitEditedMessage = async (index) => {
                 if (!editingMessageContent.trim()) {
                     setEditingMessageIndex(null);
@@ -2156,11 +2197,10 @@ ${batchContent}`;
                         }
                         // 强制 flush 完整会话到 IndexedDB
                         try {
-                            // ★ 用 ref 读最新值，避免闭包陷阱拿到旧的 historySessions
-                            const existingTitle = historySessionsRef.current.find(s => s.id === activeSessionId)?.title;
-                            await idbPutSession({
+                            // ★ 用 idbPutSessionSafe ——它内部强制保留数据库现有 title
+                            await idbPutSessionSafe({
                                 id: activeSessionId,
-                                title: existingTitle || finalMsgs[0]?.content.slice(0, 20).replace(/!\[.*?\]\(.*?\)/g, '[图片]') || '新对话',
+                                title: '新对话', // 占位 —— Safe 会用数据库里的真 title 替换
                                 messages: finalMsgs,
                                 timestamp: Date.now()
                             });
@@ -2191,11 +2231,10 @@ ${batchContent}`;
                                     await new Promise(r => setTimeout(r, 50));
                                     const latestMsgs = messagesRef.current;
                                     if (latestMsgs && latestMsgs.length > 0 && currentSessionIdRef.current === activeSessionId) {
-                                        // ★ 用 ref 读最新值，避免闭包陷阱拿到旧的 historySessions
-                                        const existingTitle = historySessionsRef.current.find(s => s.id === activeSessionId)?.title;
-                                        await idbPutSession({
+                                        // ★ 用 idbPutSessionSafe ——它内部强制保留数据库现有 title
+                                        await idbPutSessionSafe({
                                             id: activeSessionId,
-                                            title: existingTitle || latestMsgs[0]?.content?.slice(0, 20).replace(/!\[.*?\]\(.*?\)/g, '[图片]') || '新对话',
+                                            title: '新对话', // 占位 —— Safe 会用数据库里的真 title 替换
                                             messages: latestMsgs,
                                             timestamp: Date.now()
                                         });
@@ -2701,7 +2740,12 @@ ${batchContent}`;
                                                             ></textarea>
                                                             <div className="flex justify-end gap-2">
                                                                 <button onClick={() => setEditingMessageIndex(null)} className="px-3 py-1.5 text-xs text-gray-500 hover:bg-gray-100 rounded-lg transition-colors">取消</button>
-                                                                <button onClick={() => submitEditedMessage(index)} className="px-3 py-1.5 text-xs bg-blue-600 text-white hover:bg-blue-700 rounded-lg shadow-sm transition-colors flex items-center gap-1"><Icon name="Send" size={12}/> 保存并发送</button>
+                                                                {/* ★ 按消息类型分别处理：用户消息=保存并发送  AI消息=只保存修改 */}
+                                                                {isUser ? (
+                                                                    <button onClick={() => submitEditedMessage(index)} className="px-3 py-1.5 text-xs bg-blue-600 text-white hover:bg-blue-700 rounded-lg shadow-sm transition-colors flex items-center gap-1"><Icon name="Send" size={12}/> 保存并发送</button>
+                                                                ) : (
+                                                                    <button onClick={() => submitEditedAIMessage(index)} className="px-3 py-1.5 text-xs bg-purple-600 text-white hover:bg-purple-700 rounded-lg shadow-sm transition-colors flex items-center gap-1"><Icon name="Edit" size={12}/> 保存修改</button>
+                                                                )}
                                                             </div>
                                                         </div>
                                                     ) : (
@@ -2761,6 +2805,14 @@ ${batchContent}`;
                                                                 title="复制"
                                                             >
                                                                 <Icon name="FileText" size={14}/>
+                                                            </button>
+                                                            {/* ★ 编辑 AI 回复（只改本地，不重新生成）—— 修掉模型偶尔蹦出的多余字符 */}
+                                                            <button 
+                                                                onClick={() => startEditingAIMessage(index)}
+                                                                className="p-1.5 rounded-md text-gray-400 hover:text-purple-500 hover:bg-purple-50 transition-colors"
+                                                                title="编辑（不重新生成）"
+                                                            >
+                                                                <Icon name="Edit" size={14}/>
                                                             </button>
                                                             {/* 重新生成（仅最后一条 AI 消息显示） */}
                                                             {index === messages.length - 1 && !isLoading && (
