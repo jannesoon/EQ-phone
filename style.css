@@ -69,6 +69,20 @@ body.theme-claude, html.theme-claude { background-color: #f5f4ef; }
     overflow-wrap: anywhere;
     word-break: break-word;
 }
+
+/* ★★★ 防止 AI 回复贴边：消息列整体留出左右安全距离 ★★★ */
+/* 父级 space-y-6 那个容器（AI 消息 w-full 会占满它）*/
+.space-y-6 {
+    padding-left: 4px;
+    padding-right: 4px;
+    box-sizing: border-box;
+    max-width: 100%;
+}
+
+/* AI 回复 prose 容器再额外预留一点呼吸感 */
+.prose.prose-sm {
+    padding-right: 4px;
+}
 details.normal-details { border: 1px solid #e5e7eb; border-radius: 8px; padding: 8px; background: #f9fafb; margin-top: 8px; }
 details.normal-details summary { cursor: pointer; font-size: 0.8em; color: #6b7280; font-weight: 500; }
 details.cot-details { border: 1px solid #e5e7eb; border-radius: 10px; margin-bottom: 12px; overflow: hidden; background: #fafafa; }
