@@ -603,14 +603,18 @@
                         if (existingSessionIndex !== -1) {
                             updatedSessions = [...prevSessions];
                             const currentSession = updatedSessions[existingSessionIndex];
+                            // ★ 标题保护：existing 已存在 title 时绝对不动它（柒柒可能手动改过）
+                            // 只有 title 完全为空时，才允许用第一句话生成
                             let title = currentSession.title;
-                            if ((currentSession.title === '新对话' || !currentSession.title) && messages.length > 0) {
+                            if (!title && messages.length > 0) {
                                 title = messages[0].content.slice(0, 20).replace(/!\[.*?\]\(.*?\)/g, '[图片]');
                             }
                             updatedSessions[existingSessionIndex] = { ...currentSession, messages: messages, title: title, timestamp: Date.now() };
                             updatedSessions.sort((a, b) => b.timestamp - a.timestamp);
                         } else {
-                             const newSession = { id: currentSessionId, title: messages[0]?.content.slice(0, 20).replace(/!\[.*?\]\(.*?\)/g, '[图片]') || '新对话', messages: messages, timestamp: Date.now(), createdAt: Date.now() };
+                            // ★ 进入这个分支说明 prevSessions 里找不到当前 session（理论上不该发生）
+                            // 此时只创建占位，不覆盖任何已有数据
+                            const newSession = { id: currentSessionId, title: messages[0]?.content.slice(0, 20).replace(/!\[.*?\]\(.*?\)/g, '[图片]') || '新对话', messages: messages, timestamp: Date.now(), createdAt: Date.now() };
                             updatedSessions = [newSession, ...prevSessions];
                         }
                         // ★ 节流写入 IndexedDB：500ms 内多次变化合并成一次写入
@@ -2231,7 +2235,7 @@ ${batchContent}`;
             const handleKeyDown = (e) => { if (e.key === 'Enter' && !isMobile && !e.shiftKey) { e.preventDefault(); handleSend(); } };
 
             return (
-                <div className="flex h-screen bg-white text-gray-900 font-sans overflow-hidden">
+                <div className="app-shell flex bg-white text-gray-900 font-sans overflow-hidden">
                     {toast && <div className="fixed top-4 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white px-4 py-2 rounded-full text-sm shadow-lg z-50 animate-fade-in flex items-center gap-2"><Icon name="Sparkles" size={16} className="text-yellow-400"/> {toast}</div>}
 
                     {/* ===== 更新公告弹窗 ===== */}
@@ -2436,7 +2440,7 @@ ${batchContent}`;
                     )}
 
                     <div className={`${sidebarOpen ? 'w-[280px]' : 'w-0 overflow-hidden invisible'} bg-gray-50 transition-all duration-300 flex flex-col flex-shrink-0 relative border-r border-gray-200`}>
-                        <div className="p-4 pt-6 space-y-2">
+                        <div className="safe-top p-4 pt-6 space-y-2">
                             <button onClick={createNewSession} className="flex items-center gap-3 bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-3 rounded-full transition-colors w-full shadow-sm"><Icon name="Plus" className="text-gray-600" /><span className="text-sm font-medium">新对话</span></button>
                         </div>
                         
@@ -2576,7 +2580,7 @@ ${batchContent}`;
                                 })}
                             </div>
                         </div>
-                        <div className="p-3 border-t border-gray-200">
+                        <div className="safe-bottom p-3 border-t border-gray-200">
                             <button onClick={() => setSettingsOpen(true)} className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-200 w-full text-left text-sm text-gray-700 transition-colors"><Icon name="Settings" size={18} /><span>通用设置与数据备份</span></button>
                         </div>
                     </div>
@@ -2606,7 +2610,7 @@ ${batchContent}`;
                                 }}/>
                             );
                         })()}
-                        <div className="flex items-center justify-between p-4 h-16 bg-white/80 backdrop-blur sticky top-0 z-10 border-b border-gray-100">
+                        <div className="safe-top flex items-center justify-between p-4 h-16 bg-white/80 backdrop-blur sticky top-0 z-10 border-b border-gray-100" style={{height: 'calc(4rem + env(safe-area-inset-top))'}}>
                             <div className="flex items-center gap-3">
                                 <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-600"><Icon name="Menu" size={20} /></button>
                                 <div className="flex flex-col">
@@ -2628,7 +2632,7 @@ ${batchContent}`;
 
                         <div className={`flex-1 overflow-y-auto px-4 md:px-0 relative ${config.chatBgImage ? '' : 'bg-white'}`}>
                             {/* ★ 背景图放在主聊天区的定位上下文里（不新增容器层） */}
-                            <div className="max-w-3xl mx-auto py-6 pb-48 relative z-10">
+                            <div className="max-w-3xl mx-auto py-6 relative z-10" style={{paddingBottom: 'calc(12rem + env(safe-area-inset-bottom))'}}>
                                 {messages.length === 0 ? (
                                     <div className="mt-20 flex flex-col items-center justify-center animate-fade-in px-4 text-center">
                                         <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent text-4xl md:text-5xl font-semibold mb-6 tracking-tight">欢迎回家✨...</div>
@@ -2775,7 +2779,7 @@ ${batchContent}`;
                             </div>
                         </div>
 
-                        <div className="absolute bottom-0 left-0 w-full bg-white pt-4 pb-6 px-4 border-t border-gray-50 z-30">
+                        <div className="safe-bottom absolute bottom-0 left-0 w-full bg-white pt-4 pb-6 px-4 border-t border-gray-50 z-30">
                             <div className="max-w-3xl mx-auto relative">
                                 {/* 原右下角"重新生成"按钮已移至每条 AI 消息底部工具栏 */}
                                 {error && (
