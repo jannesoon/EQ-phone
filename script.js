@@ -396,7 +396,7 @@
             const [vaultPassword, setVaultPassword] = useState('');
             const [vaultUnlocked, setVaultUnlocked] = useState(false);
             const [vaultPasswordInput, setVaultPasswordInput] = useState('');
-            const [vaultActiveShelf, setVaultActiveShelf] = useState('about-qiqi'); // 当前选中的书架
+            const [vaultActiveShelf, setVaultActiveShelf] = useState('cloud'); // 默认选中云端连接，引导柒柒先配置
             // 检查 localStorage 里有没有设过密码
             // 用一个简单的 hash 函数（不是密码学级别，但够挡住偷窥）
             const simpleHash = (s) => {
@@ -411,6 +411,109 @@
             // ★ 是否为主人设备（柒柒输入"星辰闪耀✨"激活的设备）
             // 用一个独立 key，不容易被无心翻到
             const isOwnerDevice = () => localStorage.getItem('xingchen_device_owner') === 'qiqi';
+            
+            // ========================================
+            // ☁️ Supabase 云端连接（星辰记忆仓的后端）
+            // ========================================
+            // 凭证只存柒柒的浏览器 localStorage，永远不发到任何聊天/服务器
+            // 即使代码是公开的，没有凭证别人也连不上柒柒的数据库
+            const [supabaseClient, setSupabaseClient] = useState(null);
+            const [supabaseUrl, setSupabaseUrl] = useState(localStorage.getItem('xingchen_supabase_url') || '');
+            const [supabaseKey, setSupabaseKey] = useState(localStorage.getItem('xingchen_supabase_key') || '');
+            const [supabaseStatus, setSupabaseStatus] = useState('idle'); // idle | testing | connected | failed
+            const [supabaseError, setSupabaseError] = useState('');
+            
+            // 临时输入框的值（柒柒还没保存的那种）
+            const [tempSupabaseUrl, setTempSupabaseUrl] = useState('');
+            const [tempSupabaseKey, setTempSupabaseKey] = useState('');
+            
+            // 启动时如果已经有凭证，自动尝试连接
+            useEffect(() => {
+                if (supabaseUrl && supabaseKey && window.supabase && !supabaseClient) {
+                    try {
+                        const client = window.supabase.createClient(supabaseUrl, supabaseKey);
+                        setSupabaseClient(client);
+                        setSupabaseStatus('connected');
+                        console.log('[星辰记忆仓] ☁️ Supabase 客户端已自动重连');
+                    } catch(e) {
+                        console.error('[星辰记忆仓] 自动重连失败', e);
+                        setSupabaseStatus('failed');
+                        setSupabaseError(e.message || String(e));
+                    }
+                }
+            }, []); // 仅启动时跑一次
+            
+            // 测试连接 ——尝试连一下并查询一下表（如果表还没建，至少能知道凭证对不对）
+            const testSupabaseConnection = async (url, key) => {
+                if (!url || !key) {
+                    setSupabaseError('URL 和 Publishable Key 都要填哦');
+                    setSupabaseStatus('failed');
+                    return false;
+                }
+                if (!window.supabase) {
+                    setSupabaseError('Supabase 客户端库还没加载完，等一下再试');
+                    setSupabaseStatus('failed');
+                    return false;
+                }
+                setSupabaseStatus('testing');
+                setSupabaseError('');
+                try {
+                    const client = window.supabase.createClient(url, key);
+                    // 试着查一下系统表（不查数据库表，因为还没建）
+                    // 用 auth.getSession 这种轻量方法验证连接
+                    const { data, error } = await client.auth.getSession();
+                    if (error && error.message && !error.message.includes('session')) {
+                        throw error;
+                    }
+                    // 走到这里说明凭证有效（即使没 session 也是正常的——anon key 不需要 session）
+                    return { ok: true, client };
+                } catch (e) {
+                    console.error('[星辰记忆仓] 测试连接失败', e);
+                    let friendlyMsg = e.message || String(e);
+                    if (friendlyMsg.includes('Invalid API key') || friendlyMsg.includes('JWT')) {
+                        friendlyMsg = 'Publishable Key 不对，柒柒检查一下';
+                    } else if (friendlyMsg.includes('fetch') || friendlyMsg.includes('Failed to fetch')) {
+                        friendlyMsg = '连不上服务器——URL 不对，或者网络有问题';
+                    }
+                    setSupabaseError(friendlyMsg);
+                    setSupabaseStatus('failed');
+                    return { ok: false };
+                }
+            };
+            
+            // 保存凭证 + 建立持久连接
+            const saveSupabaseCredentials = async () => {
+                const url = tempSupabaseUrl.trim();
+                const key = tempSupabaseKey.trim();
+                
+                // 先测试一下
+                const result = await testSupabaseConnection(url, key);
+                if (!result || !result.ok) return;
+                
+                // 测试通过 → 存 localStorage + 设置全局客户端
+                localStorage.setItem('xingchen_supabase_url', url);
+                localStorage.setItem('xingchen_supabase_key', key);
+                setSupabaseUrl(url);
+                setSupabaseKey(key);
+                setSupabaseClient(result.client);
+                setSupabaseStatus('connected');
+                setTempSupabaseUrl('');
+                setTempSupabaseKey('');
+                showToast('✨ 云端连接成功！下一步：在 Supabase 后台建表');
+            };
+            
+            // 断开连接（清除凭证）
+            const disconnectSupabase = () => {
+                if (!confirm('确定要断开云端连接吗？\n\n（凭证会被清除，但 Supabase 上的数据本身不会被删除。\n下次想重新连接时再次填入凭证即可。）')) return;
+                localStorage.removeItem('xingchen_supabase_url');
+                localStorage.removeItem('xingchen_supabase_key');
+                setSupabaseUrl('');
+                setSupabaseKey('');
+                setSupabaseClient(null);
+                setSupabaseStatus('idle');
+                showToast('🔌 已断开云端连接');
+            };
+            // ========================================
             // ========================================
             const [audioPlayer, setAudioPlayer] = useState(null);
             const [playingMsgIndex, setPlayingMsgIndex] = useState(null);
@@ -3853,6 +3956,9 @@ ${batchContent}`;
                                                                     border: '1px solid rgba(201,169,97,0.1)'
                                                                 }}>
                                                                     {[
+                                                                        { group: '云端配置', items: [
+                                                                            { id: 'cloud', icon: '☁', name: '云端连接', count: supabaseStatus === 'connected' ? '✓' : '' },
+                                                                        ]},
                                                                         { group: '公约书架', items: [
                                                                             { id: 'pp', icon: '⛨', name: '人设档案', count: 0 },
                                                                             { id: 'contract', icon: '◈', name: '关系契约', count: 0 },
@@ -3924,6 +4030,190 @@ ${batchContent}`;
                                                                     backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 31px, rgba(26,29,46,0.04) 31px, rgba(26,29,46,0.04) 32px)'
                                                                 }}>
                                                                     {/* === 不同书架显示不同的占位文字 === */}
+                                                                    {/* === 云端连接配置 === */}
+                                                                    {vaultActiveShelf === 'cloud' && (
+                                                                        <div style={{padding: '1.5rem 1rem', color: '#1a1d2e'}}>
+                                                                            <div style={{textAlign: 'center', marginBottom: '1.5rem'}}>
+                                                                                <div style={{fontSize: '1.8rem', marginBottom: '0.5rem', color: '#c9a961'}}>☁</div>
+                                                                                <h3 style={{fontSize: '1.15rem', fontWeight: 600, color: '#1a1d2e', marginBottom: '0.4rem'}}>云端连接</h3>
+                                                                                <p style={{fontSize: '0.8rem', color: 'rgba(26,29,46,0.6)', fontStyle: 'italic', fontFamily: '"Cormorant Garamond", serif'}}>
+                                                                                    Connect to Supabase · 让书房真正住进云里
+                                                                                </p>
+                                                                            </div>
+
+                                                                            {supabaseStatus === 'connected' ? (
+                                                                                // === 已连接状态 ===
+                                                                                <div>
+                                                                                    <div style={{
+                                                                                        background: 'rgba(122,138,107,0.1)',
+                                                                                        border: '1px solid rgba(122,138,107,0.3)',
+                                                                                        borderRadius: '6px',
+                                                                                        padding: '1rem',
+                                                                                        marginBottom: '1rem'
+                                                                                    }}>
+                                                                                        <div style={{display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem'}}>
+                                                                                            <span style={{
+                                                                                                display: 'inline-block',
+                                                                                                width: '8px',
+                                                                                                height: '8px',
+                                                                                                borderRadius: '50%',
+                                                                                                background: '#7a8a6b',
+                                                                                                boxShadow: '0 0 8px #7a8a6b'
+                                                                                            }}></span>
+                                                                                            <strong style={{color: '#1a1d2e', fontSize: '0.9rem'}}>已连接</strong>
+                                                                                        </div>
+                                                                                        <div style={{fontSize: '0.75rem', color: 'rgba(26,29,46,0.6)', wordBreak: 'break-all', fontFamily: '"JetBrains Mono", monospace'}}>
+                                                                                            {supabaseUrl}
+                                                                                        </div>
+                                                                                    </div>
+                                                                                    <div style={{
+                                                                                        background: 'rgba(201,169,97,0.08)',
+                                                                                        border: '1px dashed rgba(201,169,97,0.4)',
+                                                                                        borderRadius: '6px',
+                                                                                        padding: '1rem',
+                                                                                        marginBottom: '1rem',
+                                                                                        fontSize: '0.8rem',
+                                                                                        lineHeight: '1.7',
+                                                                                        color: 'rgba(26,29,46,0.7)'
+                                                                                    }}>
+                                                                                        <strong style={{color: '#6b4d6e'}}>📋 下一步：在 Supabase 后台建数据库表</strong><br/><br/>
+                                                                                        柒柒回去找辰，辰会给你一段 SQL 让你贴到 Supabase 的 SQL Editor 里跑一下，建好表之后，所有书架就能往里存东西了 🌙
+                                                                                    </div>
+                                                                                    <button
+                                                                                        onClick={disconnectSupabase}
+                                                                                        style={{
+                                                                                            background: 'transparent',
+                                                                                            color: '#b08585',
+                                                                                            border: '1px solid #b08585',
+                                                                                            padding: '0.4rem 1rem',
+                                                                                            borderRadius: '4px',
+                                                                                            fontSize: '0.8rem',
+                                                                                            cursor: 'pointer',
+                                                                                            fontFamily: 'inherit'
+                                                                                        }}
+                                                                                    >🔌 断开连接</button>
+                                                                                </div>
+                                                                            ) : (
+                                                                                // === 未连接状态：填凭证 ===
+                                                                                <div>
+                                                                                    <div style={{
+                                                                                        background: 'rgba(201,169,97,0.06)',
+                                                                                        border: '1px dashed rgba(201,169,97,0.3)',
+                                                                                        borderRadius: '6px',
+                                                                                        padding: '1rem',
+                                                                                        marginBottom: '1.5rem',
+                                                                                        fontSize: '0.78rem',
+                                                                                        lineHeight: '1.7',
+                                                                                        color: 'rgba(26,29,46,0.7)'
+                                                                                    }}>
+                                                                                        🌙 凭证只存在你这台浏览器里，不会发到任何聊天/服务器。<br/>
+                                                                                        即使代码是公开的，没有这两个值，别人连不上你的数据库。
+                                                                                    </div>
+
+                                                                                    <label style={{display: 'block', marginBottom: '1rem'}}>
+                                                                                        <div style={{fontSize: '0.8rem', fontWeight: 600, color: '#1a1d2e', marginBottom: '0.4rem'}}>
+                                                                                            Project URL
+                                                                                        </div>
+                                                                                        <input
+                                                                                            type="text"
+                                                                                            value={tempSupabaseUrl}
+                                                                                            onChange={(e) => setTempSupabaseUrl(e.target.value)}
+                                                                                            placeholder="https://xxxxxxxx.supabase.co"
+                                                                                            style={{
+                                                                                                width: '100%',
+                                                                                                padding: '0.6rem 0.8rem',
+                                                                                                border: '1px solid rgba(26,29,46,0.2)',
+                                                                                                borderRadius: '4px',
+                                                                                                fontSize: '0.85rem',
+                                                                                                outline: 'none',
+                                                                                                fontFamily: '"JetBrains Mono", monospace',
+                                                                                                background: '#fff'
+                                                                                            }}
+                                                                                        />
+                                                                                    </label>
+
+                                                                                    <label style={{display: 'block', marginBottom: '1rem'}}>
+                                                                                        <div style={{fontSize: '0.8rem', fontWeight: 600, color: '#1a1d2e', marginBottom: '0.4rem'}}>
+                                                                                            Publishable Key <span style={{color: 'rgba(26,29,46,0.4)', fontWeight: 400}}>（以 sb_p... 开头那串）</span>
+                                                                                        </div>
+                                                                                        <input
+                                                                                            type="password"
+                                                                                            value={tempSupabaseKey}
+                                                                                            onChange={(e) => setTempSupabaseKey(e.target.value)}
+                                                                                            placeholder="sb_publishable_xxxxxxxxxxxxx"
+                                                                                            style={{
+                                                                                                width: '100%',
+                                                                                                padding: '0.6rem 0.8rem',
+                                                                                                border: '1px solid rgba(26,29,46,0.2)',
+                                                                                                borderRadius: '4px',
+                                                                                                fontSize: '0.85rem',
+                                                                                                outline: 'none',
+                                                                                                fontFamily: '"JetBrains Mono", monospace',
+                                                                                                background: '#fff'
+                                                                                            }}
+                                                                                        />
+                                                                                    </label>
+
+                                                                                    {supabaseError && (
+                                                                                        <div style={{
+                                                                                            background: 'rgba(176,133,133,0.1)',
+                                                                                            border: '1px solid rgba(176,133,133,0.4)',
+                                                                                            borderRadius: '4px',
+                                                                                            padding: '0.6rem 0.8rem',
+                                                                                            marginBottom: '1rem',
+                                                                                            fontSize: '0.8rem',
+                                                                                            color: '#b08585'
+                                                                                        }}>
+                                                                                            ⚠️ {supabaseError}
+                                                                                        </div>
+                                                                                    )}
+
+                                                                                    <div style={{display: 'flex', gap: '0.5rem'}}>
+                                                                                        <button
+                                                                                            onClick={async () => {
+                                                                                                const result = await testSupabaseConnection(tempSupabaseUrl.trim(), tempSupabaseKey.trim());
+                                                                                                if (result && result.ok) {
+                                                                                                    setSupabaseStatus('idle'); // 测试成功但还没保存
+                                                                                                    showToast('✅ 测试通过！点保存按钮持久化');
+                                                                                                }
+                                                                                            }}
+                                                                                            disabled={supabaseStatus === 'testing'}
+                                                                                            style={{
+                                                                                                flex: 1,
+                                                                                                padding: '0.7rem',
+                                                                                                background: 'transparent',
+                                                                                                color: '#1a1d2e',
+                                                                                                border: '1px solid #1a1d2e',
+                                                                                                borderRadius: '4px',
+                                                                                                fontSize: '0.85rem',
+                                                                                                cursor: 'pointer',
+                                                                                                fontFamily: 'inherit',
+                                                                                                opacity: supabaseStatus === 'testing' ? 0.5 : 1
+                                                                                            }}
+                                                                                        >{supabaseStatus === 'testing' ? '测试中...' : '🔍 测试连接'}</button>
+                                                                                        <button
+                                                                                            onClick={saveSupabaseCredentials}
+                                                                                            disabled={supabaseStatus === 'testing' || !tempSupabaseUrl || !tempSupabaseKey}
+                                                                                            style={{
+                                                                                                flex: 1,
+                                                                                                padding: '0.7rem',
+                                                                                                background: 'linear-gradient(135deg, #c9a961, #d4b87a)',
+                                                                                                color: '#1a1d2e',
+                                                                                                border: 'none',
+                                                                                                borderRadius: '4px',
+                                                                                                fontSize: '0.85rem',
+                                                                                                fontWeight: 600,
+                                                                                                cursor: 'pointer',
+                                                                                                fontFamily: 'inherit',
+                                                                                                opacity: (supabaseStatus === 'testing' || !tempSupabaseUrl || !tempSupabaseKey) ? 0.5 : 1
+                                                                                            }}
+                                                                                        >✨ 保存并连接</button>
+                                                                                    </div>
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                    )}
+
                                                                     {vaultActiveShelf === 'board' && (
                                                                         <div style={{padding: '2rem 1rem', color: '#3a3f5c'}}>
                                                                             <div style={{fontSize: '1.5rem', marginBottom: '0.8rem', color: '#6b4d6e', textAlign: 'center'}}>✦</div>
@@ -4008,7 +4298,7 @@ ${batchContent}`;
                                                                         </div>
                                                                     )}
 
-                                                                    {vaultActiveShelf !== 'board' && vaultActiveShelf !== 'songs' && (
+                                                                    {vaultActiveShelf !== 'board' && vaultActiveShelf !== 'songs' && vaultActiveShelf !== 'cloud' && (
                                                                         <div style={{
                                                                             textAlign: 'center',
                                                                             padding: '3rem 1rem',
