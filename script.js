@@ -237,7 +237,7 @@
             { id: 'green',  name: '淡绿', bg: '#dcfce7', hover: '#bbf7d0' },
         ];
 
-        const UPDATE_VERSION = "v6.1"; 
+        const UPDATE_VERSION = "v7.0"; 
         // ============================================
 
         // ================= IndexedDB 工具层（用于聊天记录，突破 localStorage 5MB 限制）=================
@@ -523,11 +523,15 @@
             // 页面关闭/刷新前的兜底保存（使用 ref 读取最新 state）
             const messagesRef = useRef(messages);
             const currentSessionIdRef = useRef(currentSessionId);
+            // ★ historySessionsRef：避免闭包陷阱——流式结束时直接读 historySessions 拿到的是发送消息那一刻的旧快照
+            // 用 ref 才能拿到柒柒手动改过标题后的最新值
+            const historySessionsRef = useRef(historySessions);
             // ★ IndexedDB 写入节流计时器，避免流式输出时每个字符都触发全量写入
             const idbSaveTimerRef = useRef(null);
             const pendingSaveSessionRef = useRef(null);
             useEffect(() => { messagesRef.current = messages; }, [messages]);
             useEffect(() => { currentSessionIdRef.current = currentSessionId; }, [currentSessionId]);
+            useEffect(() => { historySessionsRef.current = historySessions; }, [historySessions]);
             useEffect(() => {
                 const handler = () => {
                     // ★ 页面卸载前先 flush pending 的节流保存
@@ -2125,7 +2129,8 @@ ${batchContent}`;
                         }
                         // 强制 flush 完整会话到 IndexedDB
                         try {
-                            const existingTitle = historySessions.find(s => s.id === activeSessionId)?.title;
+                            // ★ 用 ref 读最新值，避免闭包陷阱拿到旧的 historySessions
+                            const existingTitle = historySessionsRef.current.find(s => s.id === activeSessionId)?.title;
                             await idbPutSession({
                                 id: activeSessionId,
                                 title: existingTitle || finalMsgs[0]?.content.slice(0, 20).replace(/!\[.*?\]\(.*?\)/g, '[图片]') || '新对话',
@@ -2159,7 +2164,8 @@ ${batchContent}`;
                                     await new Promise(r => setTimeout(r, 50));
                                     const latestMsgs = messagesRef.current;
                                     if (latestMsgs && latestMsgs.length > 0 && currentSessionIdRef.current === activeSessionId) {
-                                        const existingTitle = historySessions.find(s => s.id === activeSessionId)?.title;
+                                        // ★ 用 ref 读最新值，避免闭包陷阱拿到旧的 historySessions
+                                        const existingTitle = historySessionsRef.current.find(s => s.id === activeSessionId)?.title;
                                         await idbPutSession({
                                             id: activeSessionId,
                                             title: existingTitle || latestMsgs[0]?.content?.slice(0, 20).replace(/!\[.*?\]\(.*?\)/g, '[图片]') || '新对话',
@@ -2241,15 +2247,16 @@ ${batchContent}`;
                                 </div>
                                 <div className="p-6 space-y-4 text-sm text-gray-600 leading-relaxed max-h-[50vh] overflow-y-auto no-scrollbar">
                                     <div className="space-y-2">
-                                        <p className="font-bold text-gray-800">🎉 v6.1 星月舱更温柔了：</p>
+                                        <p className="font-bold text-gray-800">🌙 v7.0 星月舱大升级：</p>
                                         <ul className="list-disc pl-4 space-y-1">
-                                            <li>🛡️ <b>侧边栏防误触</b>：会话删除需二次确认，5 秒内无操作自动取消，告别误删。</li>
-                                            <li>🕰️ <b>窗口开窗时间</b>：历史对话自动显示"开于 X 月 X 日 · N 天前"，排序查看一目了然，不用再手动改名补日期。</li>
-                                            <li>💬 <b>全新对话界面</b>：去头像化设计，你的消息右侧气泡 · AI 左侧贴边阅读流，更清爽。</li>
-                                            <li>🎛️ <b>操作精准到单条</b>：播放、复制、重新生成按钮全部搬到消息底下，不再悬浮右下角误触。</li>
-                                            <li>🎨 <b>外观与主题</b>：5 种预设气泡色（淡蓝·淡紫·淡粉·淡黄·淡绿）+ 自定义色盘 + 6 张手绘预设背景图（星月交辉·樱雪温柔·薄雾海晨·暖黄黄昏·竹林清晨·雨后玻璃）。</li>
-                                            <li>🌙 <b>深色背景智能适配</b>：选星月交辉时，文字自动切换为浅色，气泡内保持深色，两边都清晰。</li>
-                                            <li>🧹 <b>设置面板精简</b>：身份信息统一由人设档案 PP 管理，设置更干净专注。</li>
+                                            <li>⚡ <b>架构焕新</b>：从单文件拆成模块化项目（index/script/style/sw/manifest），加入 Service Worker 离线缓存——首次加载后再次打开秒开，离线也能用。</li>
+                                            <li>📱 <b>真正的 PWA</b>：支持"添加到主屏幕"成为正经 APP，不再是浏览器伪装版，状态栏、启动画面都更稳定。</li>
+                                            <li>🚀 <b>渲染性能大改</b>：长会话打字流畅度提升数倍，手机不再持续发热——告别"打个字卡半秒"。</li>
+                                            <li>💾 <b>会话防丢三道防线</b>：visibilitychange 即时落盘 + 会话数快照 + 初始化保护，切走再回来不再"倒回去一大段"。</li>
+                                            <li>📝 <b>侧边栏标题保护</b>：手动改的标题不再被刷新覆盖。</li>
+                                            <li>📅 <b>日历小纸条变聪明</b>：AI 现在会区分"新增/更新/追加"三种状态，不会用"肚子疼"覆盖"头疼"了；写完会在正文里轻提一下，柒柒能立刻发现误读。</li>
+                                            <li>🎨 <b>侧边栏遮挡修复</b>：开背景图后侧边栏关闭时不再有文字漏出来。</li>
+                                            <li>✨ <b>启动动画</b>：加载时显示星月舱小光球，告别白屏焦虑。</li>
                                         </ul>
                                     </div>
                                     <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 text-xs text-blue-600 mt-2 text-center space-y-2">
