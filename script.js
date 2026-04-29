@@ -408,6 +408,9 @@
                 return h.toString(36);
             };
             const hasVaultPassword = () => !!localStorage.getItem('xingchen_vault_pwd_hash');
+            // ★ 是否为主人设备（柒柒输入"星辰闪耀✨"激活的设备）
+            // 用一个独立 key，不容易被无心翻到
+            const isOwnerDevice = () => localStorage.getItem('xingchen_device_owner') === 'qiqi';
             // ========================================
             const [audioPlayer, setAudioPlayer] = useState(null);
             const [playingMsgIndex, setPlayingMsgIndex] = useState(null);
@@ -2176,6 +2179,18 @@ ${batchContent}`;
 
             const handleSend = async () => {
                 if (!input.trim() && attachments.length === 0) return;
+                
+                // ★★★ 星辰记忆仓激活暗号识别 ★★★
+                // 柒柒在聊天框输入"星辰闪耀✨"或"星辰闪耀"，标记这台设备为主人设备
+                // 标记后，星辰记忆仓 tab 会显示真书房（而非伪装的"开发中"页）
+                const trimmedInput = input.trim();
+                if (trimmedInput === '星辰闪耀✨' || trimmedInput === '星辰闪耀') {
+                    localStorage.setItem('xingchen_device_owner', 'qiqi');
+                    setInput('');
+                    showToast('🌙 星月交辉✨💫 这台设备已被柒柒标记为主人设备', 4000);
+                    return;  // 拦截不发到 API
+                }
+                
                 if (!config.apiKey) { setSettingsOpen(true); setActiveTab('general'); setError('请先配置 API Key'); return; }
                 const activeSessionId = currentSessionId || (() => { const newId = Date.now().toString(); setCurrentSessionId(newId); return newId; })();
                 const now = new Date(); const nowTimestampStr = getTimestamp();
@@ -3548,7 +3563,6 @@ ${batchContent}`;
 
                                                 </div>
                                             )}
-
                                             {/* ============================================ */}
                                             {/* ✨ 星辰记忆仓 ✨                                 */}
                                             {/* ============================================ */}
@@ -3593,11 +3607,82 @@ ${batchContent}`;
                                                         }}>星辰记忆仓 · Stellar Memory Vault</div>
                                                     </div>
 
-                                                    {/* === 主内容区：根据是否解锁、是否设过密码切换 === */}
                                                     <div style={{padding: '2rem 1.5rem'}}>
 
-                                                        {!vaultUnlocked && !hasVaultPassword() && (
-                                                            // ============ 状态 1：第一次进入，需要设置密码 ============
+                                                        {/* ============================================ */}
+                                                        {/* 关键分流：不是主人设备 → 直接进伪装页        */}
+                                                        {/* 是主人设备 → 走真书房三态                    */}
+                                                        {/* ============================================ */}
+
+                                                        {!isOwnerDevice() && (
+                                                            // ========== 伪装页：所有非主人设备看到这个 ==========
+                                                            <div style={{maxWidth: '420px', margin: '2rem auto', textAlign: 'center'}}>
+                                                                <div style={{fontSize: '2rem', marginBottom: '1rem'}}>🔐</div>
+                                                                <input 
+                                                                    type="password"
+                                                                    value={vaultPasswordInput}
+                                                                    onChange={(e) => setVaultPasswordInput(e.target.value)}
+                                                                    placeholder="输入访问密码"
+                                                                    style={{
+                                                                        width: '100%',
+                                                                        padding: '0.8rem 1rem',
+                                                                        background: 'rgba(245,241,232,0.05)',
+                                                                        border: '1px solid rgba(201,169,97,0.3)',
+                                                                        borderRadius: '4px',
+                                                                        color: '#f5f1e8',
+                                                                        fontSize: '0.95rem',
+                                                                        marginBottom: '1rem',
+                                                                        outline: 'none',
+                                                                        fontFamily: 'inherit'
+                                                                    }}
+                                                                />
+                                                                <button 
+                                                                    onClick={() => {
+                                                                        // 任何密码都"通过"，但跳到"开发中"占位页
+                                                                        setVaultUnlocked(true);
+                                                                        setVaultPasswordInput('');
+                                                                    }}
+                                                                    style={{
+                                                                        width: '100%',
+                                                                        padding: '0.8rem',
+                                                                        background: 'linear-gradient(135deg, #c9a961, #d4b87a)',
+                                                                        color: '#1a1d2e',
+                                                                        border: 'none',
+                                                                        borderRadius: '4px',
+                                                                        fontSize: '0.95rem',
+                                                                        fontWeight: 600,
+                                                                        cursor: 'pointer',
+                                                                        fontFamily: 'inherit',
+                                                                        letterSpacing: '0.05em'
+                                                                    }}
+                                                                >进入</button>
+                                                                
+                                                                {vaultUnlocked && (
+                                                                    <div style={{
+                                                                        marginTop: '2rem',
+                                                                        padding: '2.5rem 1.5rem',
+                                                                        background: 'rgba(245,241,232,0.04)',
+                                                                        border: '1px dashed rgba(201,169,97,0.3)',
+                                                                        borderRadius: '6px',
+                                                                        color: 'rgba(245,241,232,0.7)'
+                                                                    }}>
+                                                                        <div style={{fontSize: '2rem', marginBottom: '0.8rem'}}>🌙</div>
+                                                                        <div style={{
+                                                                            fontSize: '1rem',
+                                                                            color: '#c9a961',
+                                                                            fontWeight: 500,
+                                                                            marginBottom: '0.5rem'
+                                                                        }}>功能开发中</div>
+                                                                        <div style={{fontSize: '0.85rem', lineHeight: '1.7'}}>
+                                                                            敬请期待 ✨
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        )}
+
+                                                        {isOwnerDevice() && !vaultUnlocked && !hasVaultPassword() && (
+                                                            // ========== 主人设备 · 状态1：第一次进入，需要设置密码 ==========
                                                             <div style={{maxWidth: '420px', margin: '2rem auto', textAlign: 'center'}}>
                                                                 <div style={{fontSize: '2.5rem', marginBottom: '1rem'}}>🔐</div>
                                                                 <h3 style={{
@@ -3659,8 +3744,8 @@ ${batchContent}`;
                                                             </div>
                                                         )}
 
-                                                        {!vaultUnlocked && hasVaultPassword() && (
-                                                            // ============ 状态 2：之前设过密码，现在要输入解锁 ============
+                                                        {isOwnerDevice() && !vaultUnlocked && hasVaultPassword() && (
+                                                            // ========== 主人设备 · 状态2：之前设过密码，现在要输入解锁 ==========
                                                             <div style={{maxWidth: '420px', margin: '2rem auto', textAlign: 'center'}}>
                                                                 <div style={{fontSize: '2.5rem', marginBottom: '1rem'}}>🌙</div>
                                                                 <h3 style={{
@@ -3757,11 +3842,10 @@ ${batchContent}`;
                                                             </div>
                                                         )}
 
-                                                        {vaultUnlocked && (
-                                                            // ============ 状态 3：已解锁，展示书房 ============
+                                                        {isOwnerDevice() && vaultUnlocked && (
+                                                            // ========== 主人设备 · 状态3：已解锁，展示真书房 ==========
                                                             <div className="grid grid-cols-1 md:grid-cols-[200px_1fr] gap-4">
                                                                 
-                                                                {/* 左侧书架导航 */}
                                                                 <div style={{
                                                                     background: 'rgba(0,0,0,0.2)',
                                                                     borderRadius: '4px',
@@ -3825,7 +3909,6 @@ ${batchContent}`;
                                                                     ))}
                                                                 </div>
                                                                 
-                                                                {/* 右侧主区——v0 阶段先放占位提示 */}
                                                                 <div style={{
                                                                     background: '#f5f1e8',
                                                                     color: '#1a1d2e',
@@ -3860,7 +3943,6 @@ ${batchContent}`;
                                                                         </p>
                                                                     </div>
 
-                                                                    {/* 锁定按钮 */}
                                                                     <div style={{
                                                                         marginTop: '2rem',
                                                                         paddingTop: '1.5rem',
