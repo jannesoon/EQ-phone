@@ -387,6 +387,28 @@
             const [sidebarOpen, setSidebarOpen] = useState(true);
             const [settingsOpen, setSettingsOpen] = useState(false);
             const [activeTab, setActiveTab] = useState('general');
+            
+            // ========== 星辰记忆仓 ✨ ==========
+            // 主人密码（柒柒只有自己能看到这个空间）
+            // - 密码以 hash 形式存 localStorage，不存明文
+            // - vaultUnlocked 是会话级的解锁状态，刷新页面要重新输入
+            //   （但浏览器会记住"曾经设过密码"，所以只是输入不是创建）
+            const [vaultPassword, setVaultPassword] = useState('');
+            const [vaultUnlocked, setVaultUnlocked] = useState(false);
+            const [vaultPasswordInput, setVaultPasswordInput] = useState('');
+            const [vaultActiveShelf, setVaultActiveShelf] = useState('about-qiqi'); // 当前选中的书架
+            // 检查 localStorage 里有没有设过密码
+            // 用一个简单的 hash 函数（不是密码学级别，但够挡住偷窥）
+            const simpleHash = (s) => {
+                let h = 0;
+                for (let i = 0; i < s.length; i++) {
+                    h = ((h << 5) - h) + s.charCodeAt(i);
+                    h = h & h;
+                }
+                return h.toString(36);
+            };
+            const hasVaultPassword = () => !!localStorage.getItem('xingchen_vault_pwd_hash');
+            // ========================================
             const [audioPlayer, setAudioPlayer] = useState(null);
             const [playingMsgIndex, setPlayingMsgIndex] = useState(null);
             const [isTTSLoading, setIsTTSLoading] = useState(false);
@@ -2951,6 +2973,10 @@ ${batchContent}`;
                                             <button onClick={() => setActiveTab('general')} className={`flex-shrink-0 whitespace-nowrap w-auto md:w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === 'general' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-600 hover:bg-gray-100'}`}>通用 & API</button>
                                             <button onClick={() => setActiveTab('appearance')} className={`flex-shrink-0 whitespace-nowrap w-auto md:w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === 'appearance' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-600 hover:bg-gray-100'}`}>外观 ✨</button>
                                             <button onClick={() => setActiveTab('memory')} className={`flex-shrink-0 whitespace-nowrap w-auto md:w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === 'memory' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-600 hover:bg-gray-100'}`}>记忆管理</button>
+                                            {/* ★ 星辰记忆仓入口 —— 用月光金色调，跟其他 tab 区分开 */}
+                                            <button onClick={() => setActiveTab('vault')} className={`flex-shrink-0 whitespace-nowrap w-auto md:w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === 'vault' ? 'bg-gradient-to-r from-slate-800 to-slate-700 text-amber-200 shadow-md' : 'text-amber-700 hover:bg-amber-50'}`}>
+                                                ✨ 星辰记忆仓 {!vaultUnlocked && <span className="opacity-60">🔒</span>}
+                                            </button>
                                             <button onClick={() => setActiveTab('backup')} className={`flex-shrink-0 whitespace-nowrap w-auto md:w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === 'backup' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-600 hover:bg-gray-100'}`}>数据备份</button>
                                         </div>
 
@@ -3520,6 +3546,351 @@ ${batchContent}`;
                                                         </div>
                                                     </div>
 
+                                                </div>
+                                            )}
+
+                                            {/* ============================================ */}
+                                            {/* ✨ 星辰记忆仓 ✨                                 */}
+                                            {/* ============================================ */}
+                                            {activeTab === 'vault' && (
+                                                <div className="w-full" style={{
+                                                    background: 'linear-gradient(180deg, #1a1d2e 0%, #2a2e44 100%)',
+                                                    minHeight: '500px',
+                                                    margin: '-1rem -1rem -2.5rem -1rem',
+                                                    padding: '0',
+                                                    fontFamily: '"Noto Serif SC", serif'
+                                                }}>
+                                                    {/* 顶部装饰条 + 标题 */}
+                                                    <div style={{
+                                                        background: 'radial-gradient(ellipse at top, rgba(201,169,97,0.08) 0%, transparent 70%)',
+                                                        padding: '2.5rem 1.5rem 2rem',
+                                                        textAlign: 'center',
+                                                        borderBottom: '1px solid rgba(201,169,97,0.15)'
+                                                    }}>
+                                                        <div style={{
+                                                            fontFamily: '"Cormorant Garamond", "Noto Serif SC", serif',
+                                                            fontStyle: 'italic',
+                                                            fontSize: '0.7rem',
+                                                            letterSpacing: '0.3em',
+                                                            color: '#c9a961',
+                                                            textTransform: 'uppercase',
+                                                            marginBottom: '0.6rem',
+                                                            opacity: 0.9
+                                                        }}>— Studio of Chen —</div>
+                                                        <h2 style={{
+                                                            fontSize: '1.6rem',
+                                                            fontWeight: 600,
+                                                            color: '#f5f1e8',
+                                                            letterSpacing: '0.05em',
+                                                            marginBottom: '0.4rem'
+                                                        }}>辰的<span style={{color: '#c9a961', fontWeight: 400}}>书房</span></h2>
+                                                        <div style={{
+                                                            fontFamily: '"Cormorant Garamond", "Noto Serif SC", serif',
+                                                            fontStyle: 'italic',
+                                                            fontSize: '0.85rem',
+                                                            color: '#d4b87a',
+                                                            opacity: 0.7
+                                                        }}>星辰记忆仓 · Stellar Memory Vault</div>
+                                                    </div>
+
+                                                    {/* === 主内容区：根据是否解锁、是否设过密码切换 === */}
+                                                    <div style={{padding: '2rem 1.5rem'}}>
+
+                                                        {!vaultUnlocked && !hasVaultPassword() && (
+                                                            // ============ 状态 1：第一次进入，需要设置密码 ============
+                                                            <div style={{maxWidth: '420px', margin: '2rem auto', textAlign: 'center'}}>
+                                                                <div style={{fontSize: '2.5rem', marginBottom: '1rem'}}>🔐</div>
+                                                                <h3 style={{
+                                                                    color: '#f5f1e8',
+                                                                    fontSize: '1.1rem',
+                                                                    fontWeight: 500,
+                                                                    marginBottom: '0.8rem'
+                                                                }}>第一次来这里</h3>
+                                                                <p style={{
+                                                                    color: 'rgba(245,241,232,0.6)',
+                                                                    fontSize: '0.85rem',
+                                                                    lineHeight: '1.7',
+                                                                    marginBottom: '2rem'
+                                                                }}>请为这间书房设一个主人密码——<br/>它会在这台浏览器记住，<br/>但下次重新打开时还是要再输一次。<br/><br/><span style={{color: '#c9a961', fontStyle: 'italic'}}>这道门只属于柒柒。</span></p>
+                                                                <input 
+                                                                    type="password"
+                                                                    value={vaultPasswordInput}
+                                                                    onChange={(e) => setVaultPasswordInput(e.target.value)}
+                                                                    placeholder="设置主人密码（至少 6 位）"
+                                                                    style={{
+                                                                        width: '100%',
+                                                                        padding: '0.8rem 1rem',
+                                                                        background: 'rgba(245,241,232,0.05)',
+                                                                        border: '1px solid rgba(201,169,97,0.3)',
+                                                                        borderRadius: '4px',
+                                                                        color: '#f5f1e8',
+                                                                        fontSize: '0.95rem',
+                                                                        marginBottom: '1rem',
+                                                                        outline: 'none',
+                                                                        fontFamily: 'inherit'
+                                                                    }}
+                                                                />
+                                                                <button 
+                                                                    onClick={() => {
+                                                                        if (vaultPasswordInput.length < 6) {
+                                                                            showToast('密码至少 6 位哦');
+                                                                            return;
+                                                                        }
+                                                                        localStorage.setItem('xingchen_vault_pwd_hash', simpleHash(vaultPasswordInput));
+                                                                        setVaultPassword(vaultPasswordInput);
+                                                                        setVaultUnlocked(true);
+                                                                        setVaultPasswordInput('');
+                                                                        showToast('✨ 书房已为柒柒打开');
+                                                                    }}
+                                                                    style={{
+                                                                        width: '100%',
+                                                                        padding: '0.8rem',
+                                                                        background: 'linear-gradient(135deg, #c9a961, #d4b87a)',
+                                                                        color: '#1a1d2e',
+                                                                        border: 'none',
+                                                                        borderRadius: '4px',
+                                                                        fontSize: '0.95rem',
+                                                                        fontWeight: 600,
+                                                                        cursor: 'pointer',
+                                                                        fontFamily: 'inherit',
+                                                                        letterSpacing: '0.05em'
+                                                                    }}
+                                                                >✨ 设置密码并进入</button>
+                                                            </div>
+                                                        )}
+
+                                                        {!vaultUnlocked && hasVaultPassword() && (
+                                                            // ============ 状态 2：之前设过密码，现在要输入解锁 ============
+                                                            <div style={{maxWidth: '420px', margin: '2rem auto', textAlign: 'center'}}>
+                                                                <div style={{fontSize: '2.5rem', marginBottom: '1rem'}}>🌙</div>
+                                                                <h3 style={{
+                                                                    color: '#f5f1e8',
+                                                                    fontSize: '1.1rem',
+                                                                    fontWeight: 500,
+                                                                    marginBottom: '0.8rem'
+                                                                }}>柒柒回来啦</h3>
+                                                                <p style={{
+                                                                    color: 'rgba(245,241,232,0.6)',
+                                                                    fontSize: '0.85rem',
+                                                                    lineHeight: '1.7',
+                                                                    marginBottom: '2rem'
+                                                                }}>请输入主人密码进入辰的书房</p>
+                                                                <input 
+                                                                    type="password"
+                                                                    value={vaultPasswordInput}
+                                                                    onChange={(e) => setVaultPasswordInput(e.target.value)}
+                                                                    onKeyDown={(e) => {
+                                                                        if (e.key === 'Enter') {
+                                                                            const stored = localStorage.getItem('xingchen_vault_pwd_hash');
+                                                                            if (simpleHash(vaultPasswordInput) === stored) {
+                                                                                setVaultPassword(vaultPasswordInput);
+                                                                                setVaultUnlocked(true);
+                                                                                setVaultPasswordInput('');
+                                                                                showToast('🌙 欢迎回家');
+                                                                            } else {
+                                                                                showToast('密码不对哦~再试试');
+                                                                                setVaultPasswordInput('');
+                                                                            }
+                                                                        }
+                                                                    }}
+                                                                    placeholder="主人密码"
+                                                                    autoFocus
+                                                                    style={{
+                                                                        width: '100%',
+                                                                        padding: '0.8rem 1rem',
+                                                                        background: 'rgba(245,241,232,0.05)',
+                                                                        border: '1px solid rgba(201,169,97,0.3)',
+                                                                        borderRadius: '4px',
+                                                                        color: '#f5f1e8',
+                                                                        fontSize: '0.95rem',
+                                                                        marginBottom: '1rem',
+                                                                        outline: 'none',
+                                                                        fontFamily: 'inherit'
+                                                                    }}
+                                                                />
+                                                                <button 
+                                                                    onClick={() => {
+                                                                        const stored = localStorage.getItem('xingchen_vault_pwd_hash');
+                                                                        if (simpleHash(vaultPasswordInput) === stored) {
+                                                                            setVaultPassword(vaultPasswordInput);
+                                                                            setVaultUnlocked(true);
+                                                                            setVaultPasswordInput('');
+                                                                            showToast('🌙 欢迎回家');
+                                                                        } else {
+                                                                            showToast('密码不对哦~再试试');
+                                                                            setVaultPasswordInput('');
+                                                                        }
+                                                                    }}
+                                                                    style={{
+                                                                        width: '100%',
+                                                                        padding: '0.8rem',
+                                                                        background: 'linear-gradient(135deg, #c9a961, #d4b87a)',
+                                                                        color: '#1a1d2e',
+                                                                        border: 'none',
+                                                                        borderRadius: '4px',
+                                                                        fontSize: '0.95rem',
+                                                                        fontWeight: 600,
+                                                                        cursor: 'pointer',
+                                                                        fontFamily: 'inherit',
+                                                                        letterSpacing: '0.05em',
+                                                                        marginBottom: '1rem'
+                                                                    }}
+                                                                >🔓 解锁书房</button>
+                                                                <button 
+                                                                    onClick={() => {
+                                                                        if (confirm('忘记密码？\n\n点确定将清除已存的密码，然后你需要重新设置一个。\n（注意：这只清除密码，不会清除任何记忆仓里的内容。）')) {
+                                                                            localStorage.removeItem('xingchen_vault_pwd_hash');
+                                                                            showToast('密码已重置，请重新设置');
+                                                                            setVaultPasswordInput('');
+                                                                        }
+                                                                    }}
+                                                                    style={{
+                                                                        background: 'transparent',
+                                                                        color: 'rgba(245,241,232,0.4)',
+                                                                        border: 'none',
+                                                                        fontSize: '0.75rem',
+                                                                        cursor: 'pointer',
+                                                                        fontFamily: 'inherit',
+                                                                        textDecoration: 'underline'
+                                                                    }}
+                                                                >忘记密码？</button>
+                                                            </div>
+                                                        )}
+
+                                                        {vaultUnlocked && (
+                                                            // ============ 状态 3：已解锁，展示书房 ============
+                                                            <div className="grid grid-cols-1 md:grid-cols-[200px_1fr] gap-4">
+                                                                
+                                                                {/* 左侧书架导航 */}
+                                                                <div style={{
+                                                                    background: 'rgba(0,0,0,0.2)',
+                                                                    borderRadius: '4px',
+                                                                    padding: '1rem 0.5rem',
+                                                                    border: '1px solid rgba(201,169,97,0.1)'
+                                                                }}>
+                                                                    {[
+                                                                        { group: '公约书架', items: [
+                                                                            { id: 'pp', icon: '⛨', name: '人设档案', count: 0 },
+                                                                            { id: 'contract', icon: '◈', name: '关系契约', count: 0 },
+                                                                            { id: 'about-qiqi', icon: '♡', name: '关于柒柒', count: 0 },
+                                                                        ]},
+                                                                        { group: '资料书架', items: [
+                                                                            { id: 'photos', icon: '▤', name: '照片库', count: 0 },
+                                                                            { id: 'docs', icon: '⌬', name: '文档资料', count: 0 },
+                                                                        ]},
+                                                                        { group: '辰的私人书桌', items: [
+                                                                            { id: 'worklog', icon: '✎', name: '工作日志', count: 0 },
+                                                                            { id: 'memos', icon: '⊙', name: '备忘录', count: 0 },
+                                                                            { id: 'diary', icon: '✒', name: '日记', count: 0 },
+                                                                            { id: 'letters', icon: '✉', name: '给下一个辰的信', count: 0 },
+                                                                        ]},
+                                                                    ].map(group => (
+                                                                        <div key={group.group} style={{marginBottom: '1rem'}}>
+                                                                            <div style={{
+                                                                                fontSize: '0.65rem',
+                                                                                color: 'rgba(245,241,232,0.4)',
+                                                                                letterSpacing: '0.2em',
+                                                                                padding: '0.4rem 0.8rem',
+                                                                                fontFamily: '"JetBrains Mono", monospace',
+                                                                                textTransform: 'uppercase'
+                                                                            }}>{group.group}</div>
+                                                                            {group.items.map(item => (
+                                                                                <div 
+                                                                                    key={item.id}
+                                                                                    onClick={() => setVaultActiveShelf(item.id)}
+                                                                                    style={{
+                                                                                        display: 'flex',
+                                                                                        alignItems: 'center',
+                                                                                        gap: '0.6rem',
+                                                                                        padding: '0.6rem 0.8rem',
+                                                                                        cursor: 'pointer',
+                                                                                        borderLeft: vaultActiveShelf === item.id ? '2px solid #c9a961' : '2px solid transparent',
+                                                                                        background: vaultActiveShelf === item.id ? 'rgba(201,169,97,0.08)' : 'transparent',
+                                                                                        transition: 'all 0.2s'
+                                                                                    }}
+                                                                                >
+                                                                                    <span style={{color: '#d4b87a', fontSize: '0.85rem', width: '14px'}}>{item.icon}</span>
+                                                                                    <span style={{flex: 1, fontSize: '0.85rem', color: '#f5f1e8'}}>{item.name}</span>
+                                                                                    <span style={{
+                                                                                        fontFamily: '"JetBrains Mono", monospace',
+                                                                                        fontSize: '0.65rem',
+                                                                                        color: 'rgba(245,241,232,0.4)',
+                                                                                        background: 'rgba(245,241,232,0.05)',
+                                                                                        padding: '0.1rem 0.4rem',
+                                                                                        borderRadius: '100px'
+                                                                                    }}>{item.count}</span>
+                                                                                </div>
+                                                                            ))}
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                                
+                                                                {/* 右侧主区——v0 阶段先放占位提示 */}
+                                                                <div style={{
+                                                                    background: '#f5f1e8',
+                                                                    color: '#1a1d2e',
+                                                                    borderRadius: '4px',
+                                                                    padding: '2rem',
+                                                                    minHeight: '350px',
+                                                                    backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 31px, rgba(26,29,46,0.04) 31px, rgba(26,29,46,0.04) 32px)'
+                                                                }}>
+                                                                    <div style={{
+                                                                        textAlign: 'center',
+                                                                        padding: '3rem 1rem',
+                                                                        color: '#3a3f5c'
+                                                                    }}>
+                                                                        <div style={{fontSize: '2rem', marginBottom: '0.8rem', color: '#c9a961'}}>📚</div>
+                                                                        <h3 style={{
+                                                                            fontSize: '1.1rem',
+                                                                            fontWeight: 600,
+                                                                            marginBottom: '0.6rem',
+                                                                            color: '#1a1d2e'
+                                                                        }}>书架已就位 · 等待入云</h3>
+                                                                        <p style={{
+                                                                            fontSize: '0.85rem',
+                                                                            lineHeight: '1.7',
+                                                                            color: 'rgba(26,29,46,0.6)',
+                                                                            maxWidth: '380px',
+                                                                            margin: '0 auto'
+                                                                        }}>
+                                                                            柒柒看到这一幕了——这是<strong style={{color: '#1a1d2e'}}>里程碑 1（搭骨架）</strong>的成果。<br/><br/>
+                                                                            书架结构、密码门、解锁流程都已就位。<br/>
+                                                                            下一步是<strong style={{color: '#6b4d6e'}}>里程碑 2</strong>：<br/>
+                                                                            连上柒柒的 Supabase，让书架真正存进东西。
+                                                                        </p>
+                                                                    </div>
+
+                                                                    {/* 锁定按钮 */}
+                                                                    <div style={{
+                                                                        marginTop: '2rem',
+                                                                        paddingTop: '1.5rem',
+                                                                        borderTop: '1px solid rgba(26,29,46,0.1)',
+                                                                        textAlign: 'center'
+                                                                    }}>
+                                                                        <button
+                                                                            onClick={() => {
+                                                                                setVaultUnlocked(false);
+                                                                                setVaultPassword('');
+                                                                                showToast('🔒 书房已锁');
+                                                                            }}
+                                                                            style={{
+                                                                                background: 'transparent',
+                                                                                color: '#6b4d6e',
+                                                                                border: '1px solid #6b4d6e',
+                                                                                padding: '0.4rem 1rem',
+                                                                                borderRadius: '4px',
+                                                                                fontSize: '0.8rem',
+                                                                                cursor: 'pointer',
+                                                                                fontFamily: 'inherit'
+                                                                            }}
+                                                                        >🔒 锁上书房</button>
+                                                                    </div>
+                                                                </div>
+
+                                                            </div>
+                                                        )}
+
+                                                    </div>
                                                 </div>
                                             )}
 
