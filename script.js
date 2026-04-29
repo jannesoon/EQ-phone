@@ -277,11 +277,16 @@
             });
         };
 
-        // ★ 安全写入：先读数据库现有 title，如果数据库里已经有非占位标题，
-        // 强制保留它，不让外部传入的 title 覆盖
-        // 用于所有兜底保存路径（visibilitychange、createNewSession、loadSession 等）
-        // 这是修复"刷新后标题被覆盖"的最终大招——不依赖任何 React state/闭包/ref，
-        // 只信任数据库自己的当前值
+        // ★★★ 全局权威标题表（module-level）
+        // autoGenerateTitle 一拿到生成的标题就立刻写入这里（同步），
+        // 不等数据库写入完成。任何兜底保存路径都先查这个 Map，
+        // 拿到了权威标题就强制保留——彻底解决 IndexedDB 写入竞态问题。
+        const authoritativeTitles = new Map();
+
+        // ★ 安全写入：三层标题保护
+        //   1. 全局权威标题 Map（autoGenerateTitle 设置）—— 最高优先级
+        //   2. 数据库现有非占位 title —— 次高
+        //   3. 否则使用传入的 session.title
         const idbPutSessionSafe = async (session) => {
             const db = await openDB();
             return new Promise((resolve, reject) => {
@@ -289,9 +294,24 @@
                 const getReq = txRead.objectStore(STORE_SESSIONS).get(session.id);
                 getReq.onsuccess = () => {
                     const dbExisting = getReq.result;
-                    // 如果数据库里已有这个会话，且已有非占位 title，强制用数据库的 title
-                    if (dbExisting?.title && dbExisting.title !== '新对话') {
+                    const incomingTitle = session.title;
+                    
+                    // ★ 第 1 层：全局权威标题（最强保护，绕过所有时序问题）
+                    const authTitle = authoritativeTitles.get(session.id);
+                    if (authTitle) {
+                        if (incomingTitle !== authTitle) {
+                            console.log(`[星月舱·Safe] 🌟 权威标题保护 sessionId=${session.id}: 传入"${incomingTitle}" → 强制使用权威"${authTitle}"`);
+                        }
+                        session.title = authTitle;
+                    }
+                    // ★ 第 2 层：数据库已有非占位 title
+                    else if (dbExisting?.title && dbExisting.title !== '新对话') {
+                        if (incomingTitle !== dbExisting.title) {
+                            console.log(`[星月舱·Safe] 🛡️ 数据库标题保护 sessionId=${session.id}: 传入"${incomingTitle}" → 保留数据库"${dbExisting.title}"`);
+                        }
                         session.title = dbExisting.title;
+                    } else {
+                        console.log(`[星月舱·Safe] ✏️ 写入新title sessionId=${session.id}: title="${incomingTitle}"`);
                     }
                     // 同样保护 createdAt（避免被刷新成 Date.now()）
                     if (dbExisting?.createdAt) {
@@ -304,7 +324,7 @@
                     txWrite.onerror = () => reject(txWrite.error);
                 };
                 getReq.onerror = () => {
-                    // 读失败，退化为直接写
+                    console.warn(`[星月舱·Safe] ⚠️ 读数据库失败 sessionId=${session.id}，退化为直接写`);
                     const txWrite = db.transaction(STORE_SESSIONS, 'readwrite');
                     txWrite.objectStore(STORE_SESSIONS).put(session);
                     txWrite.oncomplete = () => resolve();
@@ -791,6 +811,12 @@
                     if (generatedTitle) {
                         const cleanTitle = generatedTitle.replace(/<think>[\s\S]*?<\/think>/g, '').replace(/["'「」【】《》\n]/g, '').trim().slice(0, 15);
                         if (cleanTitle) {
+                            // ★★★ 第一步：同步写入全局权威标题 Map
+                            // 这一步绝对在数据库写入和 React state 更新之前
+                            // 之后任何 idbPutSessionSafe 调用都会拿到这个权威标题
+                            authoritativeTitles.set(targetSessionId, cleanTitle);
+                            console.log(`[星月舱·AutoTitle] 🌟 辰起的窗口名: sessionId=${targetSessionId}, title="${cleanTitle}"`);
+                            
                             setHistorySessions(prev => {
                                 const updated = prev.map(s => s.id === targetSessionId ? { ...s, title: cleanTitle } : s);
                                 return updated;
@@ -993,6 +1019,10 @@
             const startEditing = (e, session) => { e.stopPropagation(); setEditingSessionId(session.id); setEditTitle(session.title); };
             const saveTitle = (e) => { 
                 e.stopPropagation(); 
+                // ★ 同步写入全局权威标题 Map，防止后续兜底保存覆盖
+                authoritativeTitles.set(editingSessionId, editTitle);
+                console.log(`[星月舱·SaveTitle] ✏️ 柒柒改的标题: sessionId=${editingSessionId}, title="${editTitle}"`);
+                
                 const updatedSessions = historySessions.map(s => s.id === editingSessionId ? { ...s, title: editTitle } : s); 
                 setHistorySessions(updatedSessions); 
                 const updated = updatedSessions.find(s => s.id === editingSessionId);
