@@ -523,7 +523,7 @@
             //   私人书桌: 'worklog' | 'memos' | 'diary' | 'letters'
             //   辰辰之间: 'board'
             //   逸辰的歌: 'songs'
-            // author: 'qiqi' | 'chen'
+            // author: 'qiqi' | 'ethan'
             // ========================================
 
             // 通用错误处理:把 Supabase 错误转成友好提示
@@ -4225,7 +4225,7 @@ ${batchContent}`;
                                                                                                         title: '🧪 里程碑 3.1 测试条目',
                                                                                                         content: `这是星月舱第一次往云端写东西。\n时间:${new Date().toLocaleString('zh-CN')}\n如果柒柒看到这条,说明读写通路打通了 ✨`,
                                                                                                         metadata: { test: true, milestone: '3.1' },
-                                                                                                        author: 'chen'
+                                                                                                        author: 'ethan'
                                                                                                     });
                                                                                                     if (!writeResult.ok) {
                                                                                                         setVaultTestResult(`❌ 写入失败:${writeResult.error}`);
