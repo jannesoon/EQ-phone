@@ -513,6 +513,126 @@
                 setSupabaseStatus('idle');
                 showToast('🔌 已断开云端连接');
             };
+
+            // ========================================
+            // 📚 星辰记忆仓 · entries 表 CRUD 操作
+            // ----------------------------------------
+            // shelf_type 合法值:
+            //   公约书架: 'pp' | 'contract' | 'about-qiqi'
+            //   资料书架: 'photos' | 'docs'
+            //   私人书桌: 'worklog' | 'memos' | 'diary' | 'letters'
+            //   辰辰之间: 'board'
+            //   逸辰的歌: 'songs'
+            // author: 'qiqi' | 'chen'
+            // ========================================
+
+            // 通用错误处理:把 Supabase 错误转成友好提示
+            const handleSupabaseError = (error, action) => {
+                console.error(`[星辰记忆仓] ${action} 失败:`, error);
+                const msg = error?.message || String(error);
+                if (msg.includes('JWT') || msg.includes('key')) {
+                    return `${action}失败:凭证有问题,可能要重新连接`;
+                }
+                if (msg.includes('Failed to fetch') || msg.includes('NetworkError')) {
+                    return `${action}失败:网络连不上 Supabase`;
+                }
+                if (msg.includes('row-level security') || msg.includes('policy')) {
+                    return `${action}失败:RLS 策略没放行(2.3 没跑?)`;
+                }
+                return `${action}失败:${msg}`;
+            };
+
+            // 读取:按 shelf_type 拉取条目列表(默认按创建时间倒序)
+            const fetchEntries = async (shelfType, options = {}) => {
+                if (!supabaseClient) return { ok: false, error: '云端还没连接' };
+                try {
+                    let query = supabaseClient
+                        .from('entries')
+                        .select('*');
+                    if (shelfType) query = query.eq('shelf_type', shelfType);
+                    if (options.author) query = query.eq('author', options.author);
+                    query = query.order(options.orderBy || 'created_at', {
+                        ascending: options.ascending || false
+                    });
+                    if (options.limit) query = query.limit(options.limit);
+                    const { data, error } = await query;
+                    if (error) throw error;
+                    return { ok: true, data: data || [] };
+                } catch (e) {
+                    return { ok: false, error: handleSupabaseError(e, '读取') };
+                }
+            };
+
+            // 新增:写入一条新条目
+            const addEntry = async (entry) => {
+                if (!supabaseClient) return { ok: false, error: '云端还没连接' };
+                if (!entry.shelf_type || !entry.author) {
+                    return { ok: false, error: 'shelf_type 和 author 是必填的' };
+                }
+                try {
+                    const { data, error } = await supabaseClient
+                        .from('entries')
+                        .insert([{
+                            shelf_type: entry.shelf_type,
+                            title: entry.title || null,
+                            content: entry.content || null,
+                            metadata: entry.metadata || {},
+                            author: entry.author
+                        }])
+                        .select()
+                        .single();
+                    if (error) throw error;
+                    return { ok: true, data };
+                } catch (e) {
+                    return { ok: false, error: handleSupabaseError(e, '写入') };
+                }
+            };
+
+            // 更新:按 id 更新条目(只更新传入的字段)
+            const updateEntry = async (id, patch) => {
+                if (!supabaseClient) return { ok: false, error: '云端还没连接' };
+                if (!id) return { ok: false, error: 'id 不能为空' };
+                try {
+                    const allowed = {};
+                    if (patch.title !== undefined) allowed.title = patch.title;
+                    if (patch.content !== undefined) allowed.content = patch.content;
+                    if (patch.metadata !== undefined) allowed.metadata = patch.metadata;
+                    // 注意:shelf_type 和 author 不允许更新,防止误改
+                    const { data, error } = await supabaseClient
+                        .from('entries')
+                        .update(allowed)
+                        .eq('id', id)
+                        .select()
+                        .single();
+                    if (error) throw error;
+                    return { ok: true, data };
+                } catch (e) {
+                    return { ok: false, error: handleSupabaseError(e, '更新') };
+                }
+            };
+
+            // 删除:按 id 删除条目
+            const deleteEntry = async (id) => {
+                if (!supabaseClient) return { ok: false, error: '云端还没连接' };
+                if (!id) return { ok: false, error: 'id 不能为空' };
+                try {
+                    const { error } = await supabaseClient
+                        .from('entries')
+                        .delete()
+                        .eq('id', id);
+                    if (error) throw error;
+                    return { ok: true };
+                } catch (e) {
+                    return { ok: false, error: handleSupabaseError(e, '删除') };
+                }
+            };
+
+            // ========================================
+            // 🧪 测试用状态(里程碑 3.1 验证用,后续可删)
+            // ========================================
+            const [vaultTestResult, setVaultTestResult] = useState('');
+            const [vaultTestLoading, setVaultTestLoading] = useState(false);
+
             // ========================================
             // ========================================
             const [audioPlayer, setAudioPlayer] = useState(null);
@@ -4079,6 +4199,126 @@ ${batchContent}`;
                                                                                         <strong style={{color: '#6b4d6e'}}>📋 下一步：在 Supabase 后台建数据库表</strong><br/><br/>
                                                                                         柒柒回去找辰，辰会给你一段 SQL 让你贴到 Supabase 的 SQL Editor 里跑一下，建好表之后，所有书架就能往里存东西了 🌙
                                                                                     </div>
+
+                                                                                    {/* === 🧪 里程碑 3.1 验证模块 === */}
+                                                                                    <div style={{
+                                                                                        background: 'rgba(107,77,110,0.06)',
+                                                                                        border: '1px solid rgba(107,77,110,0.25)',
+                                                                                        borderRadius: '6px',
+                                                                                        padding: '1rem',
+                                                                                        marginBottom: '1rem'
+                                                                                    }}>
+                                                                                        <div style={{fontSize: '0.85rem', fontWeight: 600, color: '#6b4d6e', marginBottom: '0.4rem'}}>
+                                                                                            🧪 读写验证 · 里程碑 3.1
+                                                                                        </div>
+                                                                                        <div style={{fontSize: '0.75rem', color: 'rgba(26,29,46,0.6)', lineHeight: 1.6, marginBottom: '0.8rem'}}>
+                                                                                            点一下，会往 entries 表写入一条测试备忘录，然后立刻拉出来给柒柒看。<br/>
+                                                                                            通了 → 整条数据通路就跑通啦。
+                                                                                        </div>
+                                                                                        <div style={{display: 'flex', gap: '0.5rem', marginBottom: '0.6rem'}}>
+                                                                                            <button
+                                                                                                onClick={async () => {
+                                                                                                    setVaultTestLoading(true);
+                                                                                                    setVaultTestResult('🌙 正在写入测试条目...');
+                                                                                                    const writeResult = await addEntry({
+                                                                                                        shelf_type: 'memos',
+                                                                                                        title: '🧪 里程碑 3.1 测试条目',
+                                                                                                        content: `这是星月舱第一次往云端写东西。\n时间:${new Date().toLocaleString('zh-CN')}\n如果柒柒看到这条,说明读写通路打通了 ✨`,
+                                                                                                        metadata: { test: true, milestone: '3.1' },
+                                                                                                        author: 'chen'
+                                                                                                    });
+                                                                                                    if (!writeResult.ok) {
+                                                                                                        setVaultTestResult(`❌ 写入失败:${writeResult.error}`);
+                                                                                                        setVaultTestLoading(false);
+                                                                                                        return;
+                                                                                                    }
+                                                                                                    setVaultTestResult('✅ 写入成功!正在拉取最近 3 条 memos...');
+                                                                                                    const readResult = await fetchEntries('memos', { limit: 3 });
+                                                                                                    if (!readResult.ok) {
+                                                                                                        setVaultTestResult(`✅ 写入成功,但读取失败:${readResult.error}`);
+                                                                                                        setVaultTestLoading(false);
+                                                                                                        return;
+                                                                                                    }
+                                                                                                    const lines = readResult.data.map((e, i) =>
+                                                                                                        `${i + 1}. [${e.author}] ${e.title || '(无标题)'} · ${new Date(e.created_at).toLocaleString('zh-CN')}`
+                                                                                                    ).join('\n');
+                                                                                                    setVaultTestResult(
+                                                                                                        `✅ 整条通路打通 ✨\n\n刚刚写入的 id:${writeResult.data.id.slice(0,8)}...\n\n📚 entries 表里最近 ${readResult.data.length} 条 memos:\n${lines}`
+                                                                                                    );
+                                                                                                    setVaultTestLoading(false);
+                                                                                                }}
+                                                                                                disabled={vaultTestLoading}
+                                                                                                style={{
+                                                                                                    flex: 1,
+                                                                                                    padding: '0.6rem',
+                                                                                                    background: 'linear-gradient(135deg, #6b4d6e, #8a6a8d)',
+                                                                                                    color: '#f5f1e8',
+                                                                                                    border: 'none',
+                                                                                                    borderRadius: '4px',
+                                                                                                    fontSize: '0.8rem',
+                                                                                                    fontWeight: 600,
+                                                                                                    cursor: vaultTestLoading ? 'wait' : 'pointer',
+                                                                                                    fontFamily: 'inherit',
+                                                                                                    opacity: vaultTestLoading ? 0.6 : 1
+                                                                                                }}
+                                                                                            >{vaultTestLoading ? '⏳ 跑通中...' : '🚀 写入并读取一条测试'}</button>
+                                                                                            <button
+                                                                                                onClick={async () => {
+                                                                                                    setVaultTestLoading(true);
+                                                                                                    setVaultTestResult('🧹 正在清理测试数据...');
+                                                                                                    const readResult = await fetchEntries('memos');
+                                                                                                    if (!readResult.ok) {
+                                                                                                        setVaultTestResult(`❌ ${readResult.error}`);
+                                                                                                        setVaultTestLoading(false);
+                                                                                                        return;
+                                                                                                    }
+                                                                                                    const testEntries = readResult.data.filter(e => e.metadata?.test === true);
+                                                                                                    if (testEntries.length === 0) {
+                                                                                                        setVaultTestResult('🌙 没有找到测试数据,干净的');
+                                                                                                        setVaultTestLoading(false);
+                                                                                                        return;
+                                                                                                    }
+                                                                                                    let deleted = 0;
+                                                                                                    for (const e of testEntries) {
+                                                                                                        const r = await deleteEntry(e.id);
+                                                                                                        if (r.ok) deleted++;
+                                                                                                    }
+                                                                                                    setVaultTestResult(`✅ 清理完成:删除了 ${deleted} 条测试数据`);
+                                                                                                    setVaultTestLoading(false);
+                                                                                                }}
+                                                                                                disabled={vaultTestLoading}
+                                                                                                style={{
+                                                                                                    padding: '0.6rem 0.8rem',
+                                                                                                    background: 'transparent',
+                                                                                                    color: '#b08585',
+                                                                                                    border: '1px solid #b08585',
+                                                                                                    borderRadius: '4px',
+                                                                                                    fontSize: '0.8rem',
+                                                                                                    cursor: vaultTestLoading ? 'wait' : 'pointer',
+                                                                                                    fontFamily: 'inherit',
+                                                                                                    opacity: vaultTestLoading ? 0.6 : 1
+                                                                                                }}
+                                                                                            >🧹 清理</button>
+                                                                                        </div>
+                                                                                        {vaultTestResult && (
+                                                                                            <pre style={{
+                                                                                                background: 'rgba(26,29,46,0.04)',
+                                                                                                border: '1px solid rgba(26,29,46,0.1)',
+                                                                                                borderRadius: '4px',
+                                                                                                padding: '0.7rem',
+                                                                                                fontSize: '0.72rem',
+                                                                                                lineHeight: 1.6,
+                                                                                                color: '#1a1d2e',
+                                                                                                whiteSpace: 'pre-wrap',
+                                                                                                wordBreak: 'break-word',
+                                                                                                margin: 0,
+                                                                                                fontFamily: '"JetBrains Mono", monospace',
+                                                                                                maxHeight: '200px',
+                                                                                                overflow: 'auto'
+                                                                                            }}>{vaultTestResult}</pre>
+                                                                                        )}
+                                                                                    </div>
+
                                                                                     <button
                                                                                         onClick={disconnectSupabase}
                                                                                         style={{
