@@ -1074,6 +1074,12 @@ ${slice}
                 const wasLoading = prevIsLoadingRef.current;
                 prevIsLoadingRef.current = isLoading;
 
+                // 🔬 直接打到浏览器标题(柒柒能看到),确认 effect 是否在被触发
+                try {
+                    const tStr = new Date().toLocaleTimeString('zh-CN').slice(-5);
+                    document.title = `[3.5 effect ${tStr} ${wasLoading}→${isLoading}] 星月舱`;
+                } catch(e) {}
+
                 // 始终更新诊断面板,记录每次 effect 跑的状态
                 const userCount = messages.filter(m => m.role === 'user').length;
                 const now = new Date().toLocaleTimeString('zh-CN');
@@ -1107,7 +1113,7 @@ ${slice}
                 runAutowriteCheck(messages).then(() => {
                     setAutowriteDebug(prev => ({...prev, lastJudgmentResult: '已执行(具体看 console)'}));
                 });
-            }, [isLoading, autowriteEnabled, supabaseClient, supabaseStatus]);
+            }, [isLoading, autowriteEnabled, supabaseClient, supabaseStatus, messages]);
 
             // ========================================
             // ========================================
