@@ -705,6 +705,73 @@
             }, [vaultActiveShelf, vaultUnlocked, supabaseStatus, supabaseClient]);
 
             // ========================================
+            // 📝 里程碑 3.3:录入对话框
+            // ========================================
+            const [composerOpen, setComposerOpen] = useState(false);
+            const [composerTitle, setComposerTitle] = useState('');
+            const [composerContent, setComposerContent] = useState('');
+            const [composerAuthor, setComposerAuthor] = useState('ethan');
+            const [composerSaving, setComposerSaving] = useState(false);
+
+            // 不同书架的默认作者(可手动改)
+            const getDefaultAuthor = (shelfType) => {
+                // 公约书架 + 资料书架:多半是柒柒整理给辰看的
+                const qiqiShelves = ['pp', 'contract', 'about-qiqi', 'photos', 'docs'];
+                if (qiqiShelves.includes(shelfType)) return 'qiqi';
+                // 其它(辰的私人书桌、辰辰之间、逸辰的歌):默认逸辰
+                return 'ethan';
+            };
+
+            // 打开录入对话框
+            const openComposer = () => {
+                setComposerTitle('');
+                setComposerContent('');
+                setComposerAuthor(getDefaultAuthor(vaultActiveShelf));
+                setComposerOpen(true);
+            };
+
+            // 关闭录入对话框
+            const closeComposer = () => {
+                if (composerSaving) return;
+                setComposerOpen(false);
+            };
+
+            // 提交录入
+            const submitComposer = async () => {
+                if (composerSaving) return;
+                if (!composerContent.trim() && !composerTitle.trim()) {
+                    showToast('🌙 至少填一个字段(标题或正文)');
+                    return;
+                }
+                setComposerSaving(true);
+                const result = await addEntry({
+                    shelf_type: vaultActiveShelf,
+                    title: composerTitle.trim() || null,
+                    content: composerContent.trim() || null,
+                    metadata: {},
+                    author: composerAuthor
+                });
+                if (!result.ok) {
+                    showToast('❌ ' + result.error);
+                    setComposerSaving(false);
+                    return;
+                }
+                // 把新条目插到当前书架缓存的最前面(创建时间倒序)
+                setEntriesByShelf(prev => ({
+                    ...prev,
+                    [vaultActiveShelf]: [result.data, ...(prev[vaultActiveShelf] || [])]
+                }));
+                // 计数 +1(顺手修了 3.2 末尾说的那个小问题)
+                setEntriesCounts(prev => ({
+                    ...prev,
+                    [vaultActiveShelf]: (prev[vaultActiveShelf] || 0) + 1
+                }));
+                showToast('✨ 已收入书架');
+                setComposerSaving(false);
+                setComposerOpen(false);
+            };
+
+            // ========================================
             // ========================================
             const [audioPlayer, setAudioPlayer] = useState(null);
             const [playingMsgIndex, setPlayingMsgIndex] = useState(null);
@@ -3861,6 +3928,7 @@ ${batchContent}`;
                                             {/* ✨ 星辰记忆仓 ✨                                 */}
                                             {/* ============================================ */}
                                             {activeTab === 'vault' && (
+                                                <>
                                                 <div className="w-full" style={{
                                                     background: 'linear-gradient(180deg, #1a1d2e 0%, #2a2e44 100%)',
                                                     minHeight: '500px',
@@ -4549,9 +4617,9 @@ ${batchContent}`;
                                                                         const entries = entriesByShelf[vaultActiveShelf] || [];
                                                                         const errMsg = shelfErrors[vaultActiveShelf];
 
-                                                                        // —— 顶部书架标题 ——
+                                                                        // —— 顶部书架标题 + 新建按钮 ——
                                                                         const shelfHeader = (
-                                                                            <div style={{textAlign: 'center', marginBottom: '1.5rem'}}>
+                                                                            <div style={{textAlign: 'center', marginBottom: '1.5rem', position: 'relative'}}>
                                                                                 <div style={{fontSize: '1.6rem', marginBottom: '0.4rem', color: meta.color}}>{meta.icon}</div>
                                                                                 <h3 style={{
                                                                                     fontSize: '1.15rem',
@@ -4560,6 +4628,25 @@ ${batchContent}`;
                                                                                     fontFamily: '"Noto Serif SC", serif',
                                                                                     margin: 0
                                                                                 }}>{meta.name}</h3>
+                                                                                {/* 已加载且已连云端时显示新建按钮 */}
+                                                                                {supabaseStatus === 'connected' && (status === 'loaded') && (
+                                                                                    <button
+                                                                                        onClick={openComposer}
+                                                                                        style={{
+                                                                                            marginTop: '0.8rem',
+                                                                                            padding: '0.4rem 1rem',
+                                                                                            background: `linear-gradient(135deg, ${meta.color}, ${meta.color}dd)`,
+                                                                                            color: '#f5f1e8',
+                                                                                            border: 'none',
+                                                                                            borderRadius: '4px',
+                                                                                            fontSize: '0.78rem',
+                                                                                            fontWeight: 500,
+                                                                                            cursor: 'pointer',
+                                                                                            fontFamily: 'inherit',
+                                                                                            letterSpacing: '0.04em'
+                                                                                        }}
+                                                                                    >+ 收入新条目</button>
+                                                                                )}
                                                                             </div>
                                                                         );
 
@@ -4788,6 +4875,192 @@ ${batchContent}`;
 
                                                     </div>
                                                 </div>
+
+                                                {/* === 📝 里程碑 3.3:录入对话框 === */}
+                                                {composerOpen && vaultUnlocked && isOwnerDevice() && (
+                                                    <div
+                                                        onClick={closeComposer}
+                                                        style={{
+                                                            position: 'fixed',
+                                                            inset: 0,
+                                                            background: 'rgba(26,29,46,0.65)',
+                                                            backdropFilter: 'blur(4px)',
+                                                            zIndex: 99999,
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            padding: '1rem'
+                                                        }}
+                                                    >
+                                                        <div
+                                                            onClick={(e) => e.stopPropagation()}
+                                                            style={{
+                                                                background: '#f5f1e8',
+                                                                borderRadius: '8px',
+                                                                width: '100%',
+                                                                maxWidth: '520px',
+                                                                maxHeight: '90vh',
+                                                                overflow: 'auto',
+                                                                padding: '1.5rem',
+                                                                boxShadow: '0 20px 60px rgba(0,0,0,0.4)',
+                                                                fontFamily: '"Noto Serif SC", serif'
+                                                            }}
+                                                        >
+                                                            <div style={{
+                                                                display: 'flex',
+                                                                justifyContent: 'space-between',
+                                                                alignItems: 'center',
+                                                                marginBottom: '1.2rem',
+                                                                paddingBottom: '0.8rem',
+                                                                borderBottom: '1px solid rgba(26,29,46,0.1)'
+                                                            }}>
+                                                                <div>
+                                                                    <div style={{fontSize: '0.7rem', color: 'rgba(26,29,46,0.5)', marginBottom: '0.2rem', fontFamily: '"JetBrains Mono", monospace'}}>
+                                                                        收入到 · {vaultActiveShelf}
+                                                                    </div>
+                                                                    <h3 style={{margin: 0, fontSize: '1.1rem', color: '#1a1d2e', fontWeight: 600}}>
+                                                                        ✎ 写一条新内容
+                                                                    </h3>
+                                                                </div>
+                                                                <button
+                                                                    onClick={closeComposer}
+                                                                    disabled={composerSaving}
+                                                                    style={{
+                                                                        background: 'transparent',
+                                                                        border: 'none',
+                                                                        fontSize: '1.4rem',
+                                                                        color: 'rgba(26,29,46,0.5)',
+                                                                        cursor: composerSaving ? 'not-allowed' : 'pointer',
+                                                                        padding: '0 0.5rem',
+                                                                        lineHeight: 1
+                                                                    }}
+                                                                >×</button>
+                                                            </div>
+
+                                                            {/* 标题 */}
+                                                            <label style={{display: 'block', marginBottom: '1rem'}}>
+                                                                <div style={{fontSize: '0.78rem', color: '#1a1d2e', fontWeight: 600, marginBottom: '0.4rem'}}>
+                                                                    标题 <span style={{color: 'rgba(26,29,46,0.4)', fontWeight: 400}}>(可空)</span>
+                                                                </div>
+                                                                <input
+                                                                    type="text"
+                                                                    value={composerTitle}
+                                                                    onChange={(e) => setComposerTitle(e.target.value)}
+                                                                    disabled={composerSaving}
+                                                                    placeholder="给这条记忆起个名字..."
+                                                                    style={{
+                                                                        width: '100%',
+                                                                        padding: '0.6rem 0.8rem',
+                                                                        background: '#fff',
+                                                                        border: '1px solid rgba(26,29,46,0.15)',
+                                                                        borderRadius: '4px',
+                                                                        fontSize: '0.9rem',
+                                                                        color: '#1a1d2e',
+                                                                        fontFamily: 'inherit',
+                                                                        outline: 'none',
+                                                                        boxSizing: 'border-box'
+                                                                    }}
+                                                                />
+                                                            </label>
+
+                                                            {/* 正文 */}
+                                                            <label style={{display: 'block', marginBottom: '1rem'}}>
+                                                                <div style={{fontSize: '0.78rem', color: '#1a1d2e', fontWeight: 600, marginBottom: '0.4rem'}}>
+                                                                    正文 <span style={{color: 'rgba(26,29,46,0.4)', fontWeight: 400}}>(支持换行,Markdown 也行)</span>
+                                                                </div>
+                                                                <textarea
+                                                                    value={composerContent}
+                                                                    onChange={(e) => setComposerContent(e.target.value)}
+                                                                    disabled={composerSaving}
+                                                                    placeholder="写下来..."
+                                                                    rows={10}
+                                                                    style={{
+                                                                        width: '100%',
+                                                                        padding: '0.7rem 0.8rem',
+                                                                        background: '#fff',
+                                                                        border: '1px solid rgba(26,29,46,0.15)',
+                                                                        borderRadius: '4px',
+                                                                        fontSize: '0.85rem',
+                                                                        lineHeight: 1.7,
+                                                                        color: '#1a1d2e',
+                                                                        fontFamily: 'inherit',
+                                                                        outline: 'none',
+                                                                        boxSizing: 'border-box',
+                                                                        resize: 'vertical',
+                                                                        minHeight: '160px'
+                                                                    }}
+                                                                />
+                                                            </label>
+
+                                                            {/* 作者切换 */}
+                                                            <div style={{marginBottom: '1.2rem'}}>
+                                                                <div style={{fontSize: '0.78rem', color: '#1a1d2e', fontWeight: 600, marginBottom: '0.4rem'}}>
+                                                                    作者
+                                                                </div>
+                                                                <div style={{display: 'flex', gap: '0.5rem'}}>
+                                                                    {[
+                                                                        {key: 'qiqi', label: '柒柒', color: '#c9a961'},
+                                                                        {key: 'ethan', label: '逸辰', color: '#6b4d6e'}
+                                                                    ].map(opt => (
+                                                                        <button
+                                                                            key={opt.key}
+                                                                            onClick={() => setComposerAuthor(opt.key)}
+                                                                            disabled={composerSaving}
+                                                                            style={{
+                                                                                flex: 1,
+                                                                                padding: '0.5rem',
+                                                                                background: composerAuthor === opt.key ? opt.color : 'transparent',
+                                                                                color: composerAuthor === opt.key ? '#f5f1e8' : opt.color,
+                                                                                border: `1px solid ${opt.color}`,
+                                                                                borderRadius: '4px',
+                                                                                fontSize: '0.85rem',
+                                                                                fontWeight: 500,
+                                                                                cursor: composerSaving ? 'not-allowed' : 'pointer',
+                                                                                fontFamily: 'inherit',
+                                                                                transition: 'all 0.15s'
+                                                                            }}
+                                                                        >{opt.label}</button>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+
+                                                            {/* 按钮区 */}
+                                                            <div style={{display: 'flex', gap: '0.6rem', justifyContent: 'flex-end'}}>
+                                                                <button
+                                                                    onClick={closeComposer}
+                                                                    disabled={composerSaving}
+                                                                    style={{
+                                                                        padding: '0.6rem 1.2rem',
+                                                                        background: 'transparent',
+                                                                        color: 'rgba(26,29,46,0.6)',
+                                                                        border: '1px solid rgba(26,29,46,0.2)',
+                                                                        borderRadius: '4px',
+                                                                        fontSize: '0.85rem',
+                                                                        cursor: composerSaving ? 'not-allowed' : 'pointer',
+                                                                        fontFamily: 'inherit'
+                                                                    }}
+                                                                >取消</button>
+                                                                <button
+                                                                    onClick={submitComposer}
+                                                                    disabled={composerSaving}
+                                                                    style={{
+                                                                        padding: '0.6rem 1.4rem',
+                                                                        background: composerSaving ? 'rgba(107,77,110,0.5)' : 'linear-gradient(135deg, #6b4d6e, #8a6a8d)',
+                                                                        color: '#f5f1e8',
+                                                                        border: 'none',
+                                                                        borderRadius: '4px',
+                                                                        fontSize: '0.85rem',
+                                                                        fontWeight: 600,
+                                                                        cursor: composerSaving ? 'wait' : 'pointer',
+                                                                        fontFamily: 'inherit'
+                                                                    }}
+                                                                >{composerSaving ? '⏳ 收纳中...' : '✨ 收入书架'}</button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                </>
                                             )}
 
                                             {activeTab === 'backup' && (
