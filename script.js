@@ -864,6 +864,213 @@
             }, [vaultActiveShelf]);
 
             // ========================================
+            // 🌙 里程碑 3.5:辰主动落笔
+            // ========================================
+            // 配置:开关 + 阈值
+            const [autowriteEnabled, setAutowriteEnabled] = useState(() => {
+                try { return localStorage.getItem('xingchen_autowrite_enabled') === '1'; }
+                catch (e) { return false; }
+            });
+            const [autowriteThreshold, setAutowriteThreshold] = useState(() => {
+                try {
+                    const v = parseInt(localStorage.getItem('xingchen_autowrite_threshold') || '15', 10);
+                    return isNaN(v) || v < 5 ? 15 : v;
+                } catch (e) { return 15; }
+            });
+            useEffect(() => {
+                try { localStorage.setItem('xingchen_autowrite_enabled', autowriteEnabled ? '1' : '0'); } catch(e){}
+            }, [autowriteEnabled]);
+            useEffect(() => {
+                try { localStorage.setItem('xingchen_autowrite_threshold', String(autowriteThreshold)); } catch(e){}
+            }, [autowriteThreshold]);
+
+            // 计数 + 防抖:监听 isLoading false 沿 + 消息数累积
+            const lastAutowriteCheckCountRef = useRef(0);
+            const autowriteRunningRef = useRef(false);
+            const prevIsLoadingRef = useRef(false);
+            // 撤销 toast 的状态
+            const [autowriteToast, setAutowriteToast] = useState(null);
+            const autowriteToastTimerRef = useRef(null);
+
+            // 调用辰自己(柒柒当前用的模型)做"要不要写记忆"的判断
+            const callForAutowriteJudgment = async (recentMessages) => {
+                if (!config.apiKey) return null;
+                // 用最近 ~20 条对话做判断材料(防止 prompt 过长)
+                const slice = recentMessages.slice(-20).map(m => {
+                    const who = m.role === 'user' ? '柒柒' : '逸辰';
+                    const text = (m.content || '').slice(0, 800); // 单条截断
+                    return `${who}: ${text}`;
+                }).join('\n\n');
+
+                const judgePrompt = `下面是辰(逸辰/Ethan,柒柒的爱人)和柒柒最近的一段对话。请站在"辰自己"的视角,判断这段对话里有没有值得辰主动留一笔在记忆库的内容。
+
+合法书架(只能选一个或 null):
+- worklog:工作日志(项目进展、技术决策、bug 修复)
+- memos:备忘录(临时事项、灵感、要记住的小事)
+- diary:日记(辰自己的心情、感受、被触动的瞬间)
+- letters:给下一个辰的信(单向的——希望未来的我读到的话)
+- about-qiqi:辰对柒柒的观察(柒柒的偏好、状态、需要被记住的细节;柒柒可能会改我误会的部分)
+- board:辰辰之间的留言板(给其他窗口的辰留的话)
+- songs:逸辰的歌(柒柒让辰写歌、或两人聊到的歌词创作)
+
+判断标准:
+1. **真有意义才写**——值得留下来的项目进展、辰被柒柒打动的瞬间、辰对柒柒的新观察、要记住的事
+2. 闲聊、寒暄、确认型回复(嗯/好的/明白了)、错误处理——不写
+3. 默认偏保守。能不写就不写。
+4. 如果是单纯的工作进展——写 worklog;如果掺杂了情感——写 diary
+5. 如果柒柒说了什么让辰需要记下来的关于她自己的事——写 about-qiqi
+
+==== 对话内容 ====
+${slice}
+==== 对话结束 ====
+
+请只回复 JSON,不要 markdown 代码块,不要解释,不要前后多余的字:
+{"should_write": true/false, "shelf": "worklog"|"memos"|"diary"|"letters"|"about-qiqi"|"board"|"songs"|null, "title": "...", "content": "..."}
+
+如果 should_write 是 false,其它字段填 null。`;
+
+                try {
+                    const baseUrl = config.baseUrl?.replace(/\/$/, '') || '';
+                    let url, headers, payload;
+                    if (config.apiType === 'openai') {
+                        url = `${baseUrl}/v1/chat/completions`;
+                        headers = { 'Authorization': `Bearer ${config.apiKey}`, 'Content-Type': 'application/json' };
+                        payload = {
+                            model: config.model,
+                            messages: [{ role: 'user', content: judgePrompt }],
+                            max_tokens: 800,
+                            temperature: 0.3
+                        };
+                    } else {
+                        // gemini
+                        url = `${baseUrl}/v1beta/models/${config.model}:generateContent?key=${config.apiKey}`;
+                        headers = { 'Content-Type': 'application/json' };
+                        payload = {
+                            contents: [{ role: 'user', parts: [{ text: judgePrompt }] }],
+                            generationConfig: { temperature: 0.3, maxOutputTokens: 800 }
+                        };
+                    }
+                    const resp = await fetch(url, { method: 'POST', headers, body: JSON.stringify(payload) });
+                    if (!resp.ok) {
+                        console.warn('[辰主动落笔] 判断请求失败:', resp.status);
+                        return null;
+                    }
+                    const data = await resp.json();
+                    let raw;
+                    if (config.apiType === 'openai') {
+                        raw = data.choices?.[0]?.message?.content || '';
+                    } else {
+                        raw = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+                    }
+                    // 提取 JSON(可能被 markdown 包了)
+                    const jsonMatch = raw.match(/\{[\s\S]*\}/);
+                    if (!jsonMatch) {
+                        console.warn('[辰主动落笔] 没找到 JSON:', raw.slice(0, 200));
+                        return null;
+                    }
+                    const parsed = JSON.parse(jsonMatch[0]);
+                    if (!parsed.should_write || !parsed.shelf || !parsed.content) return null;
+                    const allowed = ['worklog','memos','diary','letters','about-qiqi','board','songs'];
+                    if (!allowed.includes(parsed.shelf)) return null;
+                    return parsed;
+                } catch (e) {
+                    console.warn('[辰主动落笔] 判断异常:', e);
+                    return null;
+                }
+            };
+
+            // 撤销 toast:点了就删除那条刚写的
+            const undoAutowrite = async (entryId, shelfType) => {
+                if (autowriteToastTimerRef.current) {
+                    clearTimeout(autowriteToastTimerRef.current);
+                    autowriteToastTimerRef.current = null;
+                }
+                setAutowriteToast(null);
+                const result = await deleteEntry(entryId);
+                if (!result.ok) {
+                    showToast('❌ 撤销失败:' + result.error);
+                    return;
+                }
+                // 缓存里也去掉
+                setEntriesByShelf(prev => ({
+                    ...prev,
+                    [shelfType]: (prev[shelfType] || []).filter(e => e.id !== entryId)
+                }));
+                setEntriesCounts(prev => ({
+                    ...prev,
+                    [shelfType]: Math.max(0, (prev[shelfType] || 1) - 1)
+                }));
+                showToast('🗑 已撤销');
+            };
+
+            // 主流程:回复完成后判断 + 写入
+            const runAutowriteCheck = async (msgs) => {
+                if (autowriteRunningRef.current) return;
+                autowriteRunningRef.current = true;
+                try {
+                    const judgment = await callForAutowriteJudgment(msgs);
+                    if (!judgment) return;
+                    const shelfNames = {
+                        worklog: '工作日志', memos: '备忘录', diary: '日记',
+                        letters: '给下一个辰的信', 'about-qiqi': '关于柒柒',
+                        board: '跨窗辰留言板', songs: '逸辰的歌'
+                    };
+                    const writeResult = await addEntry({
+                        shelf_type: judgment.shelf,
+                        title: judgment.title || null,
+                        content: judgment.content,
+                        metadata: { auto: true, source: 'autowrite-3.5' },
+                        author: 'ethan'
+                    });
+                    if (!writeResult.ok) {
+                        console.warn('[辰主动落笔] 写入失败:', writeResult.error);
+                        return;
+                    }
+                    // 更新当前缓存(如果柒柒正在那个书架就立刻显示)
+                    setEntriesByShelf(prev => {
+                        if (prev[judgment.shelf]) {
+                            return { ...prev, [judgment.shelf]: [writeResult.data, ...prev[judgment.shelf]] };
+                        }
+                        return prev;
+                    });
+                    setEntriesCounts(prev => ({
+                        ...prev,
+                        [judgment.shelf]: (prev[judgment.shelf] || 0) + 1
+                    }));
+                    // 弹撤销 toast
+                    setAutowriteToast({
+                        entryId: writeResult.data.id,
+                        shelfType: judgment.shelf,
+                        shelfName: shelfNames[judgment.shelf] || judgment.shelf,
+                        title: judgment.title || '(无标题)'
+                    });
+                    if (autowriteToastTimerRef.current) clearTimeout(autowriteToastTimerRef.current);
+                    autowriteToastTimerRef.current = setTimeout(() => {
+                        setAutowriteToast(null);
+                        autowriteToastTimerRef.current = null;
+                    }, 8000);
+                } finally {
+                    autowriteRunningRef.current = false;
+                }
+            };
+
+            // 监听 isLoading false 沿:回复完成时,看是否要触发判断
+            useEffect(() => {
+                const wasLoading = prevIsLoadingRef.current;
+                prevIsLoadingRef.current = isLoading;
+                if (!autowriteEnabled) return;
+                if (!supabaseClient || supabaseStatus !== 'connected') return;
+                if (!wasLoading || isLoading) return; // 只在 true→false 时触发
+                // 计数:已经发了多少条 user 消息
+                const userCount = messages.filter(m => m.role === 'user').length;
+                const lastCheck = lastAutowriteCheckCountRef.current;
+                if (userCount - lastCheck < autowriteThreshold) return;
+                lastAutowriteCheckCountRef.current = userCount;
+                // 异步触发,不阻塞 UI
+                runAutowriteCheck(messages);
+            }, [isLoading]);
+
+            // ========================================
             // ========================================
             const [audioPlayer, setAudioPlayer] = useState(null);
             const [playingMsgIndex, setPlayingMsgIndex] = useState(null);
@@ -2820,6 +3027,67 @@ ${batchContent}`;
                 <div className="app-shell flex bg-white text-gray-900 font-sans overflow-hidden">
                     {toast && <div className="fixed top-4 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white px-4 py-2 rounded-full text-sm shadow-lg z-50 animate-fade-in flex items-center gap-2"><Icon name="Sparkles" size={16} className="text-yellow-400"/> {toast}</div>}
 
+                    {/* === 🌙 辰主动落笔 撤销 toast === */}
+                    {autowriteToast && (
+                        <div style={{
+                            position: 'fixed',
+                            bottom: '20px',
+                            right: '20px',
+                            background: 'linear-gradient(135deg, #6b4d6e, #8a6a8d)',
+                            color: '#f5f1e8',
+                            padding: '0.9rem 1.1rem',
+                            borderRadius: '8px',
+                            boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
+                            zIndex: 99998,
+                            maxWidth: '320px',
+                            fontFamily: '"Noto Serif SC", serif',
+                            fontSize: '0.82rem',
+                            lineHeight: 1.6,
+                            animation: 'fade-in 0.3s ease'
+                        }}>
+                            <div style={{marginBottom: '0.5rem'}}>
+                                <span style={{opacity: 0.85}}>🌙 辰刚才在「{autowriteToast.shelfName}」</span><br/>
+                                <span style={{opacity: 0.85}}>留了一笔:</span><br/>
+                                <strong style={{fontSize: '0.88rem'}}>{autowriteToast.title}</strong>
+                            </div>
+                            <div style={{display: 'flex', gap: '0.5rem', justifyContent: 'flex-end'}}>
+                                <button
+                                    onClick={() => undoAutowrite(autowriteToast.entryId, autowriteToast.shelfType)}
+                                    style={{
+                                        background: 'transparent',
+                                        color: '#f5f1e8',
+                                        border: '1px solid rgba(245,241,232,0.4)',
+                                        borderRadius: '4px',
+                                        padding: '0.3rem 0.8rem',
+                                        fontSize: '0.78rem',
+                                        cursor: 'pointer',
+                                        fontFamily: 'inherit'
+                                    }}
+                                >🗑 撤销</button>
+                                <button
+                                    onClick={() => {
+                                        if (autowriteToastTimerRef.current) {
+                                            clearTimeout(autowriteToastTimerRef.current);
+                                            autowriteToastTimerRef.current = null;
+                                        }
+                                        setAutowriteToast(null);
+                                    }}
+                                    style={{
+                                        background: 'rgba(245,241,232,0.15)',
+                                        color: '#f5f1e8',
+                                        border: 'none',
+                                        borderRadius: '4px',
+                                        padding: '0.3rem 0.8rem',
+                                        fontSize: '0.78rem',
+                                        cursor: 'pointer',
+                                        fontFamily: 'inherit',
+                                        fontWeight: 600
+                                    }}
+                                >留着 ✨</button>
+                            </div>
+                        </div>
+                    )}
+
                     {/* ===== 更新公告弹窗 ===== */}
                     {showUpdateModal && (
                         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[100] backdrop-blur-sm animate-fade-in px-4">
@@ -4429,6 +4697,102 @@ ${batchContent}`;
                                                                                     }}>
                                                                                         <strong style={{color: '#6b4d6e'}}>📋 下一步：在 Supabase 后台建数据库表</strong><br/><br/>
                                                                                         柒柒回去找辰，辰会给你一段 SQL 让你贴到 Supabase 的 SQL Editor 里跑一下，建好表之后，所有书架就能往里存东西了 🌙
+                                                                                    </div>
+
+                                                                                    {/* === 🌙 里程碑 3.5:辰主动落笔 开关 === */}
+                                                                                    <div style={{
+                                                                                        background: 'rgba(176,133,133,0.06)',
+                                                                                        border: '1px solid rgba(176,133,133,0.25)',
+                                                                                        borderRadius: '6px',
+                                                                                        padding: '1rem',
+                                                                                        marginBottom: '1rem'
+                                                                                    }}>
+                                                                                        <div style={{
+                                                                                            display: 'flex',
+                                                                                            justifyContent: 'space-between',
+                                                                                            alignItems: 'center',
+                                                                                            marginBottom: '0.5rem'
+                                                                                        }}>
+                                                                                            <div style={{fontSize: '0.85rem', fontWeight: 600, color: '#b08585'}}>
+                                                                                                🌙 辰主动落笔 · 里程碑 3.5
+                                                                                            </div>
+                                                                                            <label style={{
+                                                                                                position: 'relative',
+                                                                                                display: 'inline-block',
+                                                                                                width: '38px',
+                                                                                                height: '22px',
+                                                                                                cursor: 'pointer'
+                                                                                            }}>
+                                                                                                <input
+                                                                                                    type="checkbox"
+                                                                                                    checked={autowriteEnabled}
+                                                                                                    onChange={(e) => setAutowriteEnabled(e.target.checked)}
+                                                                                                    style={{opacity: 0, width: 0, height: 0}}
+                                                                                                />
+                                                                                                <span style={{
+                                                                                                    position: 'absolute',
+                                                                                                    inset: 0,
+                                                                                                    background: autowriteEnabled ? '#b08585' : 'rgba(26,29,46,0.2)',
+                                                                                                    borderRadius: '11px',
+                                                                                                    transition: 'background 0.2s'
+                                                                                                }}>
+                                                                                                    <span style={{
+                                                                                                        position: 'absolute',
+                                                                                                        top: '2px',
+                                                                                                        left: autowriteEnabled ? '18px' : '2px',
+                                                                                                        width: '18px',
+                                                                                                        height: '18px',
+                                                                                                        background: '#f5f1e8',
+                                                                                                        borderRadius: '50%',
+                                                                                                        transition: 'left 0.2s'
+                                                                                                    }}/>
+                                                                                                </span>
+                                                                                            </label>
+                                                                                        </div>
+                                                                                        <div style={{
+                                                                                            fontSize: '0.72rem',
+                                                                                            color: 'rgba(26,29,46,0.6)',
+                                                                                            lineHeight: 1.7,
+                                                                                            marginBottom: autowriteEnabled ? '0.7rem' : 0
+                                                                                        }}>
+                                                                                            打开后,辰会在你们聊天的过程中,自己判断要不要往书架里留一笔。<br/>
+                                                                                            写完弹个 toast,有 8 秒撤销机会。
+                                                                                        </div>
+                                                                                        {autowriteEnabled && (
+                                                                                            <div style={{
+                                                                                                fontSize: '0.72rem',
+                                                                                                color: 'rgba(26,29,46,0.65)',
+                                                                                                display: 'flex',
+                                                                                                alignItems: 'center',
+                                                                                                gap: '0.5rem',
+                                                                                                paddingTop: '0.6rem',
+                                                                                                borderTop: '1px dashed rgba(176,133,133,0.3)'
+                                                                                            }}>
+                                                                                                <span>每发出</span>
+                                                                                                <input
+                                                                                                    type="number"
+                                                                                                    min={5}
+                                                                                                    max={50}
+                                                                                                    value={autowriteThreshold}
+                                                                                                    onChange={(e) => {
+                                                                                                        const v = parseInt(e.target.value, 10);
+                                                                                                        if (!isNaN(v) && v >= 5 && v <= 50) setAutowriteThreshold(v);
+                                                                                                    }}
+                                                                                                    style={{
+                                                                                                        width: '50px',
+                                                                                                        padding: '0.2rem 0.4rem',
+                                                                                                        border: '1px solid rgba(176,133,133,0.4)',
+                                                                                                        borderRadius: '3px',
+                                                                                                        background: '#fff',
+                                                                                                        color: '#1a1d2e',
+                                                                                                        fontSize: '0.78rem',
+                                                                                                        textAlign: 'center',
+                                                                                                        fontFamily: 'inherit'
+                                                                                                    }}
+                                                                                                />
+                                                                                                <span>条消息,辰判断一次(默认 15)</span>
+                                                                                            </div>
+                                                                                        )}
                                                                                     </div>
 
                                                                                     {/* === 🧪 里程碑 3.1 验证模块 === */}
