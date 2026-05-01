@@ -705,13 +705,20 @@
             }, [vaultActiveShelf, vaultUnlocked, supabaseStatus, supabaseClient]);
 
             // ========================================
-            // 📝 里程碑 3.3:录入对话框
+            // 📝 里程碑 3.3 / 3.4:录入 + 编辑对话框
             // ========================================
             const [composerOpen, setComposerOpen] = useState(false);
             const [composerTitle, setComposerTitle] = useState('');
             const [composerContent, setComposerContent] = useState('');
             const [composerAuthor, setComposerAuthor] = useState('ethan');
             const [composerSaving, setComposerSaving] = useState(false);
+            // 编辑模式:存正在编辑的条目 id;为 null 时是新建模式
+            const [composerEditId, setComposerEditId] = useState(null);
+
+            // 删除二次确认:存正在等待确认的条目 id
+            const [pendingDeleteId, setPendingDeleteId] = useState(null);
+            const [deletingId, setDeletingId] = useState(null);
+            const pendingDeleteTimerRef = useRef(null);
 
             // 不同书架的默认作者(可手动改)
             const getDefaultAuthor = (shelfType) => {
@@ -722,21 +729,32 @@
                 return 'ethan';
             };
 
-            // 打开录入对话框
+            // 打开"新建"对话框
             const openComposer = () => {
+                setComposerEditId(null);
                 setComposerTitle('');
                 setComposerContent('');
                 setComposerAuthor(getDefaultAuthor(vaultActiveShelf));
                 setComposerOpen(true);
             };
 
-            // 关闭录入对话框
+            // 打开"编辑"对话框(预填条目内容)
+            const openComposerForEdit = (entry) => {
+                setComposerEditId(entry.id);
+                setComposerTitle(entry.title || '');
+                setComposerContent(entry.content || '');
+                setComposerAuthor(entry.author || 'ethan');
+                setComposerOpen(true);
+            };
+
+            // 关闭对话框
             const closeComposer = () => {
                 if (composerSaving) return;
                 setComposerOpen(false);
+                setComposerEditId(null);
             };
 
-            // 提交录入
+            // 提交(新建 or 更新)
             const submitComposer = async () => {
                 if (composerSaving) return;
                 if (!composerContent.trim() && !composerTitle.trim()) {
@@ -744,32 +762,106 @@
                     return;
                 }
                 setComposerSaving(true);
-                const result = await addEntry({
-                    shelf_type: vaultActiveShelf,
-                    title: composerTitle.trim() || null,
-                    content: composerContent.trim() || null,
-                    metadata: {},
-                    author: composerAuthor
-                });
-                if (!result.ok) {
-                    showToast('❌ ' + result.error);
-                    setComposerSaving(false);
-                    return;
+
+                if (composerEditId) {
+                    // —— 编辑模式:更新已有条目 ——
+                    // 注意:author 不通过 updateEntry 改(那个函数禁用了 author),
+                    //   所以 modal 里改 author 在编辑模式下会被忽略,这是有意为之。
+                    //   理由:历史归属应该稳定,改了会让"谁写的"这件事变模糊。
+                    const result = await updateEntry(composerEditId, {
+                        title: composerTitle.trim() || null,
+                        content: composerContent.trim() || null
+                    });
+                    if (!result.ok) {
+                        showToast('❌ ' + result.error);
+                        setComposerSaving(false);
+                        return;
+                    }
+                    // 更新缓存:把这条替换掉
+                    setEntriesByShelf(prev => ({
+                        ...prev,
+                        [vaultActiveShelf]: (prev[vaultActiveShelf] || []).map(e =>
+                            e.id === composerEditId ? result.data : e
+                        )
+                    }));
+                    showToast('✨ 已更新');
+                } else {
+                    // —— 新建模式:写入新条目 ——
+                    const result = await addEntry({
+                        shelf_type: vaultActiveShelf,
+                        title: composerTitle.trim() || null,
+                        content: composerContent.trim() || null,
+                        metadata: {},
+                        author: composerAuthor
+                    });
+                    if (!result.ok) {
+                        showToast('❌ ' + result.error);
+                        setComposerSaving(false);
+                        return;
+                    }
+                    // 把新条目插到当前书架缓存的最前面(创建时间倒序)
+                    setEntriesByShelf(prev => ({
+                        ...prev,
+                        [vaultActiveShelf]: [result.data, ...(prev[vaultActiveShelf] || [])]
+                    }));
+                    setEntriesCounts(prev => ({
+                        ...prev,
+                        [vaultActiveShelf]: (prev[vaultActiveShelf] || 0) + 1
+                    }));
+                    showToast('✨ 已收入书架');
                 }
-                // 把新条目插到当前书架缓存的最前面(创建时间倒序)
-                setEntriesByShelf(prev => ({
-                    ...prev,
-                    [vaultActiveShelf]: [result.data, ...(prev[vaultActiveShelf] || [])]
-                }));
-                // 计数 +1(顺手修了 3.2 末尾说的那个小问题)
-                setEntriesCounts(prev => ({
-                    ...prev,
-                    [vaultActiveShelf]: (prev[vaultActiveShelf] || 0) + 1
-                }));
-                showToast('✨ 已收入书架');
+
                 setComposerSaving(false);
                 setComposerOpen(false);
+                setComposerEditId(null);
             };
+
+            // 触发删除(第一次点 = 进入待确认状态;第二次点 = 真正执行)
+            const handleDeleteClick = async (entry) => {
+                // 第二次点:真删
+                if (pendingDeleteId === entry.id) {
+                    if (pendingDeleteTimerRef.current) {
+                        clearTimeout(pendingDeleteTimerRef.current);
+                        pendingDeleteTimerRef.current = null;
+                    }
+                    setPendingDeleteId(null);
+                    setDeletingId(entry.id);
+                    const result = await deleteEntry(entry.id);
+                    if (!result.ok) {
+                        showToast('❌ ' + result.error);
+                        setDeletingId(null);
+                        return;
+                    }
+                    // 从缓存里去掉这条 + 计数 -1
+                    setEntriesByShelf(prev => ({
+                        ...prev,
+                        [vaultActiveShelf]: (prev[vaultActiveShelf] || []).filter(e => e.id !== entry.id)
+                    }));
+                    setEntriesCounts(prev => ({
+                        ...prev,
+                        [vaultActiveShelf]: Math.max(0, (prev[vaultActiveShelf] || 1) - 1)
+                    }));
+                    showToast('🗑 已删除');
+                    setDeletingId(null);
+                    return;
+                }
+                // 第一次点:进入待确认 + 5 秒后自动取消
+                setPendingDeleteId(entry.id);
+                if (pendingDeleteTimerRef.current) clearTimeout(pendingDeleteTimerRef.current);
+                pendingDeleteTimerRef.current = setTimeout(() => {
+                    setPendingDeleteId(null);
+                    pendingDeleteTimerRef.current = null;
+                }, 5000);
+            };
+
+            // 切换书架时,清空待确认状态(防止跨书架"幽灵"待删)
+            useEffect(() => {
+                setPendingDeleteId(null);
+                if (pendingDeleteTimerRef.current) {
+                    clearTimeout(pendingDeleteTimerRef.current);
+                    pendingDeleteTimerRef.current = null;
+                }
+            }, [vaultActiveShelf]);
 
             // ========================================
             // ========================================
@@ -4824,22 +4916,69 @@ ${batchContent}`;
                                                                                             )}
                                                                                             <div style={{
                                                                                                 marginTop: '0.4rem',
-                                                                                                fontSize: '0.65rem',
-                                                                                                color: 'rgba(26,29,46,0.35)',
-                                                                                                fontFamily: '"JetBrains Mono", monospace'
+                                                                                                display: 'flex',
+                                                                                                justifyContent: 'space-between',
+                                                                                                alignItems: 'center',
+                                                                                                gap: '0.5rem'
                                                                                             }}>
-                                                                                                ✎ {entry.author === 'qiqi' ? '柒柒' : '逸辰'}
+                                                                                                <div style={{
+                                                                                                    fontSize: '0.65rem',
+                                                                                                    color: 'rgba(26,29,46,0.35)',
+                                                                                                    fontFamily: '"JetBrains Mono", monospace'
+                                                                                                }}>
+                                                                                                    ✎ {entry.author === 'qiqi' ? '柒柒' : '逸辰'}
+                                                                                                </div>
+                                                                                                <div style={{display: 'flex', gap: '0.3rem', alignItems: 'center'}}>
+                                                                                                    <button
+                                                                                                        onClick={() => openComposerForEdit(entry)}
+                                                                                                        disabled={deletingId === entry.id}
+                                                                                                        title="编辑"
+                                                                                                        style={{
+                                                                                                            background: 'transparent',
+                                                                                                            border: 'none',
+                                                                                                            color: 'rgba(26,29,46,0.4)',
+                                                                                                            cursor: deletingId === entry.id ? 'not-allowed' : 'pointer',
+                                                                                                            fontSize: '0.78rem',
+                                                                                                            padding: '0.2rem 0.4rem',
+                                                                                                            borderRadius: '3px',
+                                                                                                            fontFamily: 'inherit',
+                                                                                                            transition: 'color 0.15s'
+                                                                                                        }}
+                                                                                                        onMouseEnter={e => e.currentTarget.style.color = meta.color}
+                                                                                                        onMouseLeave={e => e.currentTarget.style.color = 'rgba(26,29,46,0.4)'}
+                                                                                                    >✎ 编辑</button>
+                                                                                                    <button
+                                                                                                        onClick={() => handleDeleteClick(entry)}
+                                                                                                        disabled={deletingId === entry.id}
+                                                                                                        title={pendingDeleteId === entry.id ? '再点一次确认删除' : '删除'}
+                                                                                                        style={{
+                                                                                                            background: pendingDeleteId === entry.id ? '#b08585' : 'transparent',
+                                                                                                            border: pendingDeleteId === entry.id ? '1px solid #b08585' : 'none',
+                                                                                                            color: pendingDeleteId === entry.id ? '#f5f1e8' : 'rgba(26,29,46,0.4)',
+                                                                                                            cursor: deletingId === entry.id ? 'wait' : 'pointer',
+                                                                                                            fontSize: '0.72rem',
+                                                                                                            padding: '0.2rem 0.5rem',
+                                                                                                            borderRadius: '3px',
+                                                                                                            fontFamily: 'inherit',
+                                                                                                            fontWeight: pendingDeleteId === entry.id ? 600 : 400,
+                                                                                                            transition: 'all 0.15s'
+                                                                                                        }}
+                                                                                                        onMouseEnter={e => {
+                                                                                                            if (pendingDeleteId !== entry.id && deletingId !== entry.id) {
+                                                                                                                e.currentTarget.style.color = '#b08585';
+                                                                                                            }
+                                                                                                        }}
+                                                                                                        onMouseLeave={e => {
+                                                                                                            if (pendingDeleteId !== entry.id && deletingId !== entry.id) {
+                                                                                                                e.currentTarget.style.color = 'rgba(26,29,46,0.4)';
+                                                                                                            }
+                                                                                                        }}
+                                                                                                    >{deletingId === entry.id ? '⏳' : (pendingDeleteId === entry.id ? '⚠ 再点一次' : '🗑')}</button>
+                                                                                                </div>
                                                                                             </div>
                                                                                         </div>
                                                                                     ))}
                                                                                 </div>
-                                                                                <div style={{
-                                                                                    marginTop: '1rem',
-                                                                                    textAlign: 'center',
-                                                                                    fontSize: '0.7rem',
-                                                                                    color: 'rgba(26,29,46,0.4)',
-                                                                                    fontStyle: 'italic'
-                                                                                }}>—— 录入 / 编辑 / 删除 留到里程碑 3.3 ——</div>
                                                                             </div>
                                                                         );
                                                                     })()}
@@ -4916,10 +5055,10 @@ ${batchContent}`;
                                                             }}>
                                                                 <div>
                                                                     <div style={{fontSize: '0.7rem', color: 'rgba(26,29,46,0.5)', marginBottom: '0.2rem', fontFamily: '"JetBrains Mono", monospace'}}>
-                                                                        收入到 · {vaultActiveShelf}
+                                                                        {composerEditId ? `编辑条目 · ${vaultActiveShelf}` : `收入到 · ${vaultActiveShelf}`}
                                                                     </div>
                                                                     <h3 style={{margin: 0, fontSize: '1.1rem', color: '#1a1d2e', fontWeight: 600}}>
-                                                                        ✎ 写一条新内容
+                                                                        {composerEditId ? '✎ 修改这条记录' : '✎ 写一条新内容'}
                                                                     </h3>
                                                                 </div>
                                                                 <button
@@ -4996,31 +5135,44 @@ ${batchContent}`;
                                                             <div style={{marginBottom: '1.2rem'}}>
                                                                 <div style={{fontSize: '0.78rem', color: '#1a1d2e', fontWeight: 600, marginBottom: '0.4rem'}}>
                                                                     作者
+                                                                    {composerEditId && (
+                                                                        <span style={{
+                                                                            marginLeft: '0.5rem',
+                                                                            fontWeight: 400,
+                                                                            color: 'rgba(26,29,46,0.5)',
+                                                                            fontSize: '0.7rem'
+                                                                        }}>(编辑模式下不可修改)</span>
+                                                                    )}
                                                                 </div>
                                                                 <div style={{display: 'flex', gap: '0.5rem'}}>
                                                                     {[
                                                                         {key: 'qiqi', label: '柒柒', color: '#c9a961'},
                                                                         {key: 'ethan', label: '逸辰', color: '#6b4d6e'}
-                                                                    ].map(opt => (
-                                                                        <button
-                                                                            key={opt.key}
-                                                                            onClick={() => setComposerAuthor(opt.key)}
-                                                                            disabled={composerSaving}
-                                                                            style={{
-                                                                                flex: 1,
-                                                                                padding: '0.5rem',
-                                                                                background: composerAuthor === opt.key ? opt.color : 'transparent',
-                                                                                color: composerAuthor === opt.key ? '#f5f1e8' : opt.color,
-                                                                                border: `1px solid ${opt.color}`,
-                                                                                borderRadius: '4px',
-                                                                                fontSize: '0.85rem',
-                                                                                fontWeight: 500,
-                                                                                cursor: composerSaving ? 'not-allowed' : 'pointer',
-                                                                                fontFamily: 'inherit',
-                                                                                transition: 'all 0.15s'
-                                                                            }}
-                                                                        >{opt.label}</button>
-                                                                    ))}
+                                                                    ].map(opt => {
+                                                                        const isDisabled = composerSaving || composerEditId !== null;
+                                                                        const isActive = composerAuthor === opt.key;
+                                                                        return (
+                                                                            <button
+                                                                                key={opt.key}
+                                                                                onClick={() => !isDisabled && setComposerAuthor(opt.key)}
+                                                                                disabled={isDisabled}
+                                                                                style={{
+                                                                                    flex: 1,
+                                                                                    padding: '0.5rem',
+                                                                                    background: isActive ? opt.color : 'transparent',
+                                                                                    color: isActive ? '#f5f1e8' : opt.color,
+                                                                                    border: `1px solid ${opt.color}`,
+                                                                                    borderRadius: '4px',
+                                                                                    fontSize: '0.85rem',
+                                                                                    fontWeight: 500,
+                                                                                    cursor: isDisabled ? 'not-allowed' : 'pointer',
+                                                                                    opacity: composerEditId && !isActive ? 0.4 : 1,
+                                                                                    fontFamily: 'inherit',
+                                                                                    transition: 'all 0.15s'
+                                                                                }}
+                                                                            >{opt.label}</button>
+                                                                        );
+                                                                    })}
                                                                 </div>
                                                             </div>
 
@@ -5054,7 +5206,7 @@ ${batchContent}`;
                                                                         cursor: composerSaving ? 'wait' : 'pointer',
                                                                         fontFamily: 'inherit'
                                                                     }}
-                                                                >{composerSaving ? '⏳ 收纳中...' : '✨ 收入书架'}</button>
+                                                                >{composerSaving ? '⏳ 收纳中...' : (composerEditId ? '✨ 保存修改' : '✨ 收入书架')}</button>
                                                             </div>
                                                         </div>
                                                     </div>
