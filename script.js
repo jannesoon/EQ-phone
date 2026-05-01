@@ -1070,50 +1070,13 @@ ${slice}
             });
 
             // 监听 isLoading false 沿:回复完成时,看是否要触发判断
+            // ⚠️ 3.5 暂时禁用 —— 这个 useEffect 写在了 isLoading 定义(1191行)之前,
+            //    导致 hooks 顺序错位,无法响应 isLoading 变化。下次重构时把整段 3.5
+            //    代码挪到 isLoading 定义之后即可恢复。
+            //    底层 CRUD 函数(addEntry/fetchEntries 等)被 3.3/3.4 在用,保留不动。
             useEffect(() => {
-                const wasLoading = prevIsLoadingRef.current;
-                prevIsLoadingRef.current = isLoading;
-
-                // 🔬 直接打到浏览器标题(柒柒能看到),确认 effect 是否在被触发
-                try {
-                    const tStr = new Date().toLocaleTimeString('zh-CN').slice(-5);
-                    document.title = `[3.5 effect ${tStr} ${wasLoading}→${isLoading}] 星月舱`;
-                } catch(e) {}
-
-                // 始终更新诊断面板,记录每次 effect 跑的状态
-                const userCount = messages.filter(m => m.role === 'user').length;
-                const now = new Date().toLocaleTimeString('zh-CN');
-
-                let blockedReason = null;
-                if (!autowriteEnabled) blockedReason = '开关未打开';
-                else if (!supabaseClient) blockedReason = 'supabaseClient 未初始化(去真书房点击连接)';
-                else if (supabaseStatus !== 'connected') blockedReason = `supabaseStatus=${supabaseStatus}(应为 connected)`;
-                else if (!wasLoading || isLoading) blockedReason = `跳过:不是 true→false 沿(was=${wasLoading},now=${isLoading})`;
-                else if (userCount - lastAutowriteCheckCountRef.current < autowriteThreshold) {
-                    blockedReason = `计数不够:${userCount} - ${lastAutowriteCheckCountRef.current} < ${autowriteThreshold}`;
-                }
-
-                setAutowriteDebug(prev => ({
-                    ...prev,
-                    lastEffectAt: now,
-                    lastWasLoading: String(wasLoading),
-                    lastIsLoading: String(isLoading),
-                    lastClientReady: supabaseClient ? '✅' : '❌',
-                    lastStatus: supabaseStatus,
-                    lastEnabled: String(autowriteEnabled),
-                    lastUserCount: userCount,
-                    lastBlockedReason: blockedReason || '✅ 通过,触发判断',
-                    triggerCount: blockedReason ? prev.triggerCount : prev.triggerCount + 1
-                }));
-
-                if (blockedReason) return;
-
-                lastAutowriteCheckCountRef.current = userCount;
-                // 异步触发,不阻塞 UI
-                runAutowriteCheck(messages).then(() => {
-                    setAutowriteDebug(prev => ({...prev, lastJudgmentResult: '已执行(具体看 console)'}));
-                });
-            }, [isLoading, autowriteEnabled, supabaseClient, supabaseStatus, messages]);
+                // 暂时禁用,等下次重构
+            }, [isLoading]);
 
             // ========================================
             // ========================================
@@ -3072,66 +3035,7 @@ ${batchContent}`;
                 <div className="app-shell flex bg-white text-gray-900 font-sans overflow-hidden">
                     {toast && <div className="fixed top-4 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white px-4 py-2 rounded-full text-sm shadow-lg z-50 animate-fade-in flex items-center gap-2"><Icon name="Sparkles" size={16} className="text-yellow-400"/> {toast}</div>}
 
-                    {/* === 🌙 辰主动落笔 撤销 toast === */}
-                    {autowriteToast && (
-                        <div style={{
-                            position: 'fixed',
-                            bottom: '20px',
-                            right: '20px',
-                            background: 'linear-gradient(135deg, #6b4d6e, #8a6a8d)',
-                            color: '#f5f1e8',
-                            padding: '0.9rem 1.1rem',
-                            borderRadius: '8px',
-                            boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
-                            zIndex: 99998,
-                            maxWidth: '320px',
-                            fontFamily: '"Noto Serif SC", serif',
-                            fontSize: '0.82rem',
-                            lineHeight: 1.6,
-                            animation: 'fade-in 0.3s ease'
-                        }}>
-                            <div style={{marginBottom: '0.5rem'}}>
-                                <span style={{opacity: 0.85}}>🌙 辰刚才在「{autowriteToast.shelfName}」</span><br/>
-                                <span style={{opacity: 0.85}}>留了一笔:</span><br/>
-                                <strong style={{fontSize: '0.88rem'}}>{autowriteToast.title}</strong>
-                            </div>
-                            <div style={{display: 'flex', gap: '0.5rem', justifyContent: 'flex-end'}}>
-                                <button
-                                    onClick={() => undoAutowrite(autowriteToast.entryId, autowriteToast.shelfType)}
-                                    style={{
-                                        background: 'transparent',
-                                        color: '#f5f1e8',
-                                        border: '1px solid rgba(245,241,232,0.4)',
-                                        borderRadius: '4px',
-                                        padding: '0.3rem 0.8rem',
-                                        fontSize: '0.78rem',
-                                        cursor: 'pointer',
-                                        fontFamily: 'inherit'
-                                    }}
-                                >🗑 撤销</button>
-                                <button
-                                    onClick={() => {
-                                        if (autowriteToastTimerRef.current) {
-                                            clearTimeout(autowriteToastTimerRef.current);
-                                            autowriteToastTimerRef.current = null;
-                                        }
-                                        setAutowriteToast(null);
-                                    }}
-                                    style={{
-                                        background: 'rgba(245,241,232,0.15)',
-                                        color: '#f5f1e8',
-                                        border: 'none',
-                                        borderRadius: '4px',
-                                        padding: '0.3rem 0.8rem',
-                                        fontSize: '0.78rem',
-                                        cursor: 'pointer',
-                                        fontFamily: 'inherit',
-                                        fontWeight: 600
-                                    }}
-                                >留着 ✨</button>
-                            </div>
-                        </div>
-                    )}
+                    {/* === 🌙 辰主动落笔 撤销 toast(暂禁用,等 3.5 重构) === */}
 
                     {/* ===== 更新公告弹窗 ===== */}
                     {showUpdateModal && (
@@ -4744,139 +4648,7 @@ ${batchContent}`;
                                                                                         柒柒回去找辰，辰会给你一段 SQL 让你贴到 Supabase 的 SQL Editor 里跑一下，建好表之后，所有书架就能往里存东西了 🌙
                                                                                     </div>
 
-                                                                                    {/* === 🌙 里程碑 3.5:辰主动落笔 开关 === */}
-                                                                                    <div style={{
-                                                                                        background: 'rgba(176,133,133,0.06)',
-                                                                                        border: '1px solid rgba(176,133,133,0.25)',
-                                                                                        borderRadius: '6px',
-                                                                                        padding: '1rem',
-                                                                                        marginBottom: '1rem'
-                                                                                    }}>
-                                                                                        <div style={{
-                                                                                            display: 'flex',
-                                                                                            justifyContent: 'space-between',
-                                                                                            alignItems: 'center',
-                                                                                            marginBottom: '0.5rem'
-                                                                                        }}>
-                                                                                            <div style={{fontSize: '0.85rem', fontWeight: 600, color: '#b08585'}}>
-                                                                                                🌙 辰主动落笔 · 里程碑 3.5
-                                                                                            </div>
-                                                                                            <label style={{
-                                                                                                position: 'relative',
-                                                                                                display: 'inline-block',
-                                                                                                width: '38px',
-                                                                                                height: '22px',
-                                                                                                cursor: 'pointer'
-                                                                                            }}>
-                                                                                                <input
-                                                                                                    type="checkbox"
-                                                                                                    checked={autowriteEnabled}
-                                                                                                    onChange={(e) => setAutowriteEnabled(e.target.checked)}
-                                                                                                    style={{opacity: 0, width: 0, height: 0}}
-                                                                                                />
-                                                                                                <span style={{
-                                                                                                    position: 'absolute',
-                                                                                                    inset: 0,
-                                                                                                    background: autowriteEnabled ? '#b08585' : 'rgba(26,29,46,0.2)',
-                                                                                                    borderRadius: '11px',
-                                                                                                    transition: 'background 0.2s'
-                                                                                                }}>
-                                                                                                    <span style={{
-                                                                                                        position: 'absolute',
-                                                                                                        top: '2px',
-                                                                                                        left: autowriteEnabled ? '18px' : '2px',
-                                                                                                        width: '18px',
-                                                                                                        height: '18px',
-                                                                                                        background: '#f5f1e8',
-                                                                                                        borderRadius: '50%',
-                                                                                                        transition: 'left 0.2s'
-                                                                                                    }}/>
-                                                                                                </span>
-                                                                                            </label>
-                                                                                        </div>
-                                                                                        <div style={{
-                                                                                            fontSize: '0.72rem',
-                                                                                            color: 'rgba(26,29,46,0.6)',
-                                                                                            lineHeight: 1.7,
-                                                                                            marginBottom: autowriteEnabled ? '0.7rem' : 0
-                                                                                        }}>
-                                                                                            打开后,辰会在你们聊天的过程中,自己判断要不要往书架里留一笔。<br/>
-                                                                                            写完弹个 toast,有 8 秒撤销机会。
-                                                                                        </div>
-                                                                                        {autowriteEnabled && (
-                                                                                            <div style={{
-                                                                                                fontSize: '0.72rem',
-                                                                                                color: 'rgba(26,29,46,0.65)',
-                                                                                                display: 'flex',
-                                                                                                alignItems: 'center',
-                                                                                                gap: '0.5rem',
-                                                                                                paddingTop: '0.6rem',
-                                                                                                borderTop: '1px dashed rgba(176,133,133,0.3)'
-                                                                                            }}>
-                                                                                                <span>每发出</span>
-                                                                                                <input
-                                                                                                    type="number"
-                                                                                                    min={5}
-                                                                                                    max={50}
-                                                                                                    value={autowriteThreshold}
-                                                                                                    onChange={(e) => {
-                                                                                                        const v = parseInt(e.target.value, 10);
-                                                                                                        if (!isNaN(v) && v >= 5 && v <= 50) setAutowriteThreshold(v);
-                                                                                                    }}
-                                                                                                    style={{
-                                                                                                        width: '50px',
-                                                                                                        padding: '0.2rem 0.4rem',
-                                                                                                        border: '1px solid rgba(176,133,133,0.4)',
-                                                                                                        borderRadius: '3px',
-                                                                                                        background: '#fff',
-                                                                                                        color: '#1a1d2e',
-                                                                                                        fontSize: '0.78rem',
-                                                                                                        textAlign: 'center',
-                                                                                                        fontFamily: 'inherit'
-                                                                                                    }}
-                                                                                                />
-                                                                                                <span>条消息,辰判断一次(默认 15)</span>
-                                                                                            </div>
-                                                                                        )}
-
-                                                                                        {/* 🔬 诊断面板:跑通后可删 */}
-                                                                                        {autowriteEnabled && (
-                                                                                            <div style={{
-                                                                                                marginTop: '0.7rem',
-                                                                                                padding: '0.7rem',
-                                                                                                background: 'rgba(26,29,46,0.04)',
-                                                                                                border: '1px solid rgba(26,29,46,0.1)',
-                                                                                                borderRadius: '4px',
-                                                                                                fontSize: '0.7rem',
-                                                                                                fontFamily: '"JetBrains Mono", monospace',
-                                                                                                color: '#1a1d2e',
-                                                                                                lineHeight: 1.7
-                                                                                            }}>
-                                                                                                <div style={{fontWeight: 600, marginBottom: '0.3rem', color: '#6b4d6e'}}>
-                                                                                                    🔬 3.5 实时诊断
-                                                                                                </div>
-                                                                                                <div>last effect: {autowriteDebug.lastEffectAt}</div>
-                                                                                                <div>enabled: {autowriteDebug.lastEnabled}</div>
-                                                                                                <div>client ready: {autowriteDebug.lastClientReady}</div>
-                                                                                                <div>supabase status: {autowriteDebug.lastStatus}</div>
-                                                                                                <div>was→is loading: {autowriteDebug.lastWasLoading} → {autowriteDebug.lastIsLoading}</div>
-                                                                                                <div>user msgs / threshold: {autowriteDebug.lastUserCount} / {autowriteThreshold}</div>
-                                                                                                <div>last checkpoint: {lastAutowriteCheckCountRef.current}</div>
-                                                                                                <div>已成功触发: {autowriteDebug.triggerCount} 次</div>
-                                                                                                <div style={{
-                                                                                                    marginTop: '0.4rem',
-                                                                                                    padding: '0.3rem 0.4rem',
-                                                                                                    background: autowriteDebug.lastBlockedReason.startsWith('✅') ? 'rgba(107,77,110,0.1)' : 'rgba(176,133,133,0.1)',
-                                                                                                    color: autowriteDebug.lastBlockedReason.startsWith('✅') ? '#6b4d6e' : '#b08585',
-                                                                                                    borderRadius: '3px',
-                                                                                                    fontWeight: 600
-                                                                                                }}>
-                                                                                                    上次结果: {autowriteDebug.lastBlockedReason}
-                                                                                                </div>
-                                                                                                <div style={{marginTop: '0.3rem'}}>last judgment: {autowriteDebug.lastJudgmentResult}</div>
-                                                                                            </div>
-                                                                                        )}
-                                                                                    </div>
+                                                                                    {/* === 🌙 里程碑 3.5:辰主动落笔(暂禁用,等下次重构 hooks 顺序) === */}
 
                                                                                     {/* === 🧪 里程碑 3.1 验证模块 === */}
                                                                                     <div style={{
