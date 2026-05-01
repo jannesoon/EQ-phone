@@ -1054,21 +1054,60 @@ ${slice}
                 }
             };
 
+            // 🔬 诊断状态(只为定位 3.5 不触发用,跑通后可删)
+            const [autowriteDebug, setAutowriteDebug] = useState({
+                lastEffectAt: '从未',
+                lastWasLoading: '-',
+                lastIsLoading: '-',
+                lastClientReady: '-',
+                lastStatus: '-',
+                lastEnabled: '-',
+                lastUserCount: 0,
+                lastCheckedAt: 0,
+                lastBlockedReason: '尚未触发',
+                lastJudgmentResult: '尚无',
+                triggerCount: 0
+            });
+
             // 监听 isLoading false 沿:回复完成时,看是否要触发判断
             useEffect(() => {
                 const wasLoading = prevIsLoadingRef.current;
                 prevIsLoadingRef.current = isLoading;
-                if (!autowriteEnabled) return;
-                if (!supabaseClient || supabaseStatus !== 'connected') return;
-                if (!wasLoading || isLoading) return; // 只在 true→false 时触发
-                // 计数:已经发了多少条 user 消息
+
+                // 始终更新诊断面板,记录每次 effect 跑的状态
                 const userCount = messages.filter(m => m.role === 'user').length;
-                const lastCheck = lastAutowriteCheckCountRef.current;
-                if (userCount - lastCheck < autowriteThreshold) return;
+                const now = new Date().toLocaleTimeString('zh-CN');
+
+                let blockedReason = null;
+                if (!autowriteEnabled) blockedReason = '开关未打开';
+                else if (!supabaseClient) blockedReason = 'supabaseClient 未初始化(去真书房点击连接)';
+                else if (supabaseStatus !== 'connected') blockedReason = `supabaseStatus=${supabaseStatus}(应为 connected)`;
+                else if (!wasLoading || isLoading) blockedReason = `跳过:不是 true→false 沿(was=${wasLoading},now=${isLoading})`;
+                else if (userCount - lastAutowriteCheckCountRef.current < autowriteThreshold) {
+                    blockedReason = `计数不够:${userCount} - ${lastAutowriteCheckCountRef.current} < ${autowriteThreshold}`;
+                }
+
+                setAutowriteDebug(prev => ({
+                    ...prev,
+                    lastEffectAt: now,
+                    lastWasLoading: String(wasLoading),
+                    lastIsLoading: String(isLoading),
+                    lastClientReady: supabaseClient ? '✅' : '❌',
+                    lastStatus: supabaseStatus,
+                    lastEnabled: String(autowriteEnabled),
+                    lastUserCount: userCount,
+                    lastBlockedReason: blockedReason || '✅ 通过,触发判断',
+                    triggerCount: blockedReason ? prev.triggerCount : prev.triggerCount + 1
+                }));
+
+                if (blockedReason) return;
+
                 lastAutowriteCheckCountRef.current = userCount;
                 // 异步触发,不阻塞 UI
-                runAutowriteCheck(messages);
-            }, [isLoading]);
+                runAutowriteCheck(messages).then(() => {
+                    setAutowriteDebug(prev => ({...prev, lastJudgmentResult: '已执行(具体看 console)'}));
+                });
+            }, [isLoading, autowriteEnabled, supabaseClient, supabaseStatus]);
 
             // ========================================
             // ========================================
@@ -4791,6 +4830,44 @@ ${batchContent}`;
                                                                                                     }}
                                                                                                 />
                                                                                                 <span>条消息,辰判断一次(默认 15)</span>
+                                                                                            </div>
+                                                                                        )}
+
+                                                                                        {/* 🔬 诊断面板:跑通后可删 */}
+                                                                                        {autowriteEnabled && (
+                                                                                            <div style={{
+                                                                                                marginTop: '0.7rem',
+                                                                                                padding: '0.7rem',
+                                                                                                background: 'rgba(26,29,46,0.04)',
+                                                                                                border: '1px solid rgba(26,29,46,0.1)',
+                                                                                                borderRadius: '4px',
+                                                                                                fontSize: '0.7rem',
+                                                                                                fontFamily: '"JetBrains Mono", monospace',
+                                                                                                color: '#1a1d2e',
+                                                                                                lineHeight: 1.7
+                                                                                            }}>
+                                                                                                <div style={{fontWeight: 600, marginBottom: '0.3rem', color: '#6b4d6e'}}>
+                                                                                                    🔬 3.5 实时诊断
+                                                                                                </div>
+                                                                                                <div>last effect: {autowriteDebug.lastEffectAt}</div>
+                                                                                                <div>enabled: {autowriteDebug.lastEnabled}</div>
+                                                                                                <div>client ready: {autowriteDebug.lastClientReady}</div>
+                                                                                                <div>supabase status: {autowriteDebug.lastStatus}</div>
+                                                                                                <div>was→is loading: {autowriteDebug.lastWasLoading} → {autowriteDebug.lastIsLoading}</div>
+                                                                                                <div>user msgs / threshold: {autowriteDebug.lastUserCount} / {autowriteThreshold}</div>
+                                                                                                <div>last checkpoint: {lastAutowriteCheckCountRef.current}</div>
+                                                                                                <div>已成功触发: {autowriteDebug.triggerCount} 次</div>
+                                                                                                <div style={{
+                                                                                                    marginTop: '0.4rem',
+                                                                                                    padding: '0.3rem 0.4rem',
+                                                                                                    background: autowriteDebug.lastBlockedReason.startsWith('✅') ? 'rgba(107,77,110,0.1)' : 'rgba(176,133,133,0.1)',
+                                                                                                    color: autowriteDebug.lastBlockedReason.startsWith('✅') ? '#6b4d6e' : '#b08585',
+                                                                                                    borderRadius: '3px',
+                                                                                                    fontWeight: 600
+                                                                                                }}>
+                                                                                                    上次结果: {autowriteDebug.lastBlockedReason}
+                                                                                                </div>
+                                                                                                <div style={{marginTop: '0.3rem'}}>last judgment: {autowriteDebug.lastJudgmentResult}</div>
                                                                                             </div>
                                                                                         )}
                                                                                     </div>
