@@ -3069,11 +3069,16 @@ ${batchContent}`;
                             // 检查是否有工具调用
                             if (finishReason === 'tool_calls' || (messageObj.tool_calls && messageObj.tool_calls.length > 0)) {
                                 // 把 assistant 的带 tool_calls 的消息加入对话历史
-                                conversationMessages.push({
+                                // ★ DeepSeek thinking 模式要求 reasoning_content 也回传
+                                const assistantMsg = {
                                     role: 'assistant',
                                     content: messageObj.content || null,
                                     tool_calls: messageObj.tool_calls
-                                });
+                                };
+                                if (messageObj.reasoning_content) {
+                                    assistantMsg.reasoning_content = messageObj.reasoning_content;
+                                }
+                                conversationMessages.push(assistantMsg);
 
                                 // 逐个执行工具调用
                                 for (const tc of messageObj.tool_calls) {
