@@ -2984,6 +2984,19 @@ ${batchContent}`;
                         while (true) {
                             const { done, value } = await reader.read(); 
                             if (done) {
+                                const cleanedAiText2 = processVaultTags(aiText);
+                                if (cleanedAiText2 !== aiText) {
+                                    let fd = cleanedAiText2;
+                                    const tm = fd.match(/<think>([\s\S]*?)<\/think>/);
+                                    if (tm) fd = fd.replace(/<think>[\s\S]*?<\/think>/, '').trim();
+                                    fd = processHealthTag(fd);
+                                    setMessages(prev => {
+                                        const newMsgs = [...prev]; const lastMsg = newMsgs[newMsgs.length - 1];
+                                        lastMsg.content = fd; lastMsg.variants[0].content = fd;
+                                        return [...newMsgs];
+                                    });
+                                    finalContentToTitle = fd;
+                                }
                                 if (isFirstMessage) autoGenerateTitle(currentSessionId, [...newHistoryForAPI, { role: 'model', content: finalContentToTitle }]);
                                 break;
                             }
@@ -3078,6 +3091,19 @@ ${batchContent}`;
                         while (true) {
                             const { done, value } = await reader.read(); 
                             if (done) {
+                                const cleanedAiText3 = processVaultTags(aiText);
+                                if (cleanedAiText3 !== aiText) {
+                                    let fd = cleanedAiText3;
+                                    const tm = fd.match(/<think>([\s\S]*?)<\/think>/);
+                                    if (tm) fd = fd.replace(/<think>[\s\S]*?<\/think>/, '').trim();
+                                    fd = processHealthTag(fd);
+                                    setMessages(prev => {
+                                        const msgs = [...prev]; const last = msgs[msgs.length - 1];
+                                        last.variants[newVariantIndex].content = fd; last.content = fd;
+                                        return [...msgs];
+                                    });
+                                    finalContentToTitle = fd;
+                                }
                                 if (isFirstMessage) autoGenerateTitle(currentSessionId, [...newMessages, { role: 'model', content: finalContentToTitle }]);
                                 break;
                             }
@@ -3340,6 +3366,24 @@ ${batchContent}`;
                         while (true) {
                             const { done, value } = await reader.read(); 
                             if (done) {
+                                // ★ v8.0 流式结束后：处理 VAULT 标记（写入云端 + 从显示内容中清除）
+                                const cleanedAiText = processVaultTags(aiText);
+                                if (cleanedAiText !== aiText) {
+                                    // 标记被清除了，需要更新消息内容
+                                    let finalDisplay = cleanedAiText;
+                                    const thinkMatchFinal = cleanedAiText.match(/<think>([\s\S]*?)<\/think>/);
+                                    if (thinkMatchFinal) { finalDisplay = cleanedAiText.replace(/<think>[\s\S]*?<\/think>/, '').trim(); }
+                                    finalDisplay = processHealthTag(finalDisplay);
+                                    setMessages(prev => {
+                                        const newMsgs = [...prev]; const lastMsg = newMsgs[newMsgs.length - 1];
+                                        lastMsg.content = finalDisplay;
+                                        lastMsg.variants[0].content = finalDisplay;
+                                        return [...newMsgs];
+                                    });
+                                    finalContentToTitle = finalDisplay;
+                                    // 等 React 渲染完
+                                    await new Promise(r => setTimeout(r, 50));
+                                }
                                 // ★ 清掉 pending 的节流保存（即将做权威性同步 flush）
                                 if (idbSaveTimerRef.current) {
                                     clearTimeout(idbSaveTimerRef.current);
