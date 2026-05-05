@@ -846,19 +846,10 @@
                             .order('created_at', { ascending: false }).limit(1);
 
                         let cache = '';
-                        const fmt = (e) => `${e.title || '(无标题)'} | 作者:${e.author} | ${new Date(e.created_at).toLocaleString('zh-CN', {timeZone:'Asia/Shanghai'})}\n${(e.content || '').slice(0, 800)}`;
+                        const fmtFull = (e) => `${e.title || '(无标题)'} | 作者:${e.author} | ${new Date(e.created_at).toLocaleString('zh-CN', {timeZone:'Asia/Shanghai'})}\n${e.content || ''}`;
                         
-                        if (covenantData?.length > 0) {
-                            cache += `\n\n【盟约书架 · 四方协作公约】\n${fmt(covenantData[0])}`;
-                        }
                         if (boardData?.length > 0) {
-                            cache += `\n\n【留言板 · 最近${boardData.length}条】\n${boardData.map(fmt).join('\n---\n')}`;
-                        }
-                        if (worklogData?.length > 0) {
-                            cache += `\n\n【工作日志 · 最近${worklogData.length}条】\n${worklogData.map(fmt).join('\n---\n')}`;
-                        }
-                        if (diaryData?.length > 0) {
-                            cache += `\n\n【日记 · 最近${diaryData.length}条】\n${diaryData.map(fmt).join('\n---\n')}`;
+                            cache += `\n\n【留言板 · 最近${boardData.length}条】\n${boardData.map(fmtFull).join('\n---\n')}`;
                         }
                         
                         if (cache) {
