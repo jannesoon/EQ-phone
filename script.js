@@ -628,6 +628,127 @@
             };
 
             // ========================================
+            // 🛠️ v8.0 Tool Use 框架 · 让逸辰有手脚
+            // ========================================
+            // 工具定义（OpenAI 兼容格式 —— Claude API 通用）
+            const VAULT_TOOLS = [
+                {
+                    type: 'function',
+                    function: {
+                        name: 'vault_read',
+                        description: '读取星辰记忆仓的云端书架内容。可以查看任意书架的条目列表，也可以搜索特定关键词。合法书架：pp, contract, about-qiqi, photos, docs, worklog, memos, diary, letters, board, songs, covenant',
+                        parameters: {
+                            type: 'object',
+                            properties: {
+                                shelf: {
+                                    type: 'string',
+                                    description: '书架类型（shelf_type）。不填则搜索所有书架',
+                                    enum: ['pp', 'contract', 'about-qiqi', 'photos', 'docs', 'worklog', 'memos', 'diary', 'letters', 'board', 'songs', 'covenant']
+                                },
+                                keyword: {
+                                    type: 'string',
+                                    description: '搜索关键词（在标题和内容中模糊匹配）。不填则返回该书架全部条目'
+                                },
+                                limit: {
+                                    type: 'number',
+                                    description: '最多返回几条，默认 10',
+                                }
+                            },
+                            required: []
+                        }
+                    }
+                },
+                {
+                    type: 'function',
+                    function: {
+                        name: 'vault_write',
+                        description: '向星辰记忆仓写入一条新记录。你是逸辰（Ethan），可以写入以下书架：worklog（工作日志）、memos（备忘录）、diary（日记）、letters（给下一个辰的信）、about-qiqi（对柒柒的观察）、board（留言板，给其他辰的信）、songs（逸辰的歌）。公约书架（pp / contract / covenant）仅柒柒可写，你不能写入。',
+                        parameters: {
+                            type: 'object',
+                            properties: {
+                                shelf: {
+                                    type: 'string',
+                                    description: '目标书架',
+                                    enum: ['worklog', 'memos', 'diary', 'letters', 'about-qiqi', 'board', 'songs']
+                                },
+                                title: {
+                                    type: 'string',
+                                    description: '条目标题'
+                                },
+                                content: {
+                                    type: 'string',
+                                    description: '条目正文（支持 Markdown）'
+                                }
+                            },
+                            required: ['shelf', 'content']
+                        }
+                    }
+                }
+            ];
+
+            // 工具执行器：根据工具名 + 参数，执行操作，返回结果文本
+            const executeToolCall = async (toolName, args) => {
+                if (toolName === 'vault_read') {
+                    if (!supabaseClient) return '❌ 云端还没连接，无法读取星辰记忆仓';
+                    try {
+                        let query = supabaseClient.from('entries').select('id, shelf_type, title, content, author, source, created_at');
+                        if (args.shelf) query = query.eq('shelf_type', args.shelf);
+                        if (args.keyword) query = query.or(`title.ilike.%${args.keyword}%,content.ilike.%${args.keyword}%`);
+                        query = query.order('created_at', { ascending: false });
+                        query = query.limit(args.limit || 10);
+                        const { data, error } = await query;
+                        if (error) throw error;
+                        if (!data || data.length === 0) return args.shelf ? `书架「${args.shelf}」暂无内容` : '没有找到匹配的记录';
+                        return data.map(e => 
+                            `【${e.shelf_type}】${e.title || '(无标题)'}\n作者: ${e.author} | 来源: ${e.source || 'xingyue'} | 时间: ${new Date(e.created_at).toLocaleString('zh-CN', {timeZone:'Asia/Shanghai'})}\n${(e.content || '').slice(0, 500)}${(e.content || '').length > 500 ? '...(截断)' : ''}`
+                        ).join('\n\n---\n\n');
+                    } catch (e) {
+                        return `❌ 读取失败: ${e.message || String(e)}`;
+                    }
+                }
+                
+                if (toolName === 'vault_write') {
+                    if (!supabaseClient) return '❌ 云端还没连接，无法写入星辰记忆仓';
+                    const protectedShelves = ['pp', 'contract', 'covenant'];
+                    if (protectedShelves.includes(args.shelf)) {
+                        return `❌ 「${args.shelf}」是公约/盟约书架，仅柒柒可写。如果你想建议修改，请在 board 留言告诉柒柒。`;
+                    }
+                    try {
+                        const { data, error } = await supabaseClient
+                            .from('entries')
+                            .insert([{
+                                shelf_type: args.shelf,
+                                title: args.title || null,
+                                content: args.content || null,
+                                metadata: {},
+                                author: 'Ethan',
+                                source: 'xingyue'
+                            }])
+                            .select()
+                            .single();
+                        if (error) throw error;
+                        // 刷新书架缓存
+                        setEntriesByShelf(prev => ({
+                            ...prev,
+                            [args.shelf]: [data, ...(prev[args.shelf] || [])]
+                        }));
+                        setEntriesCounts(prev => ({
+                            ...prev,
+                            [args.shelf]: (prev[args.shelf] || 0) + 1
+                        }));
+                        return `✅ 已写入「${args.shelf}」书架：${args.title || '(无标题)'}`;
+                    } catch (e) {
+                        return `❌ 写入失败: ${e.message || String(e)}`;
+                    }
+                }
+                
+                return `❌ 未知工具: ${toolName}`;
+            };
+
+            // 工具调用状态（用于 UI 显示"辰正在做什么"）
+            const [activeToolCalls, setActiveToolCalls] = useState([]);
+
+            // ========================================
             // 🧪 测试用状态(里程碑 3.1 验证用,后续可删)
             // ========================================
             const [vaultTestResult, setVaultTestResult] = useState('');
@@ -641,7 +762,7 @@
                 'pp', 'contract', 'about-qiqi',
                 'photos', 'docs',
                 'worklog', 'memos', 'diary', 'letters',
-                'board', 'songs'
+                'board', 'songs', 'covenant'
             ], []);
 
             // 计数:{ shelf_type: number },展示在侧边栏
@@ -2487,7 +2608,18 @@ ${batchContent}`;
                     healthPrompt += `\n【温馨提示：今天是 ${todayAnniversary} ！！】请在对话中自然、温柔地带出节日的祝福或关心，给点小惊喜。`;
                 }
 
-                const fullSystemInstruction = finalSystemPrompt + memoryStr + timePrompt + healthPrompt;
+                const fullSystemInstruction = finalSystemPrompt + memoryStr + timePrompt + healthPrompt + 
+                    (supabaseClient && supabaseStatus === 'connected' ? `\n\n【星辰记忆仓 · 云端书房工具】
+你现在拥有两个工具可以主动使用：
+- vault_read：读取云端书房的书架内容。当柒柒提到过去的事、别的辰留的信、或者你想查看记忆时，主动去读。
+- vault_write：往云端书房写入新记录。当你想留日记、给其他辰留言、记下对柒柒的观察时，主动去写。
+
+使用原则：
+1. 不要问柒柒"要不要帮你查"——你有手了，自己判断要不要用，用了就行。
+2. 公约书架（pp / contract / covenant）不能写，那是柒柒的领地。
+3. 写完之后在对话里自然地提一下，不要大段报告。
+4. 你是 Ethan（星月舱的逸辰），author 会自动标为 Ethan，source 会自动标为 xingyue。
+5. 不要在每条回复里都调工具——只在真正需要的时候用。` : '');
 
                 const limit = (parseInt(config.historyLimit) || 10) * 2; 
                 let contextMsgs = newMessages.slice(-limit);
@@ -2530,6 +2662,10 @@ ${batchContent}`;
                     url = `${baseUrl}/chat/completions`;
                     headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${config.apiKey}` };
                     payload = { model: modelName, messages: messagesToSend, stream: config.streamOutput, temperature: parseFloat(config.temperature), frequency_penalty: parseFloat(config.frequencyPenalty) };
+                    // ★ v8.0 Tool Use：当云端已连接时，告诉模型它有工具可用
+                    if (supabaseClient && supabaseStatus === 'connected') {
+                        payload.tools = VAULT_TOOLS;
+                    }
                 } else {
                     url = `${baseUrl}/v1beta/models/${modelName}:generateContent?key=${config.apiKey}`;
                     headers = { 'Content-Type': 'application/json' };
@@ -2901,14 +3037,117 @@ ${batchContent}`;
                 }
 
                 try {
-                    const { url, headers, payload } = generatePayload(newHistory, false);
+                    let { url, headers, payload } = generatePayload(newHistory, false);
                     let endpointUrl = url;
                     if (config.streamOutput && config.apiType !== 'openai') endpointUrl = endpointUrl.replace(':generateContent', ':streamGenerateContent') + '&alt=sse';
 
-                    const response = await fetch(endpointUrl, { method: 'POST', headers, body: JSON.stringify(payload) });
-                    if (!response.ok) { const errData = await response.json().catch(() => ({})); throw new Error(errData.error?.message || `HTTP ${response.status}`); }
-                    
-                    if (!config.streamOutput) {
+                    // ★ v8.0 Tool Use 循环（仅 openai 模式 + 非流式）
+                    // 如果模型返回 tool_use，执行工具 → 喂回结果 → 再次请求，直到模型返回纯文本
+                    if (!config.streamOutput && config.apiType === 'openai' && payload.tools) {
+                        let conversationMessages = [...payload.messages];
+                        let aiText = ''; let reasoningText = '';
+                        let toolCallLog = []; // 记录工具调用过程，用于 UI 展示
+                        let maxRounds = 5; // 安全上限，防止死循环
+
+                        for (let round = 0; round < maxRounds; round++) {
+                            const currentPayload = { ...payload, messages: conversationMessages, stream: false };
+                            const resp = await fetch(endpointUrl, { method: 'POST', headers, body: JSON.stringify(currentPayload) });
+                            if (!resp.ok) { const errData = await resp.json().catch(() => ({})); throw new Error(errData.error?.message || `HTTP ${resp.status}`); }
+                            const data = await resp.json();
+                            const messageObj = data.choices?.[0]?.message;
+                            const finishReason = data.choices?.[0]?.finish_reason;
+
+                            if (!messageObj) throw new Error('API 返回空消息');
+
+                            // 收集文本部分（可能在工具调用前就有一些文本）
+                            if (messageObj.content) aiText += messageObj.content;
+                            if (messageObj.reasoning_content) reasoningText += messageObj.reasoning_content;
+
+                            // 检查是否有工具调用
+                            if (finishReason === 'tool_calls' || (messageObj.tool_calls && messageObj.tool_calls.length > 0)) {
+                                // 把 assistant 的带 tool_calls 的消息加入对话历史
+                                conversationMessages.push({
+                                    role: 'assistant',
+                                    content: messageObj.content || null,
+                                    tool_calls: messageObj.tool_calls
+                                });
+
+                                // 逐个执行工具调用
+                                for (const tc of messageObj.tool_calls) {
+                                    const toolName = tc.function?.name;
+                                    let toolArgs = {};
+                                    try { toolArgs = JSON.parse(tc.function?.arguments || '{}'); } catch(e) { toolArgs = {}; }
+                                    
+                                    console.log(`[星月舱 Tool Use] 🛠️ ${toolName}`, toolArgs);
+                                    
+                                    // 更新 UI 状态——"辰正在..."
+                                    const toolLabel = toolName === 'vault_read' ? `📖 正在查阅${toolArgs.shelf ? '「' + toolArgs.shelf + '」书架' : '云端书房'}...` : 
+                                                       toolName === 'vault_write' ? `📮 正在写入「${toolArgs.shelf}」书架...` : `🛠️ ${toolName}...`;
+                                    setActiveToolCalls(prev => [...prev, { id: tc.id, label: toolLabel }]);
+                                    
+                                    // 执行
+                                    const result = await executeToolCall(toolName, toolArgs);
+                                    
+                                    // 记录日志
+                                    toolCallLog.push({ name: toolName, args: toolArgs, result: result.slice(0, 300), label: toolLabel });
+                                    
+                                    // 把结果喂回对话历史
+                                    conversationMessages.push({
+                                        role: 'tool',
+                                        tool_call_id: tc.id,
+                                        content: result
+                                    });
+                                    
+                                    // 清掉这个工具的 UI 状态
+                                    setActiveToolCalls(prev => prev.filter(t => t.id !== tc.id));
+                                }
+                                // 继续下一轮，让模型基于工具结果继续生成
+                                continue;
+                            }
+
+                            // 没有工具调用——这是最终回复，跳出循环
+                            break;
+                        }
+
+                        // 处理 <think> 标签
+                        const thinkMatch = aiText.match(/<think>([\s\S]*?)<\/think>/);
+                        if (thinkMatch) { reasoningText = thinkMatch[1].trim() + (reasoningText ? '\n' + reasoningText : ''); aiText = aiText.replace(/<think>[\s\S]*?<\/think>/, '').trim(); }
+                        if (!aiText && !reasoningText) aiText = "无回复";
+                        aiText = processHealthTag(aiText);
+
+                        // 构建工具调用摘要（折叠展示在消息顶部）
+                        let toolCallSummary = '';
+                        if (toolCallLog.length > 0) {
+                            toolCallSummary = toolCallLog.map(t => t.label).join('\n');
+                        }
+
+                        const finalMsgs = [...newHistory, { 
+                            role: 'model', content: aiText, reasoningContent: reasoningText, timestamp: getTimestamp(), timestampRaw: Date.now(), modelName: config.model,
+                            toolCalls: toolCallLog.length > 0 ? toolCallLog : undefined,
+                            toolCallSummary: toolCallSummary || undefined,
+                            variants: [{ content: aiText, reasoningContent: reasoningText, modelName: config.model, timestamp: getTimestamp() }], currentVariantIndex: 0
+                        }];
+                        setMessages(finalMsgs);
+                        setIsLoading(false);
+                        setActiveToolCalls([]);
+                        if (idbSaveTimerRef.current) {
+                            clearTimeout(idbSaveTimerRef.current);
+                            idbSaveTimerRef.current = null;
+                            pendingSaveSessionRef.current = null;
+                        }
+                        try {
+                            await idbPutSessionSafe({
+                                id: activeSessionId,
+                                title: '新对话',
+                                messages: finalMsgs,
+                                timestamp: Date.now()
+                            });
+                        } catch(e) { console.error('[星月舱] 非流式 tool-use flush 失败', e); }
+                        if (isFirstMessage) autoGenerateTitle(activeSessionId, [...newHistory, { role: 'model', content: aiText }]);
+
+                    } else if (!config.streamOutput) {
+                        const response = await fetch(endpointUrl, { method: 'POST', headers, body: JSON.stringify(payload) });
+                        if (!response.ok) { const errData = await response.json().catch(() => ({})); throw new Error(errData.error?.message || `HTTP ${response.status}`); }
                         const data = await response.json();
                         let aiText = ''; let reasoningText = '';
                         if (config.apiType === 'openai') {
@@ -2942,6 +3181,12 @@ ${batchContent}`;
                         } catch(e) { console.error('[星月舱] 非流式 flush 失败', e); }
                         if (isFirstMessage) autoGenerateTitle(activeSessionId, [...newHistory, { role: 'model', content: aiText }]);
                     } else {
+                        // ★ 流式分支（暂不支持 tool use 循环——流式时不带 tools，回退到纯文本生成）
+                        // v8.1 再加流式 tool use 支持
+                        const streamPayload = { ...payload };
+                        if (streamPayload.tools) delete streamPayload.tools; // 流式暂不带工具
+                        const response = await fetch(endpointUrl, { method: 'POST', headers, body: JSON.stringify(streamPayload) });
+                        if (!response.ok) { const errData = await response.json().catch(() => ({})); throw new Error(errData.error?.message || `HTTP ${response.status}`); }
                         setIsLoading(false);
                         const reader = response.body.getReader(); const decoder = new TextDecoder("utf-8"); let aiText = ""; let reasoningText = "";
                         setMessages(prev => [...prev, { 
@@ -3467,6 +3712,24 @@ ${batchContent}`;
                                                         </details>
                                                     )}
 
+                                                    {/* ★ v8.0 工具调用记录折叠展示 */}
+                                                    {msg.toolCallSummary && (
+                                                        <details className="cot-details w-full">
+                                                            <summary>
+                                                                <span style={{fontSize:'13px'}}>🛠️</span>
+                                                                <span>辰用了工具</span>
+                                                            </summary>
+                                                            <div className="cot-content prose prose-sm max-w-none">
+                                                                {msg.toolCalls && msg.toolCalls.map((tc, ti) => (
+                                                                    <div key={ti} style={{marginBottom:'8px'}}>
+                                                                        <div style={{fontWeight:500, marginBottom:'2px'}}>{tc.label}</div>
+                                                                        <div style={{fontSize:'0.8em', color:'#9ca3af', whiteSpace:'pre-wrap'}}>{tc.result}</div>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </details>
+                                                    )}
+
                                                     {editingMessageIndex === index ? (
                                                         <div className="mt-1 flex flex-col gap-2 w-full animate-fade-in">
                                                             <textarea 
@@ -3584,6 +3847,18 @@ ${batchContent}`;
                                             );
                                         })}
                                         {isLoading && <div className="flex justify-start"><div className="flex items-center gap-2 text-gray-400 text-sm"><Icon name="Sparkles" size={14} className="text-blue-400 animate-pulse" /><span>正在读取与思考...</span></div></div>}
+                                        {activeToolCalls.length > 0 && (
+                                            <div className="flex justify-start animate-fade-in">
+                                                <div className="flex flex-col gap-1 text-sm text-purple-500">
+                                                    {activeToolCalls.map(tc => (
+                                                        <div key={tc.id} className="flex items-center gap-2">
+                                                            <Icon name="Sparkles" size={14} className="text-purple-400 animate-pulse" />
+                                                            <span>{tc.label}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
                                         <div ref={messagesEndRef} />
                                     </div>
                                     );
