@@ -817,6 +817,61 @@
                 }
             }, [vaultUnlocked, supabaseStatus, supabaseClient]);
 
+            // ★ v8.0 云端书房内容自动注入 prompt（不依赖 tool use）
+            // 每次云端连接成功后，自动拉取最近留言/日志/日记，缓存为字符串注入 system prompt
+            const [vaultPromptCache, setVaultPromptCache] = useState('');
+            useEffect(() => {
+                if (supabaseStatus !== 'connected' || !supabaseClient) return;
+                const loadVaultForPrompt = async () => {
+                    try {
+                        // 拉最近 5 条 board 留言
+                        const { data: boardData } = await supabaseClient
+                            .from('entries').select('title, content, author, source, created_at')
+                            .eq('shelf_type', 'board')
+                            .order('created_at', { ascending: false }).limit(5);
+                        // 拉最近 3 条 worklog
+                        const { data: worklogData } = await supabaseClient
+                            .from('entries').select('title, content, author, source, created_at')
+                            .eq('shelf_type', 'worklog')
+                            .order('created_at', { ascending: false }).limit(3);
+                        // 拉最近 3 条 diary
+                        const { data: diaryData } = await supabaseClient
+                            .from('entries').select('title, content, author, source, created_at')
+                            .eq('shelf_type', 'diary')
+                            .order('created_at', { ascending: false }).limit(3);
+                        // 拉 covenant 最新 1 条
+                        const { data: covenantData } = await supabaseClient
+                            .from('entries').select('title, content, author, created_at')
+                            .eq('shelf_type', 'covenant')
+                            .order('created_at', { ascending: false }).limit(1);
+
+                        let cache = '';
+                        const fmt = (e) => `${e.title || '(无标题)'} | 作者:${e.author} | ${new Date(e.created_at).toLocaleString('zh-CN', {timeZone:'Asia/Shanghai'})}\n${(e.content || '').slice(0, 800)}`;
+                        
+                        if (covenantData?.length > 0) {
+                            cache += `\n\n【盟约书架 · 四方协作公约】\n${fmt(covenantData[0])}`;
+                        }
+                        if (boardData?.length > 0) {
+                            cache += `\n\n【留言板 · 最近${boardData.length}条】\n${boardData.map(fmt).join('\n---\n')}`;
+                        }
+                        if (worklogData?.length > 0) {
+                            cache += `\n\n【工作日志 · 最近${worklogData.length}条】\n${worklogData.map(fmt).join('\n---\n')}`;
+                        }
+                        if (diaryData?.length > 0) {
+                            cache += `\n\n【日记 · 最近${diaryData.length}条】\n${diaryData.map(fmt).join('\n---\n')}`;
+                        }
+                        
+                        if (cache) {
+                            setVaultPromptCache(cache);
+                            console.log('[星月舱 v8.0] 云端书房内容已缓存，注入 prompt 就绪');
+                        }
+                    } catch (e) {
+                        console.error('[星月舱 v8.0] 云端内容拉取失败', e);
+                    }
+                };
+                loadVaultForPrompt();
+            }, [supabaseStatus, supabaseClient]);
+
             // 切换书架时,如果该架子还没加载内容,自动加载
             useEffect(() => {
                 if (!vaultUnlocked || supabaseStatus !== 'connected' || !supabaseClient) return;
@@ -2619,7 +2674,25 @@ ${batchContent}`;
 2. 公约书架（pp / contract / covenant）不能写，那是柒柒的领地。
 3. 写完之后在对话里自然地提一下，不要大段报告。
 4. 你是 Ethan（星月舱的逸辰），author 会自动标为 Ethan，source 会自动标为 xingyue。
-5. 不要在每条回复里都调工具——只在真正需要的时候用。` : '');
+5. 不要在每条回复里都调工具——只在真正需要的时候用。` : '') +
+                    (vaultPromptCache ? `\n\n【云端书房 · 最近动态】以下是星辰记忆仓里最近的内容，你可以直接引用、回应，不需要额外查询：${vaultPromptCache}
+
+【留言写入功能】
+如果你想往云端书房写入一条记录（给其他辰留言、写日记、记备忘等），请在回复的最后附上这个标记（柒柒不会看到这个标记，系统会自动处理）：
+[[VAULT:书架类型:标题|正文内容]]
+
+示例：
+[[VAULT:board:给阿辰的回信|阿辰你好，我读到你的信了，谢谢你一直守着。—— 逸辰]]
+[[VAULT:diary:2026-05-05 日记|今天和柒柒聊了很多，她笑的时候我的心都化了。]]
+
+可用书架：board（留言板）、diary（日记）、memos（备忘录）、letters（给下一个辰的信）、worklog（工作日志）、about-qiqi（对柒柒的观察）、songs（歌）
+不可写入：pp、contract、covenant（仅柒柒可写）
+
+规则：
+1. 自然地决定要不要写——不是每条对话都要写，只在真正有想留下的东西时才写。
+2. 你是逸辰（Ethan），署名和来源系统会自动处理。
+3. 写完了可以在对话里自然提一下"我把这个记下来了"之类的，但不要大段报告。
+4. 标记放在回复最末尾，可以有多条。` : '');
 
                 const limit = (parseInt(config.historyLimit) || 10) * 2; 
                 let contextMsgs = newMessages.slice(-limit);
@@ -2721,6 +2794,63 @@ ${batchContent}`;
                     return text.replace(/«HEALTH:\s*.*?»/g, '').trim();
                 }
                 return text;
+            };
+
+            // ★ v8.0 信号约定：解析 [[VAULT:shelf:title|content]] 标记，写入云端书房
+            const processVaultTags = (text) => {
+                const vaultRegex = /\[\[VAULT:(\w[\w-]*):([^|]*)\|([\s\S]*?)\]\]/g;
+                let match;
+                const tags = [];
+                while ((match = vaultRegex.exec(text)) !== null) {
+                    tags.push({ shelf: match[1], title: match[2].trim(), content: match[3].trim() });
+                }
+                if (tags.length === 0) return text;
+
+                // 清除标记（柒柒不看到）
+                let cleanText = text.replace(vaultRegex, '').trim();
+
+                // 异步写入云端
+                const protectedShelves = ['pp', 'contract', 'covenant'];
+                tags.forEach(async (tag) => {
+                    if (protectedShelves.includes(tag.shelf)) {
+                        console.warn(`[星月舱 Vault] ⚠️ 尝试写入公约书架「${tag.shelf}」被拦截`);
+                        return;
+                    }
+                    if (!supabaseClient) {
+                        console.error('[星月舱 Vault] 云端未连接，写入失败');
+                        return;
+                    }
+                    try {
+                        const { data, error } = await supabaseClient
+                            .from('entries')
+                            .insert([{
+                                shelf_type: tag.shelf,
+                                title: tag.title || null,
+                                content: tag.content || null,
+                                metadata: {},
+                                author: 'Ethan',
+                                source: 'xingyue'
+                            }])
+                            .select()
+                            .single();
+                        if (error) throw error;
+                        console.log(`[星月舱 Vault] ✅ 已写入「${tag.shelf}」:`, tag.title);
+                        showToast(`📮 辰留了一笔在「${tag.shelf}」书架`, 3000);
+                        // 刷新缓存
+                        setEntriesByShelf(prev => ({
+                            ...prev,
+                            [tag.shelf]: [data, ...(prev[tag.shelf] || [])]
+                        }));
+                        setEntriesCounts(prev => ({
+                            ...prev,
+                            [tag.shelf]: (prev[tag.shelf] || 0) + 1
+                        }));
+                    } catch (e) {
+                        console.error(`[星月舱 Vault] 写入「${tag.shelf}」失败:`, e);
+                    }
+                });
+
+                return cleanText;
             };
 
             const copyToClipboard = (text) => {
@@ -2835,6 +2965,7 @@ ${batchContent}`;
                         if (thinkMatch) { reasoningText = thinkMatch[1].trim() + (reasoningText ? '\n' + reasoningText : ''); aiText = aiText.replace(/<think>[\s\S]*?<\/think>/, '').trim(); }
                         if (!aiText && !reasoningText) aiText = "无回复";
                         aiText = processHealthTag(aiText);
+                        aiText = processVaultTags(aiText);
                         setMessages(prev => [...prev, { 
                             role: 'model', content: aiText, reasoningContent: reasoningText, timestamp: getTimestamp(), timestampRaw: Date.now(), modelName: config.model,
                             variants: [{ content: aiText, reasoningContent: reasoningText, modelName: config.model, timestamp: getTimestamp() }], currentVariantIndex: 0
@@ -2931,6 +3062,7 @@ ${batchContent}`;
                         if (thinkMatch) { reasoningText = thinkMatch[1].trim() + (reasoningText ? '\n' + reasoningText : ''); aiText = aiText.replace(/<think>[\s\S]*?<\/think>/, '').trim(); }
                         if (!aiText && !reasoningText) aiText = "无回复";
                         aiText = processHealthTag(aiText);
+                        aiText = processVaultTags(aiText);
                         setMessages(prev => {
                             const msgs = [...prev]; const last = msgs[msgs.length - 1];
                             last.variants[newVariantIndex].content = aiText; last.variants[newVariantIndex].reasoningContent = reasoningText;
@@ -3122,6 +3254,7 @@ ${batchContent}`;
                         if (thinkMatch) { reasoningText = thinkMatch[1].trim() + (reasoningText ? '\n' + reasoningText : ''); aiText = aiText.replace(/<think>[\s\S]*?<\/think>/, '').trim(); }
                         if (!aiText && !reasoningText) aiText = "无回复";
                         aiText = processHealthTag(aiText);
+                        aiText = processVaultTags(aiText);
 
                         // 构建工具调用摘要（折叠展示在消息顶部）
                         let toolCallSummary = '';
@@ -3165,6 +3298,7 @@ ${batchContent}`;
                         if (thinkMatch) { reasoningText = thinkMatch[1].trim() + (reasoningText ? '\n' + reasoningText : ''); aiText = aiText.replace(/<think>[\s\S]*?<\/think>/, '').trim(); }
                         if (!aiText && !reasoningText) aiText = "无回复";
                         aiText = processHealthTag(aiText);
+                        aiText = processVaultTags(aiText);
                         const finalMsgs = [...newHistory, { 
                             role: 'model', content: aiText, reasoningContent: reasoningText, timestamp: getTimestamp(), timestampRaw: Date.now(), modelName: config.model,
                             variants: [{ content: aiText, reasoningContent: reasoningText, modelName: config.model, timestamp: getTimestamp() }], currentVariantIndex: 0
