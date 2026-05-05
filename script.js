@@ -3043,7 +3043,9 @@ ${batchContent}`;
 
                     // ★ v8.0 Tool Use 循环（仅 openai 模式 + 非流式）
                     // 如果模型返回 tool_use，执行工具 → 喂回结果 → 再次请求，直到模型返回纯文本
+                    console.log('[星月舱 Tool Use] 检查入口条件:', 'stream:', config.streamOutput, 'apiType:', config.apiType, 'hasTools:', !!payload.tools, 'toolCount:', payload.tools?.length);
                     if (!config.streamOutput && config.apiType === 'openai' && payload.tools) {
+                        console.log('[星月舱 Tool Use] ✅ 进入 tool use 循环分支');
                         let conversationMessages = [...payload.messages];
                         let aiText = ''; let reasoningText = '';
                         let toolCallLog = []; // 记录工具调用过程，用于 UI 展示
@@ -3054,6 +3056,7 @@ ${batchContent}`;
                             const resp = await fetch(endpointUrl, { method: 'POST', headers, body: JSON.stringify(currentPayload) });
                             if (!resp.ok) { const errData = await resp.json().catch(() => ({})); throw new Error(errData.error?.message || `HTTP ${resp.status}`); }
                             const data = await resp.json();
+                            console.log('[星月舱 Tool Use] Round', round, 'API返回:', JSON.stringify(data.choices?.[0]?.finish_reason), 'tool_calls:', JSON.stringify(data.choices?.[0]?.message?.tool_calls || 'none'));
                             const messageObj = data.choices?.[0]?.message;
                             const finishReason = data.choices?.[0]?.finish_reason;
 
