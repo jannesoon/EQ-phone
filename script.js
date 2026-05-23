@@ -237,7 +237,7 @@
             { id: 'green',  name: '淡绿', bg: '#dcfce7', hover: '#bbf7d0' },
         ];
 
-        const UPDATE_VERSION = "v8.0-alpha+patch-20260523c"; 
+        const UPDATE_VERSION = "v8.0-alpha+patch-20260523d"; 
         // ============================================
 
         // ================= IndexedDB 工具层（用于聊天记录，突破 localStorage 5MB 限制）=================
@@ -2870,9 +2870,10 @@ ${batchContent}`;
                 // 如果既没有写入也没有读取标记，原文返回
                 if (tags.length === 0 && readTags.length === 0) return text;
 
-                // 清除两种标记（柒柒不看到原始标记）
+                // 清除写入标记（柒柒不看到 [[VAULT:...]]）
+                // ★ A-mini-v2 修复：VAULT_READ 标记**不在这里清除**——
+                // 让 processVaultReadAsync 拿到带标记的原文后才能替换成折叠区块。
                 let cleanText = text.replace(vaultRegex, '').trim();
-                cleanText = stripVaultReadTags(cleanText);
 
                 // 异步写入云端
                 const protectedShelves = ['pp', 'contract', 'covenant'];
