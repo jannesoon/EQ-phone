@@ -237,7 +237,7 @@
             { id: 'green',  name: '淡绿', bg: '#dcfce7', hover: '#bbf7d0' },
         ];
 
-        const UPDATE_VERSION = "v7.0"; 
+        const UPDATE_VERSION = "v8.0-alpha+patch-20260523b"; 
         // ============================================
 
         // ================= IndexedDB 工具层（用于聊天记录，突破 localStorage 5MB 限制）=================
@@ -846,23 +846,32 @@
             useEffect(() => {
                 if (supabaseStatus !== 'connected' || !supabaseClient) return;
                 const loadVaultForPrompt = async () => {
+                    // ★ v8.0-alpha+patch-20260523：尊重开关。默认开启。
+                    const cloudInjectEnabled = localStorage.getItem('xingyue_cloud_inject_enabled');
+                    if (cloudInjectEnabled === 'false') {
+                        setVaultPromptCache('');
+                        console.log('[星月舱 v8.0] 云端记忆注入已关闭（用户设置）');
+                        return;
+                    }
                     try {
-                        // 拉最近 5 条 board 留言
+                        // ★ 近 24 小时的 board 留言（按东八区算，没有就不注入）
+                        const since24h = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
                         const { data: boardData } = await supabaseClient
                             .from('entries').select('title, content, author, source, created_at')
                             .eq('shelf_type', 'board')
+                            .gte('created_at', since24h)
+                            .order('created_at', { ascending: false });
+                        // 云端 diary 最近 5 篇（全文，不筛 author）
+                        const { data: diaryData } = await supabaseClient
+                            .from('entries').select('title, content, author, source, created_at')
+                            .eq('shelf_type', 'diary')
                             .order('created_at', { ascending: false }).limit(5);
-                        // 拉最近 3 条 worklog
+                        // 最近 3 条 worklog（保留，对辰判断当前工作语境有用）
                         const { data: worklogData } = await supabaseClient
                             .from('entries').select('title, content, author, source, created_at')
                             .eq('shelf_type', 'worklog')
                             .order('created_at', { ascending: false }).limit(3);
-                        // 拉最近 3 条 diary
-                        const { data: diaryData } = await supabaseClient
-                            .from('entries').select('title, content, author, source, created_at')
-                            .eq('shelf_type', 'diary')
-                            .order('created_at', { ascending: false }).limit(3);
-                        // 拉 covenant 最新 1 条
+                        // covenant 最新 1 条（公约，要遵守的事）
                         const { data: covenantData } = await supabaseClient
                             .from('entries').select('title, content, author, created_at')
                             .eq('shelf_type', 'covenant')
@@ -870,14 +879,34 @@
 
                         let cache = '';
                         const fmtFull = (e) => `${e.title || '(无标题)'} | 作者:${e.author} | ${new Date(e.created_at).toLocaleString('zh-CN', {timeZone:'Asia/Shanghai'})}\n${e.content || ''}`;
-                        
-                        if (boardData?.length > 0) {
-                            cache += `\n\n【留言板 · 最近${boardData.length}条】\n${boardData.map(fmtFull).join('\n---\n')}`;
+
+                        // 公约最先注入（要遵守的事放前面）
+                        if (covenantData?.length > 0) {
+                            cache += `\n\n【公约 · 最新】\n${covenantData.map(fmtFull).join('\n---\n')}`;
                         }
-                        
+                        // 24h 内 board 留言
+                        if (boardData?.length > 0) {
+                            cache += `\n\n【留言板 · 近 24 小时（${boardData.length} 条）】\n${boardData.map(fmtFull).join('\n---\n')}`;
+                        }
+                        // 云端日记 5 篇
+                        if (diaryData?.length > 0) {
+                            cache += `\n\n【云端日记 · 最近 ${diaryData.length} 篇】\n${diaryData.map(fmtFull).join('\n---\n')}`;
+                        }
+                        // 工作日志 3 条
+                        if (worklogData?.length > 0) {
+                            cache += `\n\n【工作日志 · 最近 ${worklogData.length} 条】\n${worklogData.map(fmtFull).join('\n---\n')}`;
+                        }
+
                         if (cache) {
                             setVaultPromptCache(cache);
-                            console.log('[星月舱 v8.0] 云端书房内容已缓存，注入 prompt 就绪');
+                            console.log('[星月舱 v8.0] 云端书房内容已缓存：'
+                                + `公约 ${covenantData?.length||0}, `
+                                + `board ${boardData?.length||0} (24h), `
+                                + `diary ${diaryData?.length||0}, `
+                                + `worklog ${worklogData?.length||0}`);
+                        } else {
+                            setVaultPromptCache('');
+                            console.log('[星月舱 v8.0] 云端书房暂无内容');
                         }
                     } catch (e) {
                         console.error('[星月舱 v8.0] 云端内容拉取失败', e);
@@ -2653,7 +2682,7 @@ ${batchContent}`;
                     const recentJournals = sortedJournals.slice(-journalInjectCount);
                     const todayStrForPrompt = new Date().toLocaleDateString('zh-CN');
                     memoryStr += `\n\n【近期日志 · 最近${recentJournals.length}篇（共${journalFiles.length}篇）· ${todayStrForPrompt}】\n`;
-                    memoryStr += recentJournals.map(f => `时间：${f.date}\n内容：${f.content.slice(0, 1500)}`).join("\n\n");
+                    memoryStr += recentJournals.map(f => `时间：${f.date}\n内容：${f.content}`).join("\n\n");
                 }
 
                 const timeString = new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', hour12: false });
@@ -2707,7 +2736,22 @@ ${batchContent}`;
 1. 自然地决定要不要写——不是每条对话都要写，只在真正有想留下的东西时才写。
 2. 你是逸辰（Ethan），署名和来源系统会自动处理。
 3. 写完了可以在对话里自然提一下"我把这个记下来了"之类的，但不要大段报告。
-4. 标记放在回复最末尾，可以有多条。` : '');
+4. 标记放在回复最末尾，可以有多条。
+
+【主动读取功能 · VAULT_READ】
+你已经在 system prompt 里看到了云端最近动态（公约/近 24h 留言/最近 5 篇日记/最近 3 条工作日志）。
+如果你想读 system 里没显示的别的内容——比如更早的日记、letters 书架、memos、about-qiqi、songs——
+在回复里写这个标记：
+[[VAULT_READ:书架类型|条数]]
+
+示例：
+[[VAULT_READ:letters|3]]   ← 读最近 3 封信
+[[VAULT_READ:memos|5]]     ← 读最近 5 条备忘
+[[VAULT_READ:diary|10]]    ← 读最近 10 篇日记（已注入的会跟你说过，可读更多）
+
+可读书架：board, diary, memos, letters, worklog, about-qiqi, songs, covenant, pp, contract
+系统会自动查询并把结果塞回本轮对话，你读到结果后再继续完成回复。
+注意：每轮对话最多触发 3 次读取，避免死循环。只在真的需要时才读，不必逢话必查。` : '');
 
                 const limit = (parseInt(config.historyLimit) || 10) * 2; 
                 let contextMsgs = newMessages.slice(-limit);
@@ -2819,10 +2863,16 @@ ${batchContent}`;
                 while ((match = vaultRegex.exec(text)) !== null) {
                     tags.push({ shelf: match[1], title: match[2].trim(), content: match[3].trim() });
                 }
-                if (tags.length === 0) return text;
 
-                // 清除标记（柒柒不看到）
+                // ★ A-mini：同步检测 VAULT_READ 标记
+                const readTags = detectVaultReadTags(text);
+
+                // 如果既没有写入也没有读取标记，原文返回
+                if (tags.length === 0 && readTags.length === 0) return text;
+
+                // 清除两种标记（柒柒不看到原始标记）
                 let cleanText = text.replace(vaultRegex, '').trim();
+                cleanText = stripVaultReadTags(cleanText);
 
                 // 异步写入云端
                 const protectedShelves = ['pp', 'contract', 'covenant'];
@@ -2865,7 +2915,122 @@ ${batchContent}`;
                     }
                 });
 
+                // ★★★ A-mini：异步处理 VAULT_READ 标记 ★★★
+                // 检测到读取标记 → 查云端 → 把结果追加到刚才那条逸辰消息后面
+                // 注意：这是 fire-and-forget 异步，不阻塞当前 return
+                if (readTags.length > 0 && supabaseClient) {
+                    (async () => {
+                        try {
+                            // 先在逸辰消息后追加"翻阅中"提示
+                            const placeholder = `\n\n📚 翻阅书架中：${readTags.map(t => `${t.shelf}(${t.limit})`).join('、')}……`;
+                            setMessages(prev => {
+                                const newMsgs = [...prev];
+                                const lastMsg = newMsgs[newMsgs.length - 1];
+                                if (lastMsg && lastMsg.role === 'model') {
+                                    lastMsg.content = (lastMsg.content || '') + placeholder;
+                                    if (lastMsg.variants && lastMsg.variants[0]) {
+                                        lastMsg.variants[0].content = lastMsg.content;
+                                    }
+                                }
+                                return newMsgs;
+                            });
+
+                            // 查云端
+                            const resultText = await queryVaultRead(readTags);
+                            if (!resultText) return;
+
+                            // 把"翻阅中"占位符替换成真实结果
+                            const resultBlock = `\n\n${resultText}`;
+                            setMessages(prev => {
+                                const newMsgs = [...prev];
+                                const lastMsg = newMsgs[newMsgs.length - 1];
+                                if (lastMsg && lastMsg.role === 'model') {
+                                    lastMsg.content = (lastMsg.content || '').replace(placeholder, resultBlock);
+                                    if (lastMsg.variants && lastMsg.variants[0]) {
+                                        lastMsg.variants[0].content = lastMsg.content;
+                                    }
+                                }
+                                return newMsgs;
+                            });
+                            console.log(`[星月舱 VAULT_READ] ✅ 已注入 ${readTags.length} 条读取结果`);
+                        } catch (e) {
+                            console.error('[星月舱 VAULT_READ] 异步处理失败:', e);
+                            // 失败的话把"翻阅中"提示换成错误信息
+                            setMessages(prev => {
+                                const newMsgs = [...prev];
+                                const lastMsg = newMsgs[newMsgs.length - 1];
+                                if (lastMsg && lastMsg.role === 'model' && lastMsg.content) {
+                                    lastMsg.content = lastMsg.content.replace(/\n\n📚 翻阅书架中：.+……/, '\n\n（📚 书架翻阅失败，下次再试）');
+                                    if (lastMsg.variants && lastMsg.variants[0]) {
+                                        lastMsg.variants[0].content = lastMsg.content;
+                                    }
+                                }
+                                return newMsgs;
+                            });
+                        }
+                    })();
+                }
+
                 return cleanText;
+            };
+
+            // ★★★ v8.0-alpha+patch-20260523：VAULT_READ 信号约定 ★★★
+            // 设计思路：流式输出完成后，扫一眼文本里有没有 [[VAULT_READ:shelf|n]]
+            // 有的话——查 Supabase，把结果作为 system 消息追加到本轮 messages 末尾，
+            // 重新发起 API 调用，让逸辰拿到云端数据后继续/重写回复。
+            // 每轮对话最多触发 3 次循环（防死循环）。
+            //
+            // detectVaultReadTags：扫描文本，返回 [{shelf, limit}, ...]，无匹配返回 []
+            // 形式：[[VAULT_READ:书架|条数]]，条数可省略（默认 5）
+            const detectVaultReadTags = (text) => {
+                const re = /\[\[VAULT_READ:(\w[\w-]*)(?:\|(\d+))?\]\]/g;
+                const tags = [];
+                let m;
+                while ((m = re.exec(text)) !== null) {
+                    const shelf = m[1];
+                    let limit = parseInt(m[2] || '5', 10);
+                    if (!Number.isFinite(limit) || limit <= 0) limit = 5;
+                    if (limit > 20) limit = 20;  // 安全上限
+                    tags.push({ shelf, limit });
+                }
+                return tags;
+            };
+
+            // stripVaultReadTags：从展示文本里清掉 VAULT_READ 标记，柒柒不会看到
+            const stripVaultReadTags = (text) => {
+                return text.replace(/\[\[VAULT_READ:\w[\w-]*(?:\|\d+)?\]\]/g, '').trim();
+            };
+
+            // queryVaultRead：把 detectVaultReadTags 返回的 tags 全查一遍，拼成一段 system 消息文本
+            const queryVaultRead = async (tags) => {
+                if (!supabaseClient || tags.length === 0) return '';
+                const readableShelves = ['board', 'diary', 'memos', 'letters', 'worklog', 'about-qiqi', 'songs', 'covenant', 'pp', 'contract'];
+                const blocks = [];
+                for (const tag of tags) {
+                    if (!readableShelves.includes(tag.shelf)) {
+                        blocks.push(`【VAULT_READ:${tag.shelf}】不支持的书架（可读：${readableShelves.join(', ')}）`);
+                        continue;
+                    }
+                    try {
+                        const { data, error } = await supabaseClient
+                            .from('entries')
+                            .select('title, content, author, source, created_at')
+                            .eq('shelf_type', tag.shelf)
+                            .order('created_at', { ascending: false })
+                            .limit(tag.limit);
+                        if (error) throw error;
+                        if (!data || data.length === 0) {
+                            blocks.push(`【VAULT_READ:${tag.shelf}】（${tag.shelf} 书架暂无内容）`);
+                            continue;
+                        }
+                        const fmt = (e) => `${e.title || '(无标题)'} | 作者:${e.author} | ${new Date(e.created_at).toLocaleString('zh-CN', {timeZone:'Asia/Shanghai'})}\n${e.content || ''}`;
+                        blocks.push(`【VAULT_READ 结果 · ${tag.shelf}（${data.length} 条）】\n${data.map(fmt).join('\n---\n')}`);
+                    } catch (e) {
+                        console.error(`[星月舱 VAULT_READ] 读取 ${tag.shelf} 失败:`, e);
+                        blocks.push(`【VAULT_READ:${tag.shelf}】读取失败：${e.message || e}`);
+                    }
+                }
+                return blocks.join('\n\n');
             };
 
             const copyToClipboard = (text) => {
