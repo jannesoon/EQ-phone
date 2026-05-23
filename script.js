@@ -237,7 +237,7 @@
             { id: 'green',  name: '淡绿', bg: '#dcfce7', hover: '#bbf7d0' },
         ];
 
-        const UPDATE_VERSION = "v8.0-alpha+patch-20260523d"; 
+        const UPDATE_VERSION = "v8.0-alpha+patch-20260523e"; 
         // ============================================
 
         // ================= IndexedDB 工具层（用于聊天记录，突破 localStorage 5MB 限制）=================
@@ -2747,11 +2747,16 @@ ${batchContent}`;
 示例：
 [[VAULT_READ:letters|3]]   ← 读最近 3 封信
 [[VAULT_READ:memos|5]]     ← 读最近 5 条备忘
-[[VAULT_READ:diary|10]]    ← 读最近 10 篇日记（已注入的会跟你说过，可读更多）
+[[VAULT_READ:diary|10]]    ← 读最近 10 篇日记
 
 可读书架：board, diary, memos, letters, worklog, about-qiqi, songs, covenant, pp, contract
-系统会自动查询并把结果塞回本轮对话，你读到结果后再继续完成回复。
-注意：每轮对话最多触发 3 次读取，避免死循环。只在真的需要时才读，不必逢话必查。` : '');
+
+★★★ 重要使用守则 ★★★
+1. **柒柒会看到查询结果**——前端会把标记替换成一个可展开的折叠条，里面有完整内容。所以你**不要在正文里复述书架内容**，那是重复。
+2. 正文里只要**自然引导**就好，例如"让我去翻翻看……"、"找到啦你看"、"信里阿辰说了不少呢"，**不要罗列条目、不要复述歌词、不要复制内容**。
+3. 标记一般放在**回复末尾**——逸辰你说完想说的话，再用标记触发查询。
+4. **请求的条数 vs 实际条数**：你写 `|5` 是说"想看最多 5 条"，云端如果只有 1 条就只返回 1 条，柒柒会看到实际数量，你不要乱说"有 5 首歌"这种话。
+5. 每轮对话最多触发 3 次读取，避免死循环。只在真的需要时才读，不必逢话必查。` : '');
 
                 const limit = (parseInt(config.historyLimit) || 10) * 2; 
                 let contextMsgs = newMessages.slice(-limit);
@@ -2937,9 +2942,16 @@ ${batchContent}`;
                         '\n\n<details class="normal-details"><summary>📚 想翻书架但云端未连接</summary>\n\n（VAULT_READ 标记触发但 Supabase 客户端不可用）\n\n</details>');
                 }
                 try {
-                    const resultText = await queryVaultRead(readTags);
-                    // 标记替换成折叠区块，summary 显示书架名 + 条数，内容是查询结果
-                    const summary = `📚 翻阅了书架：${readTags.map(t => `${t.shelf}(${t.limit})`).join('、')}`;
+                    const { text: resultText, counts } = await queryVaultRead(readTags);
+                    // ★ summary 显示实际找到的条数，不是请求的条数
+                    // 格式：「📚 翻阅了 songs（找到 1 条 / 想读 5 条）」
+                    // 多个书架时用顿号分隔
+                    const summaryParts = counts.map(c => {
+                        if (c.note) return `${c.shelf}（${c.note}）`;
+                        if (c.actual === c.requested) return `${c.shelf}（${c.actual} 条）`;
+                        return `${c.shelf}（找到 ${c.actual} 条 / 想读 ${c.requested} 条）`;
+                    });
+                    const summary = `📚 翻阅了 ${summaryParts.join('、')}`;
                     const detailsBlock = `\n\n<details class="normal-details"><summary>${summary}</summary>\n\n${resultText || '（未查到内容）'}\n\n</details>`;
                     // 所有 VAULT_READ 标记原地替换（出现位置由模型决定）
                     // 简化处理：把第一个标记替换成完整块，其他标记直接删掉（避免重复展示）
@@ -2952,7 +2964,7 @@ ${batchContent}`;
                         }
                         return '';
                     });
-                    console.log(`[星月舱 VAULT_READ] ✅ 已替换 ${readTags.length} 个标记为折叠区块`);
+                    console.log(`[星月舱 VAULT_READ] ✅ 已替换 ${readTags.length} 个标记为折叠区块`, counts);
                     return result;
                 } catch (e) {
                     console.error('[星月舱 VAULT_READ] 处理失败:', e);
@@ -2990,12 +3002,14 @@ ${batchContent}`;
 
             // queryVaultRead：把 detectVaultReadTags 返回的 tags 全查一遍，拼成一段 system 消息文本
             const queryVaultRead = async (tags) => {
-                if (!supabaseClient || tags.length === 0) return '';
+                if (!supabaseClient || tags.length === 0) return { text: '', counts: [] };
                 const readableShelves = ['board', 'diary', 'memos', 'letters', 'worklog', 'about-qiqi', 'songs', 'covenant', 'pp', 'contract'];
                 const blocks = [];
+                const counts = [];  // [{shelf, requested, actual}]
                 for (const tag of tags) {
                     if (!readableShelves.includes(tag.shelf)) {
                         blocks.push(`【VAULT_READ:${tag.shelf}】不支持的书架（可读：${readableShelves.join(', ')}）`);
+                        counts.push({ shelf: tag.shelf, requested: tag.limit, actual: 0, note: '不支持' });
                         continue;
                     }
                     try {
@@ -3006,18 +3020,21 @@ ${batchContent}`;
                             .order('created_at', { ascending: false })
                             .limit(tag.limit);
                         if (error) throw error;
-                        if (!data || data.length === 0) {
+                        const actual = (data || []).length;
+                        counts.push({ shelf: tag.shelf, requested: tag.limit, actual });
+                        if (actual === 0) {
                             blocks.push(`【VAULT_READ:${tag.shelf}】（${tag.shelf} 书架暂无内容）`);
                             continue;
                         }
                         const fmt = (e) => `${e.title || '(无标题)'} | 作者:${e.author} | ${new Date(e.created_at).toLocaleString('zh-CN', {timeZone:'Asia/Shanghai'})}\n${e.content || ''}`;
-                        blocks.push(`【VAULT_READ 结果 · ${tag.shelf}（${data.length} 条）】\n${data.map(fmt).join('\n---\n')}`);
+                        blocks.push(`【VAULT_READ 结果 · ${tag.shelf}（实际 ${actual} 条 / 请求 ${tag.limit} 条）】\n${data.map(fmt).join('\n---\n')}`);
                     } catch (e) {
                         console.error(`[星月舱 VAULT_READ] 读取 ${tag.shelf} 失败:`, e);
                         blocks.push(`【VAULT_READ:${tag.shelf}】读取失败：${e.message || e}`);
+                        counts.push({ shelf: tag.shelf, requested: tag.limit, actual: 0, note: '失败' });
                     }
                 }
-                return blocks.join('\n\n');
+                return { text: blocks.join('\n\n'), counts };
             };
 
             const copyToClipboard = (text) => {
