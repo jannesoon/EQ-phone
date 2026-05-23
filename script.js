@@ -237,7 +237,7 @@
             { id: 'green',  name: '淡绿', bg: '#dcfce7', hover: '#bbf7d0' },
         ];
 
-        const UPDATE_VERSION = "v8.0-alpha+patch-20260523b"; 
+        const UPDATE_VERSION = "v8.0-alpha+patch-20260523c"; 
         // ============================================
 
         // ================= IndexedDB 工具层（用于聊天记录，突破 localStorage 5MB 限制）=================
@@ -2915,63 +2915,49 @@ ${batchContent}`;
                     }
                 });
 
-                // ★★★ A-mini：异步处理 VAULT_READ 标记 ★★★
-                // 检测到读取标记 → 查云端 → 把结果追加到刚才那条逸辰消息后面
-                // 注意：这是 fire-and-forget 异步，不阻塞当前 return
-                if (readTags.length > 0 && supabaseClient) {
-                    (async () => {
-                        try {
-                            // 先在逸辰消息后追加"翻阅中"提示
-                            const placeholder = `\n\n📚 翻阅书架中：${readTags.map(t => `${t.shelf}(${t.limit})`).join('、')}……`;
-                            setMessages(prev => {
-                                const newMsgs = [...prev];
-                                const lastMsg = newMsgs[newMsgs.length - 1];
-                                if (lastMsg && lastMsg.role === 'model') {
-                                    lastMsg.content = (lastMsg.content || '') + placeholder;
-                                    if (lastMsg.variants && lastMsg.variants[0]) {
-                                        lastMsg.variants[0].content = lastMsg.content;
-                                    }
-                                }
-                                return newMsgs;
-                            });
-
-                            // 查云端
-                            const resultText = await queryVaultRead(readTags);
-                            if (!resultText) return;
-
-                            // 把"翻阅中"占位符替换成真实结果
-                            const resultBlock = `\n\n${resultText}`;
-                            setMessages(prev => {
-                                const newMsgs = [...prev];
-                                const lastMsg = newMsgs[newMsgs.length - 1];
-                                if (lastMsg && lastMsg.role === 'model') {
-                                    lastMsg.content = (lastMsg.content || '').replace(placeholder, resultBlock);
-                                    if (lastMsg.variants && lastMsg.variants[0]) {
-                                        lastMsg.variants[0].content = lastMsg.content;
-                                    }
-                                }
-                                return newMsgs;
-                            });
-                            console.log(`[星月舱 VAULT_READ] ✅ 已注入 ${readTags.length} 条读取结果`);
-                        } catch (e) {
-                            console.error('[星月舱 VAULT_READ] 异步处理失败:', e);
-                            // 失败的话把"翻阅中"提示换成错误信息
-                            setMessages(prev => {
-                                const newMsgs = [...prev];
-                                const lastMsg = newMsgs[newMsgs.length - 1];
-                                if (lastMsg && lastMsg.role === 'model' && lastMsg.content) {
-                                    lastMsg.content = lastMsg.content.replace(/\n\n📚 翻阅书架中：.+……/, '\n\n（📚 书架翻阅失败，下次再试）');
-                                    if (lastMsg.variants && lastMsg.variants[0]) {
-                                        lastMsg.variants[0].content = lastMsg.content;
-                                    }
-                                }
-                                return newMsgs;
-                            });
-                        }
-                    })();
-                }
-
+                // ★ A-mini-v2：VAULT_READ 不再在这里处理（避免异步竞争）
+                // 标记由 processVaultReadAsync 在流式结束后同步处理：
+                // 查云端 → 把标记原地替换成 <details> 折叠区块 → 直接进 messages.content
+                // 注意：本函数返回的 cleanText 已经移除了 VAULT_READ 标记（在函数开头 stripVaultReadTags 处）
+                // 所以调用方如果要支持 VAULT_READ，应该额外调用 processVaultReadAsync(原始aiText)
                 return cleanText;
+            };
+
+            // ★★★ A-mini-v2：同步处理 VAULT_READ 标记 ★★★
+            // 输入：原始 aiText（含 [[VAULT_READ:shelf|n]] 标记）
+            // 输出：Promise<string>，把标记替换成 <details> 折叠 HTML 区块的文本
+            // 没有 VAULT_READ 标记的话直接返回原文（无云端查询）
+            const processVaultReadAsync = async (text) => {
+                const readTags = detectVaultReadTags(text);
+                if (readTags.length === 0) return text;
+                if (!supabaseClient) {
+                    // 云端没连接，把标记替换成提示
+                    return text.replace(/\[\[VAULT_READ:\w[\w-]*(?:\|\d+)?\]\]/g,
+                        '\n\n<details class="normal-details"><summary>📚 想翻书架但云端未连接</summary>\n\n（VAULT_READ 标记触发但 Supabase 客户端不可用）\n\n</details>');
+                }
+                try {
+                    const resultText = await queryVaultRead(readTags);
+                    // 标记替换成折叠区块，summary 显示书架名 + 条数，内容是查询结果
+                    const summary = `📚 翻阅了书架：${readTags.map(t => `${t.shelf}(${t.limit})`).join('、')}`;
+                    const detailsBlock = `\n\n<details class="normal-details"><summary>${summary}</summary>\n\n${resultText || '（未查到内容）'}\n\n</details>`;
+                    // 所有 VAULT_READ 标记原地替换（出现位置由模型决定）
+                    // 简化处理：把第一个标记替换成完整块，其他标记直接删掉（避免重复展示）
+                    let result = text;
+                    let isFirst = true;
+                    result = result.replace(/\[\[VAULT_READ:\w[\w-]*(?:\|\d+)?\]\]/g, () => {
+                        if (isFirst) {
+                            isFirst = false;
+                            return detailsBlock;
+                        }
+                        return '';
+                    });
+                    console.log(`[星月舱 VAULT_READ] ✅ 已替换 ${readTags.length} 个标记为折叠区块`);
+                    return result;
+                } catch (e) {
+                    console.error('[星月舱 VAULT_READ] 处理失败:', e);
+                    return text.replace(/\[\[VAULT_READ:\w[\w-]*(?:\|\d+)?\]\]/g,
+                        '\n\n<details class="normal-details"><summary>📚 书架翻阅失败</summary>\n\n（' + (e.message || e) + '）\n\n</details>');
+                }
             };
 
             // ★★★ v8.0-alpha+patch-20260523：VAULT_READ 信号约定 ★★★
@@ -3146,6 +3132,7 @@ ${batchContent}`;
                         if (!aiText && !reasoningText) aiText = "无回复";
                         aiText = processHealthTag(aiText);
                         aiText = processVaultTags(aiText);
+                        aiText = await processVaultReadAsync(aiText);
                         setMessages(prev => [...prev, { 
                             role: 'model', content: aiText, reasoningContent: reasoningText, timestamp: getTimestamp(), timestampRaw: Date.now(), modelName: config.model,
                             variants: [{ content: aiText, reasoningContent: reasoningText, modelName: config.model, timestamp: getTimestamp() }], currentVariantIndex: 0
@@ -3164,7 +3151,10 @@ ${batchContent}`;
                         while (true) {
                             const { done, value } = await reader.read(); 
                             if (done) {
-                                const cleanedAiText2 = processVaultTags(aiText);
+                                // ★ A-mini-v2：先 processVaultTags（清写入标记 + 异步写云端）
+                                let cleanedAiText2 = processVaultTags(aiText);
+                                // 再 await processVaultReadAsync（查云端 + 标记替换成折叠区块）
+                                cleanedAiText2 = await processVaultReadAsync(cleanedAiText2);
                                 if (cleanedAiText2 !== aiText) {
                                     let fd = cleanedAiText2;
                                     const tm = fd.match(/<think>([\s\S]*?)<\/think>/);
@@ -3256,6 +3246,7 @@ ${batchContent}`;
                         if (!aiText && !reasoningText) aiText = "无回复";
                         aiText = processHealthTag(aiText);
                         aiText = processVaultTags(aiText);
+                        aiText = await processVaultReadAsync(aiText);
                         setMessages(prev => {
                             const msgs = [...prev]; const last = msgs[msgs.length - 1];
                             last.variants[newVariantIndex].content = aiText; last.variants[newVariantIndex].reasoningContent = reasoningText;
@@ -3271,7 +3262,9 @@ ${batchContent}`;
                         while (true) {
                             const { done, value } = await reader.read(); 
                             if (done) {
-                                const cleanedAiText3 = processVaultTags(aiText);
+                                // ★ A-mini-v2
+                                let cleanedAiText3 = processVaultTags(aiText);
+                                cleanedAiText3 = await processVaultReadAsync(cleanedAiText3);
                                 if (cleanedAiText3 !== aiText) {
                                     let fd = cleanedAiText3;
                                     const tm = fd.match(/<think>([\s\S]*?)<\/think>/);
@@ -3461,6 +3454,7 @@ ${batchContent}`;
                         if (!aiText && !reasoningText) aiText = "无回复";
                         aiText = processHealthTag(aiText);
                         aiText = processVaultTags(aiText);
+                        aiText = await processVaultReadAsync(aiText);
 
                         // 构建工具调用摘要（折叠展示在消息顶部）
                         let toolCallSummary = '';
@@ -3505,6 +3499,7 @@ ${batchContent}`;
                         if (!aiText && !reasoningText) aiText = "无回复";
                         aiText = processHealthTag(aiText);
                         aiText = processVaultTags(aiText);
+                        aiText = await processVaultReadAsync(aiText);
                         const finalMsgs = [...newHistory, { 
                             role: 'model', content: aiText, reasoningContent: reasoningText, timestamp: getTimestamp(), timestampRaw: Date.now(), modelName: config.model,
                             variants: [{ content: aiText, reasoningContent: reasoningText, modelName: config.model, timestamp: getTimestamp() }], currentVariantIndex: 0
@@ -3546,10 +3541,10 @@ ${batchContent}`;
                         while (true) {
                             const { done, value } = await reader.read(); 
                             if (done) {
-                                // ★ v8.0 流式结束后：处理 VAULT 标记（写入云端 + 从显示内容中清除）
-                                const cleanedAiText = processVaultTags(aiText);
+                                // ★ A-mini-v2：流式结束后处理 VAULT 标记（写入云端 + 清除）+ VAULT_READ（查云端 + 折叠区块）
+                                let cleanedAiText = processVaultTags(aiText);
+                                cleanedAiText = await processVaultReadAsync(cleanedAiText);
                                 if (cleanedAiText !== aiText) {
-                                    // 标记被清除了，需要更新消息内容
                                     let finalDisplay = cleanedAiText;
                                     const thinkMatchFinal = cleanedAiText.match(/<think>([\s\S]*?)<\/think>/);
                                     if (thinkMatchFinal) { finalDisplay = cleanedAiText.replace(/<think>[\s\S]*?<\/think>/, '').trim(); }
