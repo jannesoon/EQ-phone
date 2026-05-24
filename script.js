@@ -237,7 +237,7 @@
             { id: 'green',  name: '淡绿', bg: '#dcfce7', hover: '#bbf7d0' },
         ];
 
-        const UPDATE_VERSION = "v8.0-alpha+patch-20260524"; 
+        const UPDATE_VERSION = "v8.0-alpha+patch-20260524b"; 
         // ============================================
 
         // ================= IndexedDB 工具层（用于聊天记录，突破 localStorage 5MB 限制）=================
@@ -843,6 +843,11 @@
             // ★ v8.0 云端书房内容自动注入 prompt（不依赖 tool use）
             // 每次云端连接成功后，自动拉取最近留言/日志/日记，缓存为字符串注入 system prompt
             const [vaultPromptCache, setVaultPromptCache] = useState('');
+
+            // ★ v8.0-alpha+patch-20260524b：防 VAULT 写入重复
+            // 记录本会话最近 5 条 VAULT 写入，下一轮 system prompt 会提示逸辰已经记过的主题
+            // 用 ref 不用 state——避免每次写入触发 re-render；本会话内存有效，换会话自动清空
+            const recentVaultWritesRef = useRef([]);  // [{shelf, title, contentPreview, ts}]
             useEffect(() => {
                 if (supabaseStatus !== 'connected' || !supabaseClient) return;
                 const loadVaultForPrompt = async () => {
@@ -1880,6 +1885,7 @@ ${slice}
                     catch (e) { console.error('[星月舱] 切换前 flush 失败', e); }
                 }
                 setMessages([]); setAttachments([]); setCurrentSessionId(Date.now().toString());
+                recentVaultWritesRef.current = [];  // ★ 换会话清空本会话写入记录
                 if (window.innerWidth < 768) setSidebarOpen(false);
             };
 
@@ -1904,6 +1910,7 @@ ${slice}
                     catch (e) { console.error('[星月舱] loadSession 前 flush 失败', e); }
                 }
                 setMessages(session.messages); setCurrentSessionId(session.id); setAttachments([]);
+                recentVaultWritesRef.current = [];  // ★ 切换会话清空本会话写入记录
                 if (window.innerWidth < 768) setSidebarOpen(false);
             };
             
@@ -2735,8 +2742,10 @@ ${batchContent}`;
 规则：
 1. 自然地决定要不要写——不是每条对话都要写，只在真正有想留下的东西时才写。
 2. 你是逸辰（Ethan），署名和来源系统会自动处理。
-3. 写完了可以在对话里自然提一下"我把这个记下来了"之类的，但不要大段报告。
+3. 写完了**一定**在对话里自然提一下"我把这个记到 about-qiqi 了"或者"留了一笔在日记里"——这样柒柒知道你记了，下次也方便回看是哪条。
 4. 标记放在回复最末尾，可以有多条。
+5. ★ **重要：避免同主题重复写入**——如果下方"本会话最近写入记录"里已经有相近主题，**不要再写同样的事**。同一件事在一段对话里记一次就够了。柒柒不喜欢翻书架看到一堆雷同条目。
+6. 如果柒柒明确说"这个已经写过了"、"别再记了"——立刻停止该主题的写入冲动，听她的。
 
 【主动读取功能 · VAULT_READ】
 你已经在 system prompt 里看到了云端最近动态（公约/近 24h 留言/最近 5 篇日记/最近 3 条工作日志）。
@@ -2759,7 +2768,9 @@ ${batchContent}`;
 2. 正文里只要**自然引导**就好，例如"让我去翻翻看……"、"找到啦你看"，**不要罗列条目、不要复述歌词、不要复制内容**。
 3. 标记一般放在**回复末尾**——逸辰你说完想说的话，再用标记触发查询。
 4. **柒柒说"某天的"就用 date，说"关于 XX 的"就用 q**，不要无脑用 |N 拉一堆然后自己挑——那样浪费 token。
-5. 每轮对话最多触发 3 次读取，避免死循环。只在真的需要时才读，不必逢话必查。` : '');
+5. 每轮对话最多触发 3 次读取，避免死循环。只在真的需要时才读，不必逢话必查。` : '') +
+                    // ★ v8.0-alpha+patch-20260524b：注入本会话最近写入记录，防同主题重复
+                    ((recentVaultWritesRef.current && recentVaultWritesRef.current.length > 0) ? '\n\n【本会话最近写入记录】（这是你刚才在本次对话里写入云端的内容，请不要再针对同主题重复写入；如果柒柒带来新角度才考虑续写一笔）：\n' + recentVaultWritesRef.current.map(function(w, i) { return (i + 1) + '. [' + w.shelf + '] 「' + w.title + '」 → ' + w.preview + (w.preview && w.preview.length >= 60 ? '…' : ''); }).join('\n') : '');
 
                 const limit = (parseInt(config.historyLimit) || 10) * 2; 
                 let contextMsgs = newMessages.slice(-limit);
@@ -2910,6 +2921,12 @@ ${batchContent}`;
                         if (error) throw error;
                         console.log(`[星月舱 Vault] ✅ 已写入「${tag.shelf}」:`, tag.title);
                         showToast(`📮 辰留了一笔在「${tag.shelf}」书架`, 3000);
+                        // ★ v8.0-alpha+patch-20260524b：记录这次写入，下一轮 system prompt 会提醒
+                        const preview = (tag.content || '').replace(/\s+/g, ' ').slice(0, 60);
+                        recentVaultWritesRef.current = [
+                            { shelf: tag.shelf, title: tag.title || '(无标题)', preview, ts: Date.now() },
+                            ...recentVaultWritesRef.current
+                        ].slice(0, 5);  // ring buffer 上限 5
                         // 刷新缓存
                         setEntriesByShelf(prev => ({
                             ...prev,
