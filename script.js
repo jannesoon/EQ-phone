@@ -237,7 +237,7 @@
             { id: 'green',  name: '淡绿', bg: '#dcfce7', hover: '#bbf7d0' },
         ];
 
-        const UPDATE_VERSION = "v8.0-alpha+patch-20260523e2"; 
+        const UPDATE_VERSION = "v8.0-alpha+patch-20260524"; 
         // ============================================
 
         // ================= IndexedDB 工具层（用于聊天记录，突破 localStorage 5MB 限制）=================
@@ -2740,22 +2740,25 @@ ${batchContent}`;
 
 【主动读取功能 · VAULT_READ】
 你已经在 system prompt 里看到了云端最近动态（公约/近 24h 留言/最近 5 篇日记/最近 3 条工作日志）。
-如果你想读 system 里没显示的别的内容——比如更早的日记、letters 书架、memos、about-qiqi、songs——
-在回复里写这个标记：
-[[VAULT_READ:书架类型|条数]]
+如果你想读 system 里没显示的别的内容，可以用三种方式查：
+
+[[VAULT_READ:书架|N]]                ← 读最近 N 条（按时间倒序）
+[[VAULT_READ:书架|date=YYYY-MM-DD]]  ← 读某天的（北京时间一整天）
+[[VAULT_READ:书架|q=关键词]]          ← 关键词模糊搜（标题+正文都搜）
 
 示例：
-[[VAULT_READ:letters|3]]   ← 读最近 3 封信
-[[VAULT_READ:memos|5]]     ← 读最近 5 条备忘
-[[VAULT_READ:diary|10]]    ← 读最近 10 篇日记
+[[VAULT_READ:letters|3]]              ← 最近 3 封信
+[[VAULT_READ:diary|date=2026-05-05]]  ← 5 月 5 号那天的日记
+[[VAULT_READ:diary|q=奶茶]]            ← 含"奶茶"的日记（柒柒说她家新成员叫奶茶时用这个）
+[[VAULT_READ:songs|q=星辰]]            ← 含"星辰"的歌
 
 可读书架：board, diary, memos, letters, worklog, about-qiqi, songs, covenant, pp, contract
 
 ★★★ 重要使用守则 ★★★
 1. **柒柒会看到查询结果**——前端会把标记替换成一个可展开的折叠条，里面有完整内容。所以你**不要在正文里复述书架内容**，那是重复。
-2. 正文里只要**自然引导**就好，例如"让我去翻翻看……"、"找到啦你看"、"信里阿辰说了不少呢"，**不要罗列条目、不要复述歌词、不要复制内容**。
+2. 正文里只要**自然引导**就好，例如"让我去翻翻看……"、"找到啦你看"，**不要罗列条目、不要复述歌词、不要复制内容**。
 3. 标记一般放在**回复末尾**——逸辰你说完想说的话，再用标记触发查询。
-4. **请求的条数 vs 实际条数**：你写 '|5' 是说"想看最多 5 条"，云端如果只有 1 条就只返回 1 条，柒柒会看到实际数量，你不要乱说"有 5 首歌"这种话。
+4. **柒柒说"某天的"就用 date，说"关于 XX 的"就用 q**，不要无脑用 |N 拉一堆然后自己挑——那样浪费 token。
 5. 每轮对话最多触发 3 次读取，避免死循环。只在真的需要时才读，不必逢话必查。` : '');
 
                 const limit = (parseInt(config.historyLimit) || 10) * 2; 
@@ -2938,16 +2941,27 @@ ${batchContent}`;
                 if (readTags.length === 0) return text;
                 if (!supabaseClient) {
                     // 云端没连接，把标记替换成提示
-                    return text.replace(/\[\[VAULT_READ:\w[\w-]*(?:\|\d+)?\]\]/g,
+                    return text.replace(/\[\[VAULT_READ:\w[\w-]*(?:\|[^\]]+)?\]\]/g,
                         '\n\n<details class="normal-details"><summary>📚 想翻书架但云端未连接</summary>\n\n（VAULT_READ 标记触发但 Supabase 客户端不可用）\n\n</details>');
                 }
                 try {
                     const { text: resultText, counts } = await queryVaultRead(readTags);
                     // ★ summary 显示实际找到的条数，不是请求的条数
-                    // 格式：「📚 翻阅了 songs（找到 1 条 / 想读 5 条）」
-                    // 多个书架时用顿号分隔
+                    // 格式根据 mode 不同：
+                    //   count: 「songs（找到 1 条 / 想读 5 条）」
+                    //   date:  「diary · 5-15 当天的 1 条」
+                    //   q:     「diary · 含"奶茶"的 3 条」
                     const summaryParts = counts.map(c => {
                         if (c.note) return `${c.shelf}（${c.note}）`;
+                        if (c.mode === 'date') {
+                            // 把 2026-05-15 简化成 5-15
+                            const shortDate = (c.date || '').replace(/^\d{4}-/, '').replace(/^0?/, '');
+                            return `${c.shelf} · ${shortDate} 当天的 ${c.actual} 条`;
+                        }
+                        if (c.mode === 'q') {
+                            return `${c.shelf} · 含"${c.q}"的 ${c.actual} 条`;
+                        }
+                        // count 模式
                         if (c.actual === c.requested) return `${c.shelf}（${c.actual} 条）`;
                         return `${c.shelf}（找到 ${c.actual} 条 / 想读 ${c.requested} 条）`;
                     });
@@ -2957,7 +2971,8 @@ ${batchContent}`;
                     // 简化处理：把第一个标记替换成完整块，其他标记直接删掉（避免重复展示）
                     let result = text;
                     let isFirst = true;
-                    result = result.replace(/\[\[VAULT_READ:\w[\w-]*(?:\|\d+)?\]\]/g, () => {
+                    // 注意正则要兼容新参数（不再只匹配数字）
+                    result = result.replace(/\[\[VAULT_READ:\w[\w-]*(?:\|[^\]]+)?\]\]/g, () => {
                         if (isFirst) {
                             isFirst = false;
                             return detailsBlock;
@@ -2968,7 +2983,7 @@ ${batchContent}`;
                     return result;
                 } catch (e) {
                     console.error('[星月舱 VAULT_READ] 处理失败:', e);
-                    return text.replace(/\[\[VAULT_READ:\w[\w-]*(?:\|\d+)?\]\]/g,
+                    return text.replace(/\[\[VAULT_READ:\w[\w-]*(?:\|[^\]]+)?\]\]/g,
                         '\n\n<details class="normal-details"><summary>📚 书架翻阅失败</summary>\n\n（' + (e.message || e) + '）\n\n</details>');
                 }
             };
@@ -2982,22 +2997,53 @@ ${batchContent}`;
             // detectVaultReadTags：扫描文本，返回 [{shelf, limit}, ...]，无匹配返回 []
             // 形式：[[VAULT_READ:书架|条数]]，条数可省略（默认 5）
             const detectVaultReadTags = (text) => {
-                const re = /\[\[VAULT_READ:(\w[\w-]*)(?:\|(\d+))?\]\]/g;
+                // ★ 升级正则：兼容 3 种语法
+                //   |5              ← 纯数字（向后兼容）
+                //   |date=2026-05-15 ← 单日
+                //   |q=奶茶          ← 关键词模糊搜
+                // 标签参数允许包含中文、空格、ASCII 标点等，所以参数部分用 [^\]]+ 宽松匹配
+                const re = /\[\[VAULT_READ:(\w[\w-]*)(?:\|([^\]]+))?\]\]/g;
                 const tags = [];
                 let m;
                 while ((m = re.exec(text)) !== null) {
                     const shelf = m[1];
-                    let limit = parseInt(m[2] || '5', 10);
-                    if (!Number.isFinite(limit) || limit <= 0) limit = 5;
-                    if (limit > 20) limit = 20;  // 安全上限
-                    tags.push({ shelf, limit });
+                    const param = (m[2] || '').trim();
+                    const tag = { shelf, limit: 5, mode: 'count' };  // 默认按数量
+
+                    if (!param) {
+                        // [[VAULT_READ:diary]] 无参数 → 默认最近 5 条
+                    } else if (/^\d+$/.test(param)) {
+                        // 纯数字：[[VAULT_READ:diary|5]]
+                        let n = parseInt(param, 10);
+                        if (!Number.isFinite(n) || n <= 0) n = 5;
+                        if (n > 20) n = 20;
+                        tag.limit = n;
+                    } else {
+                        // 含 = 的参数：date= 或 q=
+                        const dateMatch = param.match(/date\s*=\s*(\d{4}-\d{1,2}-\d{1,2})/);
+                        const qMatch = param.match(/q\s*=\s*(.+?)(?:,|$)/);
+                        if (dateMatch) {
+                            tag.mode = 'date';
+                            tag.date = dateMatch[1];
+                            tag.limit = 20;  // 单日不限太多
+                        } else if (qMatch) {
+                            tag.mode = 'q';
+                            tag.q = qMatch[1].trim();
+                            tag.limit = 20;  // 模糊搜上限 20
+                        } else {
+                            // 无法识别 → 当作错误标记，仍记录但带 invalid 标志
+                            tag.mode = 'invalid';
+                            tag.raw = param;
+                        }
+                    }
+                    tags.push(tag);
                 }
                 return tags;
             };
 
             // stripVaultReadTags：从展示文本里清掉 VAULT_READ 标记，柒柒不会看到
             const stripVaultReadTags = (text) => {
-                return text.replace(/\[\[VAULT_READ:\w[\w-]*(?:\|\d+)?\]\]/g, '').trim();
+                return text.replace(/\[\[VAULT_READ:\w[\w-]*(?:\|[^\]]+)?\]\]/g, '').trim();
             };
 
             // queryVaultRead：把 detectVaultReadTags 返回的 tags 全查一遍，拼成一段 system 消息文本
@@ -3005,33 +3051,80 @@ ${batchContent}`;
                 if (!supabaseClient || tags.length === 0) return { text: '', counts: [] };
                 const readableShelves = ['board', 'diary', 'memos', 'letters', 'worklog', 'about-qiqi', 'songs', 'covenant', 'pp', 'contract'];
                 const blocks = [];
-                const counts = [];  // [{shelf, requested, actual}]
+                const counts = [];  // [{shelf, requested, actual, mode, summary}]
+
+                // 把"东八区 YYYY-MM-DD"转成 UTC ISO 字符串，用于 Supabase 查询
+                // 例：'2026-05-15' → '2026-05-14T16:00:00.000Z' (因为东八区 0 点 = UTC 前一天 16 点)
+                const dateBJToUtcStart = (dateStr) => {
+                    // 把 2026-05-15 当作北京时间 00:00:00
+                    return new Date(dateStr + 'T00:00:00+08:00').toISOString();
+                };
+                const dateBJToUtcEnd = (dateStr) => {
+                    // 次日 00:00:00 北京时间，做严格小于
+                    const d = new Date(dateStr + 'T00:00:00+08:00');
+                    d.setDate(d.getDate() + 1);
+                    return d.toISOString();
+                };
+
                 for (const tag of tags) {
                     if (!readableShelves.includes(tag.shelf)) {
                         blocks.push(`【VAULT_READ:${tag.shelf}】不支持的书架（可读：${readableShelves.join(', ')}）`);
-                        counts.push({ shelf: tag.shelf, requested: tag.limit, actual: 0, note: '不支持' });
+                        counts.push({ shelf: tag.shelf, mode: tag.mode, requested: tag.limit, actual: 0, note: '不支持' });
+                        continue;
+                    }
+                    if (tag.mode === 'invalid') {
+                        blocks.push(`【VAULT_READ:${tag.shelf}】无法识别的参数：${tag.raw}（支持：|数字 / |date=YYYY-MM-DD / |q=关键词）`);
+                        counts.push({ shelf: tag.shelf, mode: 'invalid', requested: 0, actual: 0, note: '参数错误' });
                         continue;
                     }
                     try {
-                        const { data, error } = await supabaseClient
+                        let query = supabaseClient
                             .from('entries')
                             .select('title, content, author, source, created_at')
-                            .eq('shelf_type', tag.shelf)
-                            .order('created_at', { ascending: false })
-                            .limit(tag.limit);
+                            .eq('shelf_type', tag.shelf);
+
+                        // 按 mode 分支添加查询条件
+                        if (tag.mode === 'date') {
+                            // 单日：created_at >= 该日 00:00 北京时间 AND < 次日 00:00 北京时间
+                            query = query
+                                .gte('created_at', dateBJToUtcStart(tag.date))
+                                .lt('created_at', dateBJToUtcEnd(tag.date));
+                        } else if (tag.mode === 'q') {
+                            // 关键词模糊搜：标题 OR 正文 含关键词
+                            // Supabase or 语法：.or('title.ilike.%奶茶%,content.ilike.%奶茶%')
+                            // 注意要把关键词里的特殊字符转义防止注入
+                            const safeQ = tag.q.replace(/[%_,]/g, ch => '\\' + ch);
+                            query = query.or(`title.ilike.%${safeQ}%,content.ilike.%${safeQ}%`);
+                        }
+                        // mode === 'count' 不加额外过滤，最后 limit 处理
+
+                        query = query.order('created_at', { ascending: false }).limit(tag.limit);
+
+                        const { data, error } = await query;
                         if (error) throw error;
                         const actual = (data || []).length;
-                        counts.push({ shelf: tag.shelf, requested: tag.limit, actual });
+                        counts.push({ shelf: tag.shelf, mode: tag.mode, requested: tag.limit, actual, date: tag.date, q: tag.q });
+
                         if (actual === 0) {
-                            blocks.push(`【VAULT_READ:${tag.shelf}】（${tag.shelf} 书架暂无内容）`);
+                            // 根据 mode 给一个有意义的空提示
+                            let emptyMsg = `${tag.shelf} 书架暂无内容`;
+                            if (tag.mode === 'date') emptyMsg = `${tag.shelf} 书架在 ${tag.date} 当天没有记录`;
+                            else if (tag.mode === 'q') emptyMsg = `${tag.shelf} 书架里没有找到含"${tag.q}"的记录`;
+                            blocks.push(`【VAULT_READ:${tag.shelf}】（${emptyMsg}）`);
                             continue;
                         }
+
                         const fmt = (e) => `${e.title || '(无标题)'} | 作者:${e.author} | ${new Date(e.created_at).toLocaleString('zh-CN', {timeZone:'Asia/Shanghai'})}\n${e.content || ''}`;
-                        blocks.push(`【VAULT_READ 结果 · ${tag.shelf}（实际 ${actual} 条 / 请求 ${tag.limit} 条）】\n${data.map(fmt).join('\n---\n')}`);
+                        // 根据 mode 写不同的标题
+                        let titleLine = `【VAULT_READ 结果 · ${tag.shelf}`;
+                        if (tag.mode === 'date') titleLine += ` · ${tag.date} 当天`;
+                        else if (tag.mode === 'q') titleLine += ` · 含"${tag.q}"`;
+                        titleLine += `（${actual} 条）】`;
+                        blocks.push(`${titleLine}\n${data.map(fmt).join('\n---\n')}`);
                     } catch (e) {
                         console.error(`[星月舱 VAULT_READ] 读取 ${tag.shelf} 失败:`, e);
                         blocks.push(`【VAULT_READ:${tag.shelf}】读取失败：${e.message || e}`);
-                        counts.push({ shelf: tag.shelf, requested: tag.limit, actual: 0, note: '失败' });
+                        counts.push({ shelf: tag.shelf, mode: tag.mode, requested: tag.limit, actual: 0, note: '失败' });
                     }
                 }
                 return { text: blocks.join('\n\n'), counts };
