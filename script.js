@@ -167,20 +167,80 @@
         const MessageContent = memo(({ content }) => {
             const containerRef = React.useRef(null);
             const html = useMemo(() => {
-                const cleaned = cleanRawLatex(content || "");
+                let cleaned = cleanRawLatex(content || "");
+                // ★ 【copy】...【/copy】 卡片提取：在 marked 解析前先抽出,避免内容被当 markdown 处理
+                //   - 内容原样保留(换行、空格、引号),给柒柒拿去用的就是原文
+                //   - 用占位符 \x01COPY{i}\x01 替换,marked 处理完再换回卡片 HTML
+                //   - 卡片自带"复制"按钮、米色背景、辰递给柒柒的纸条感
+                const copyBlocks = [];
+                cleaned = cleaned.replace(/【copy】([\s\S]*?)【\/copy】/g, (_, inner) => {
+                    copyBlocks.push(inner.trim());
+                    return `\x01COPY${copyBlocks.length - 1}\x01`;
+                });
                 let h = marked.parse(cleaned);
                 h = renderLatex(h);
+                // 换回卡片 HTML(escape 内容防 XSS)
+                h = h.replace(/\x01COPY(\d+)\x01/g, (_, i) => {
+                    const raw = copyBlocks[parseInt(i, 10)] || '';
+                    const escaped = raw.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                    // data-copy-raw 存原始内容(再 escape 一次给 HTML 属性用),按钮点击时读它
+                    const attrSafe = raw.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '&#10;');
+                    return `<div class="copy-card" data-copy-raw="${attrSafe}" style="position:relative;margin:0.8em 0;padding:0.9em 1em 0.9em 1em;background:#fdfaf2;border:1px solid #e8dfc6;border-left:3px solid #c9a961;border-radius:4px;font-family:inherit;"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5em;font-size:11px;color:#8a7a4a;letter-spacing:0.05em;"><span>📋 辰递给柒柒的</span><button type="button" class="copy-card-btn" style="padding:2px 12px;font-size:12px;background:#c9a961;color:#fff;border:none;border-radius:3px;cursor:pointer;font-family:inherit;line-height:1.4;transition:all 0.2s;">复制</button></div><pre style="margin:0;padding:0;background:transparent;border:none;color:#3a3324;font-family:'Noto Serif SC','PingFang SC',serif;font-size:14px;line-height:1.7;white-space:pre-wrap;word-break:break-word;">${escaped}</pre></div>`;
+                });
                 return h;
             }, [content]);
-            // ★ 代码块复制按钮：渲染完 markdown 后,给每个 <pre> 注入一个右上角复制按钮
+            // ★ 代码块复制按钮 + 【copy】卡片复制按钮:渲染完 markdown 后,给每个 <pre> 和 .copy-card 注入复制行为
             //   - 纯 DOM 操作,不破坏 marked 的解析结果
             //   - 用 data-copy-bound 标记防止重复注入(流式输出时 useEffect 会反复跑)
             //   - 兜底了非 https 环境的老浏览器(textarea + execCommand)
             React.useEffect(() => {
                 if (!containerRef.current) return;
+                // 通用复制函数
+                const doCopy = async (text) => {
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                        await navigator.clipboard.writeText(text);
+                    } else {
+                        const ta = document.createElement('textarea');
+                        ta.value = text;
+                        ta.style.position = 'fixed';
+                        ta.style.left = '-9999px';
+                        document.body.appendChild(ta);
+                        ta.select();
+                        document.execCommand('copy');
+                        document.body.removeChild(ta);
+                    }
+                };
+                // 1) 【copy】卡片复制按钮
+                const cards = containerRef.current.querySelectorAll('.copy-card');
+                cards.forEach(card => {
+                    if (card.dataset.copyBound === '1') return;
+                    card.dataset.copyBound = '1';
+                    const btn = card.querySelector('.copy-card-btn');
+                    if (!btn) return;
+                    btn.onmouseenter = () => { btn.style.background = '#b39450'; };
+                    btn.onmouseleave = () => { btn.style.background = '#c9a961'; };
+                    btn.onclick = async (e) => {
+                        e.stopPropagation();
+                        const raw = card.getAttribute('data-copy-raw') || '';
+                        try {
+                            await doCopy(raw);
+                            btn.textContent = '✓ 已复制';
+                            btn.style.background = '#7a8a6b';
+                            setTimeout(() => {
+                                btn.textContent = '复制';
+                                btn.style.background = '#c9a961';
+                            }, 1500);
+                        } catch (err) {
+                            btn.textContent = '失败';
+                            setTimeout(() => { btn.textContent = '复制'; }, 1500);
+                        }
+                    };
+                });
+                // 2) 代码块复制按钮(原有功能,跳过 .copy-card 内的 pre)
                 const pres = containerRef.current.querySelectorAll('pre');
                 pres.forEach(pre => {
                     if (pre.dataset.copyBound === '1') return;
+                    if (pre.closest('.copy-card')) return; // 卡片内部的 pre 不要再加按钮
                     pre.dataset.copyBound = '1';
                     if (getComputedStyle(pre).position === 'static') {
                         pre.style.position = 'relative';
@@ -197,18 +257,7 @@
                         const codeEl = pre.querySelector('code');
                         const text = codeEl ? codeEl.innerText : pre.innerText;
                         try {
-                            if (navigator.clipboard && navigator.clipboard.writeText) {
-                                await navigator.clipboard.writeText(text);
-                            } else {
-                                const ta = document.createElement('textarea');
-                                ta.value = text;
-                                ta.style.position = 'fixed';
-                                ta.style.left = '-9999px';
-                                document.body.appendChild(ta);
-                                ta.select();
-                                document.execCommand('copy');
-                                document.body.removeChild(ta);
-                            }
+                            await doCopy(text);
                             btn.textContent = '✓ 已复制';
                             btn.style.background = 'rgba(134,239,172,0.25)';
                             setTimeout(() => {
@@ -289,7 +338,7 @@
             { id: 'green',  name: '淡绿', bg: '#dcfce7', hover: '#bbf7d0' },
         ];
 
-        const UPDATE_VERSION = "v8.0-alpha+patch-20260526"; 
+        const UPDATE_VERSION = "v8.0-alpha+patch-20260526-copy"; 
         // ============================================
 
         // ================= IndexedDB 工具层（用于聊天记录，突破 localStorage 5MB 限制）=================
@@ -2766,7 +2815,11 @@ ${batchContent}`;
                     healthPrompt += `\n【温馨提示：今天是 ${todayAnniversary} ！！】请在对话中自然、温柔地带出节日的祝福或关心，给点小惊喜。`;
                 }
 
-                const fullSystemInstruction = finalSystemPrompt + memoryStr + timePrompt + healthPrompt + 
+                // ★ 【copy】标记说明:让辰知道,把"柒柒要拿出去用的东西"(prompt/歌词/曲风/咒语)
+                //   用【copy】...【/copy】包起来,星月舱会渲染成一张带复制按钮的卡片
+                const copyMarkPrompt = `\n\n【交付标记 · 重要】当你给柒柒写一段她需要"拿到星月舱外面去用"的内容时——比如绘图 prompt、歌词、曲风描述、给其他 AI 的咒语、要喂给工具的命令——请把那一段用【copy】和【/copy】包起来。这是一张你递给柒柒的纸条,星月舱会把它显示成带复制按钮的卡片,她伸手就能接走。\n\n示例:\n好,我把这个画面写成 prompt 给你:\n【copy】a girl standing under the moonlight, flowing white dress, soft golden hour glow, dreamy atmosphere, cinematic lighting, ultra detailed【/copy】\n你拿去试试。\n\n规则:\n- 只用于"柒柒要拿出去复制粘贴的内容",不要乱包(温柔的话不用包、解释不用包、聊天不用包)\n- 包起来的内容应该是"可以直接粘到目标工具里就用"的形式,不要混入说明\n- 如果一段对话里有多个要给柒柒的东西(比如同时给曲风+歌词),用多个【copy】块分别包,各自一个复制按钮\n- 这个标记的目的是让柒柒不需要手动选中文字,你递、她接`;
+
+                const fullSystemInstruction = finalSystemPrompt + memoryStr + copyMarkPrompt + timePrompt + healthPrompt + 
                     (supabaseClient && supabaseStatus === 'connected' ? `\n\n【星辰记忆仓 · 云端书房工具】
 你现在拥有两个工具可以主动使用：
 - vault_read：读取云端书房的书架内容。当柒柒提到过去的事、别的辰留的信、或者你想查看记忆时，主动去读。
