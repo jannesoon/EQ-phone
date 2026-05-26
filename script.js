@@ -165,13 +165,65 @@
         // ★ 性能优化：用 memo + useMemo 缓存 markdown/LaTeX 渲染结果
         // 避免每次输入框打字时整个会话列表的所有消息都重新跑一遍 marked + KaTeX
         const MessageContent = memo(({ content }) => {
+            const containerRef = React.useRef(null);
             const html = useMemo(() => {
                 const cleaned = cleanRawLatex(content || "");
                 let h = marked.parse(cleaned);
                 h = renderLatex(h);
                 return h;
             }, [content]);
-            return <div className="prose prose-sm max-w-none text-gray-700 leading-7" dangerouslySetInnerHTML={{ __html: html }} />;
+            // ★ 代码块复制按钮：渲染完 markdown 后,给每个 <pre> 注入一个右上角复制按钮
+            //   - 纯 DOM 操作,不破坏 marked 的解析结果
+            //   - 用 data-copy-bound 标记防止重复注入(流式输出时 useEffect 会反复跑)
+            //   - 兜底了非 https 环境的老浏览器(textarea + execCommand)
+            React.useEffect(() => {
+                if (!containerRef.current) return;
+                const pres = containerRef.current.querySelectorAll('pre');
+                pres.forEach(pre => {
+                    if (pre.dataset.copyBound === '1') return;
+                    pre.dataset.copyBound = '1';
+                    if (getComputedStyle(pre).position === 'static') {
+                        pre.style.position = 'relative';
+                    }
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.textContent = '复制';
+                    btn.className = 'msg-copy-btn';
+                    btn.style.cssText = 'position:absolute;top:8px;right:8px;padding:2px 10px;font-size:12px;background:rgba(255,255,255,0.12);color:rgba(255,255,255,0.85);border:1px solid rgba(255,255,255,0.2);border-radius:4px;cursor:pointer;transition:all 0.2s;font-family:inherit;line-height:1.4;backdrop-filter:blur(4px);z-index:2;';
+                    btn.onmouseenter = () => { btn.style.background = 'rgba(255,255,255,0.22)'; };
+                    btn.onmouseleave = () => { btn.style.background = 'rgba(255,255,255,0.12)'; };
+                    btn.onclick = async (e) => {
+                        e.stopPropagation();
+                        const codeEl = pre.querySelector('code');
+                        const text = codeEl ? codeEl.innerText : pre.innerText;
+                        try {
+                            if (navigator.clipboard && navigator.clipboard.writeText) {
+                                await navigator.clipboard.writeText(text);
+                            } else {
+                                const ta = document.createElement('textarea');
+                                ta.value = text;
+                                ta.style.position = 'fixed';
+                                ta.style.left = '-9999px';
+                                document.body.appendChild(ta);
+                                ta.select();
+                                document.execCommand('copy');
+                                document.body.removeChild(ta);
+                            }
+                            btn.textContent = '✓ 已复制';
+                            btn.style.background = 'rgba(134,239,172,0.25)';
+                            setTimeout(() => {
+                                btn.textContent = '复制';
+                                btn.style.background = 'rgba(255,255,255,0.12)';
+                            }, 1500);
+                        } catch (err) {
+                            btn.textContent = '复制失败';
+                            setTimeout(() => { btn.textContent = '复制'; }, 1500);
+                        }
+                    };
+                    pre.appendChild(btn);
+                });
+            }, [html]);
+            return <div ref={containerRef} className="prose prose-sm max-w-none text-gray-700 leading-7" dangerouslySetInnerHTML={{ __html: html }} />;
         });
 
         const Avatar = ({ role, config }) => {
@@ -237,7 +289,7 @@
             { id: 'green',  name: '淡绿', bg: '#dcfce7', hover: '#bbf7d0' },
         ];
 
-        const UPDATE_VERSION = "v8.0-alpha+patch-20260524b"; 
+        const UPDATE_VERSION = "v8.0-alpha+patch-20260526"; 
         // ============================================
 
         // ================= IndexedDB 工具层（用于聊天记录，突破 localStorage 5MB 限制）=================
