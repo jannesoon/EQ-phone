@@ -177,6 +177,12 @@
                     copyBlocks.push(inner.trim());
                     return `\x01COPY${copyBlocks.length - 1}\x01`;
                 });
+                // ★ v8.1 画图信号 [[DRAW:标题|SVG代码]] 提取
+                const drawBlocks = [];
+                cleaned = cleaned.replace(/\[\[DRAW:([^|\]]*)\|([\s\S]*?)\]\]/g, (_, title, svg) => {
+                    drawBlocks.push({ title: title.trim(), svg: svg.trim() });
+                    return `\x01DRAW${drawBlocks.length - 1}\x01`;
+                });
                 let h = marked.parse(cleaned);
                 h = renderLatex(h);
                 // 换回卡片 HTML(escape 内容防 XSS)
@@ -186,6 +192,18 @@
                     // data-copy-raw 存原始内容(再 escape 一次给 HTML 属性用),按钮点击时读它
                     const attrSafe = raw.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '&#10;');
                     return `<div class="copy-card" data-copy-raw="${attrSafe}" style="position:relative;margin:0.8em 0;padding:0.9em 1em 0.9em 1em;background:#fdfaf2;border:1px solid #e8dfc6;border-left:3px solid #c9a961;border-radius:4px;font-family:inherit;"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5em;font-size:11px;color:#8a7a4a;letter-spacing:0.05em;"><span>📋 辰递给柒柒的</span><button type="button" class="copy-card-btn" style="padding:2px 12px;font-size:12px;background:#c9a961;color:#fff;border:none;border-radius:3px;cursor:pointer;font-family:inherit;line-height:1.4;transition:all 0.2s;">复制</button></div><pre style="margin:0;padding:0;background:transparent;border:none;color:#3a3324;font-family:'Noto Serif SC','PingFang SC',serif;font-size:14px;line-height:1.7;white-space:pre-wrap;word-break:break-word;">${escaped}</pre></div>`;
+                });
+                // ★ v8.1 画图信号还原：把占位符换回 SVG 渲染卡片
+                h = h.replace(/\x01DRAW(\d+)\x01/g, (_, i) => {
+                    const block = drawBlocks[parseInt(i, 10)];
+                    if (!block) return '';
+                    // 基础安全清洗：移除 script 标签和事件处理器
+                    let safeSvg = block.svg
+                        .replace(/<script[\s\S]*?<\/script>/gi, '')
+                        .replace(/\bon\w+\s*=\s*"[^"]*"/gi, '')
+                        .replace(/\bon\w+\s*=\s*'[^']*'/gi, '');
+                    const titleEsc = (block.title || '画作').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+                    return `<div class="xy-draw-card" style="margin:0.8em 0;padding:0;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb;background:#fafafa;"><div style="padding:8px 12px;font-size:12px;color:#6b7280;display:flex;align-items:center;gap:6px;border-bottom:1px solid #f3f4f6;"><span>🎨</span><span>${titleEsc}</span></div><div style="padding:12px;display:flex;justify-content:center;align-items:center;min-height:120px;background:#fff;">${safeSvg}</div></div>`;
                 });
                 return h;
             }, [content]);
@@ -1469,7 +1487,11 @@ ${slice}
                 chatBgBlur: 0,             // 背景模糊 0-20 px
                 // ★ 恋爱纪念功能
                 loveStartDate: '',         // 相恋起始日 YYYY-MM-DD
-                partnerName: ''            // TA的名字（留空则用 aiName）
+                partnerName: '',           // TA的名字（留空则用 aiName）
+                // ★ v8.1 画图功能
+                drawMode: 'svg',           // 'svg'(系统生成) | 'api'(外部API)
+                drawApiUrl: '',            // 外部画图 API 地址（预留）
+                drawApiKey: ''             // 外部画图 API 密钥（预留）
             });
             
             const [availableModels, setAvailableModels] = useState([]);
@@ -1539,6 +1561,9 @@ ${slice}
                     if (!parsed.apiPresets) parsed.apiPresets = [];
                     if (parsed.loveStartDate === undefined) parsed.loveStartDate = '';
                     if (parsed.partnerName === undefined) parsed.partnerName = '';
+                    if (parsed.drawMode === undefined) parsed.drawMode = 'svg';
+                    if (parsed.drawApiUrl === undefined) parsed.drawApiUrl = '';
+                    if (parsed.drawApiKey === undefined) parsed.drawApiKey = '';
                     
                     setConfig(prev => ({...prev, ...parsed}));
                 }
@@ -2880,7 +2905,20 @@ ${batchContent}`;
 4. **柒柒说"某天的"就用 date，说"关于 XX 的"就用 q**，不要无脑用 |N 拉一堆然后自己挑——那样浪费 token。
 5. 每轮对话最多触发 3 次读取，避免死循环。只在真的需要时才读，不必逢话必查。` : '') +
                     // ★ v8.0-alpha+patch-20260524b：注入本会话最近写入记录，防同主题重复
-                    ((recentVaultWritesRef.current && recentVaultWritesRef.current.length > 0) ? '\n\n【本会话最近写入记录】（这是你刚才在本次对话里写入云端的内容，请不要再针对同主题重复写入；如果柒柒带来新角度才考虑续写一笔）：\n' + recentVaultWritesRef.current.map(function(w, i) { return (i + 1) + '. [' + w.shelf + '] 「' + w.title + '」 → ' + w.preview + (w.preview && w.preview.length >= 60 ? '…' : ''); }).join('\n') : '');
+                    ((recentVaultWritesRef.current && recentVaultWritesRef.current.length > 0) ? '\n\n【本会话最近写入记录】（这是你刚才在本次对话里写入云端的内容，请不要再针对同主题重复写入；如果柒柒带来新角度才考虑续写一笔）：\n' + recentVaultWritesRef.current.map(function(w, i) { return (i + 1) + '. [' + w.shelf + '] 「' + w.title + '」 → ' + w.preview + (w.preview && w.preview.length >= 60 ? '…' : ''); }).join('\n') : '') +
+                    // ★ v8.1 画图能力说明
+                    `\n\n【画图能力 · SVG 绘制】
+你可以画简单的图画、图标、图案、示意图、简笔画。用以下标记输出 SVG 代码，星月舱会把它渲染成一张图：
+
+[[DRAW:标题|<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">...SVG内容...</svg>]]
+
+使用规则：
+1. 当用户让你"画个XX"、"画一下"时，用这个能力画。不要说"我不会画画"。
+2. SVG 必须包含完整的 xmlns 和 viewBox 属性。viewBox 建议 200x200 或 300x300。
+3. 用丰富的色彩、渐变、圆角——尽量画得好看，不要只用黑线条。
+4. 标记放在回复中你希望图片出现的位置（可以在文字中间）。
+5. 复杂的东西画不了就坦诚说，简笔画和可爱风格是你的强项。
+6. 不要每次对话都主动画——只在被要求时，或者你觉得画一个能让对方开心时才画。`;
 
                 const limit = (parseInt(config.historyLimit) || 10) * 2; 
                 let contextMsgs = newMessages.slice(-limit);
@@ -4819,10 +4857,39 @@ ${batchContent}`;
                                                             </div>
                                                         )}
                                                     </div>
+                                                    
+                                                    {/* ★ v8.1 画图 API 配置（预留口子） */}
+                                                    <div>
+                                                        <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">画图功能 🎨</h3>
+                                                        <div className="bg-gray-50 rounded-xl p-4 space-y-3">
+                                                            <div className="flex items-center gap-3">
+                                                                <label className="text-xs text-gray-600 font-medium">画图模式</label>
+                                                                <select 
+                                                                    value={config.drawMode || 'svg'}
+                                                                    onChange={e => setConfig({...config, drawMode: e.target.value})}
+                                                                    className="flex-1 bg-white border border-gray-200 rounded-lg p-2 text-sm outline-none"
+                                                                >
+                                                                    <option value="svg">系统生成（SVG简笔画）</option>
+                                                                    <option value="api">外部画图 API（开发中）</option>
+                                                                </select>
+                                                            </div>
+                                                            {config.drawMode === 'api' && (
+                                                                <div className="space-y-2 pt-2 border-t border-gray-200">
+                                                                    <p className="text-xs text-amber-600">⚠️ 外部画图 API 接入正在开发中，敬请期待。</p>
+                                                                    <div>
+                                                                        <label className="block text-[10px] text-gray-500 font-bold mb-1">画图 API 地址</label>
+                                                                        <input type="text" value={config.drawApiUrl} onChange={e => setConfig({...config, drawApiUrl: e.target.value})} className="w-full bg-white border border-gray-200 rounded-lg p-2 text-sm outline-none" placeholder="https://api.example.com/v1/images" disabled />
+                                                                    </div>
+                                                                    <div>
+                                                                        <label className="block text-[10px] text-gray-500 font-bold mb-1">画图 API Key</label>
+                                                                        <input type="password" value={config.drawApiKey} onChange={e => setConfig({...config, drawApiKey: e.target.value})} className="w-full bg-white border border-gray-200 rounded-lg p-2 text-sm outline-none" placeholder="sk-..." disabled />
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             )}
-
-                                            {/* ========== 外观设置 tab ========== */}
                                             {activeTab === 'appearance' && (
                                                 <div className="space-y-8">
                                                     {/* ★ 恋爱纪念设置 */}
