@@ -532,7 +532,7 @@
                 return h.toString(36);
             };
             const hasVaultPassword = () => !!localStorage.getItem('xingchen_vault_pwd_hash');
-            // ★ 是否为主人设备（柒柒输入"星辰闪耀✨"激活的设备）
+            // ★ 是否为主人设备（历史标记，暗号触发已移除，后续改为设置页配置）
             // 用一个独立 key，不容易被无心翻到
             const isOwnerDevice = () => localStorage.getItem('xingchen_device_owner') === 'qiqi';
             
@@ -1466,7 +1466,10 @@ ${slice}
                 userBubbleCustom: '#dbeafe',
                 chatBgImage: '',           // base64 或预设 id "preset:xxx"
                 chatBgOpacity: 0.25,       // 背景透明度 0-1
-                chatBgBlur: 0              // 背景模糊 0-20 px
+                chatBgBlur: 0,             // 背景模糊 0-20 px
+                // ★ 恋爱纪念功能
+                loveStartDate: '',         // 相恋起始日 YYYY-MM-DD
+                partnerName: ''            // TA的名字（留空则用 aiName）
             });
             
             const [availableModels, setAvailableModels] = useState([]);
@@ -1534,6 +1537,8 @@ ${slice}
                     }
                     if (!parsed.anniversaries) parsed.anniversaries = { '01-01': '元旦', '02-14': '情人节', '05-20': '520纪念日', '12-25': '圣诞节' };
                     if (!parsed.apiPresets) parsed.apiPresets = [];
+                    if (parsed.loveStartDate === undefined) parsed.loveStartDate = '';
+                    if (parsed.partnerName === undefined) parsed.partnerName = '';
                     
                     setConfig(prev => ({...prev, ...parsed}));
                 }
@@ -3548,16 +3553,7 @@ ${batchContent}`;
             const handleSend = async () => {
                 if (!input.trim() && attachments.length === 0) return;
                 
-                // ★★★ 星辰记忆仓激活暗号识别 ★★★
-                // 柒柒在聊天框输入"星辰闪耀✨"或"星辰闪耀"，标记这台设备为主人设备
-                // 标记后，星辰记忆仓 tab 会显示真书房（而非伪装的"开发中"页）
                 const trimmedInput = input.trim();
-                if (trimmedInput === '星辰闪耀✨' || trimmedInput === '星辰闪耀') {
-                    localStorage.setItem('xingchen_device_owner', 'qiqi');
-                    setInput('');
-                    showToast('🌙 星月交辉✨💫 这台设备已被柒柒标记为主人设备', 4000);
-                    return;  // 拦截不发到 API
-                }
                 
                 if (!config.apiKey) { setSettingsOpen(true); setActiveTab('general'); setError('请先配置 API Key'); return; }
                 const activeSessionId = currentSessionId || (() => { const newId = Date.now().toString(); setCurrentSessionId(newId); currentSessionIdRef.current = newId; return newId; })();
@@ -4272,9 +4268,84 @@ ${batchContent}`;
                             {/* ★ 背景图放在主聊天区的定位上下文里（不新增容器层） */}
                             <div className="max-w-3xl mx-auto py-6 relative z-10" style={{paddingBottom: 'calc(12rem + env(safe-area-inset-bottom))'}}>
                                 {messages.length === 0 ? (
-                                    <div className="mt-20 flex flex-col items-center justify-center animate-fade-in px-4 text-center">
-                                        <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent text-4xl md:text-5xl font-semibold mb-6 tracking-tight">欢迎回家✨...</div>
-                                        <p className="text-gray-500 mb-12 max-w-md">输入框极其纯净。发送网址会自动读取，时间流逝也会被安静感知。</p>
+                                    <div className="mt-16 flex flex-col items-center justify-center animate-fade-in px-4 text-center">
+                                        <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent text-3xl md:text-4xl font-semibold mb-4 tracking-tight">欢迎回到星月舱 ✨</div>
+                                        
+                                        {config.loveStartDate ? (() => {
+                                            const start = new Date(config.loveStartDate);
+                                            const now = new Date();
+                                            const diffDays = Math.floor((now - start) / 86400000);
+                                            const displayName = config.partnerName || config.aiName || 'TA';
+                                            
+                                            // ★ 自动里程碑
+                                            const milestones = [100,200,300,365,400,500,520,600,700,730,800,900,1000,1095,1200,1314,1500,1826,2000,2555,3000,3650];
+                                            const todayMilestone = milestones.includes(diffDays) ? diffDays : null;
+                                            
+                                            // ★ 下一个里程碑
+                                            const nextMilestone = milestones.find(m => m > diffDays);
+                                            const daysToNextMilestone = nextMilestone ? nextMilestone - diffDays : null;
+                                            
+                                            // ★ 纪念日检查（config.anniversaries）
+                                            const monthDayStr = `${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+                                            const todayAnniversary = config.anniversaries?.[monthDayStr];
+                                            
+                                            // ★ 下一个日历纪念日
+                                            let nextAnniversary = null;
+                                            let daysToNextAnniversary = null;
+                                            if (config.anniversaries) {
+                                                const sortedAnni = Object.entries(config.anniversaries).sort(([a],[b]) => a.localeCompare(b));
+                                                for (const [md, name] of sortedAnni) {
+                                                    const [m, d] = md.split('-').map(Number);
+                                                    let anniDate = new Date(now.getFullYear(), m-1, d);
+                                                    if (anniDate <= now) anniDate = new Date(now.getFullYear()+1, m-1, d);
+                                                    const diff = Math.ceil((anniDate - now) / 86400000);
+                                                    if (diff > 0 && (!daysToNextAnniversary || diff < daysToNextAnniversary)) {
+                                                        daysToNextAnniversary = diff;
+                                                        nextAnniversary = name;
+                                                    }
+                                                }
+                                            }
+                                            
+                                            return (
+                                                <div className="space-y-4 mb-8">
+                                                    {/* 相恋天数 */}
+                                                    <p className="text-gray-600 text-base">
+                                                        你与<span className="font-semibold text-purple-600">{displayName}</span>已相恋
+                                                    </p>
+                                                    <div className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 bg-clip-text text-transparent">
+                                                        {diffDays} <span className="text-2xl">天</span>
+                                                    </div>
+                                                    
+                                                    {/* 今日特殊提示 */}
+                                                    {todayMilestone && (
+                                                        <div className="inline-block bg-gradient-to-r from-pink-100 to-purple-100 text-pink-600 px-4 py-2 rounded-full text-sm font-medium animate-scale-in">
+                                                            🎉 今天是第 {todayMilestone} 天纪念日！
+                                                        </div>
+                                                    )}
+                                                    {todayAnniversary && (
+                                                        <div className="inline-block bg-gradient-to-r from-amber-100 to-pink-100 text-amber-600 px-4 py-2 rounded-full text-sm font-medium animate-scale-in">
+                                                            ✨ 今天是{todayAnniversary}！
+                                                        </div>
+                                                    )}
+                                                    
+                                                    {/* 下一个纪念日倒计时 */}
+                                                    {!todayMilestone && !todayAnniversary && (
+                                                        <div className="text-xs text-gray-400 space-y-1">
+                                                            {nextAnniversary && daysToNextAnniversary && (
+                                                                <p>距离<span className="text-purple-500 font-medium">{nextAnniversary}</span>还有 {daysToNextAnniversary} 天</p>
+                                                            )}
+                                                            {nextMilestone && daysToNextMilestone && (
+                                                                <p>距离第 <span className="text-pink-500 font-medium">{nextMilestone}</span> 天还有 {daysToNextMilestone} 天</p>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })() : (
+                                            <p className="text-gray-400 text-sm mb-8">在「外观 ✨」设置中填写相恋起始日，这里会展示你们的故事 💕</p>
+                                        )}
+                                        
+                                        <p className="text-gray-400 text-xs max-w-md">输入框极其纯净。发送网址会自动读取，时间流逝也会被安静感知。</p>
                                     </div>
                                 ) : (() => {
                                     // ★ 判断当前背景是否深色，以便切换文字颜色
@@ -4529,7 +4600,7 @@ ${batchContent}`;
                                             <button onClick={() => setActiveTab('memory')} className={`flex-shrink-0 whitespace-nowrap w-auto md:w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === 'memory' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-600 hover:bg-gray-100'}`}>记忆管理</button>
                                             {/* ★ 星辰记忆仓入口 —— 用月光金色调，跟其他 tab 区分开 */}
                                             <button onClick={() => setActiveTab('vault')} className={`flex-shrink-0 whitespace-nowrap w-auto md:w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === 'vault' ? 'bg-gradient-to-r from-slate-800 to-slate-700 text-amber-200 shadow-md' : 'text-amber-700 hover:bg-amber-50'}`}>
-                                                ✨ 星辰记忆仓 {!vaultUnlocked && <span className="opacity-60">🔒</span>}
+                                                ☁️ 云书房 {!vaultUnlocked && <span className="opacity-60">🔒</span>}
                                             </button>
                                             <button onClick={() => setActiveTab('backup')} className={`flex-shrink-0 whitespace-nowrap w-auto md:w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === 'backup' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-600 hover:bg-gray-100'}`}>数据备份</button>
                                         </div>
@@ -4755,6 +4826,37 @@ ${batchContent}`;
                                             {/* ========== 外观设置 tab ========== */}
                                             {activeTab === 'appearance' && (
                                                 <div className="space-y-8">
+                                                    {/* ★ 恋爱纪念设置 */}
+                                                    <div>
+                                                        <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">恋爱纪念 💕</h3>
+                                                        <p className="text-xs text-gray-500 mb-3">设置后，首页会展示你们的相恋天数和纪念日倒计时。</p>
+                                                        <div className="space-y-3">
+                                                            <div>
+                                                                <label className="block text-xs text-gray-600 font-medium mb-1">TA的名字</label>
+                                                                <input 
+                                                                    type="text"
+                                                                    value={config.partnerName || ''}
+                                                                    onChange={e => setConfig({...config, partnerName: e.target.value})}
+                                                                    placeholder={config.aiName || '留空则显示"TA"'}
+                                                                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-blue-400 focus:ring-1 focus:ring-blue-100 outline-none"
+                                                                />
+                                                            </div>
+                                                            <div>
+                                                                <label className="block text-xs text-gray-600 font-medium mb-1">相恋起始日</label>
+                                                                <input 
+                                                                    type="date"
+                                                                    value={config.loveStartDate || ''}
+                                                                    onChange={e => setConfig({...config, loveStartDate: e.target.value})}
+                                                                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-blue-400 focus:ring-1 focus:ring-blue-100 outline-none"
+                                                                />
+                                                                {config.loveStartDate && (() => {
+                                                                    const days = Math.floor((new Date() - new Date(config.loveStartDate)) / 86400000);
+                                                                    return days > 0 ? <p className="text-xs text-pink-500 mt-1">已经在一起 {days} 天了 ✨</p> : null;
+                                                                })()}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
                                                     {/* 气泡色 */}
                                                     <div>
                                                         <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">你的气泡颜色</h3>
@@ -5137,14 +5239,14 @@ ${batchContent}`;
                                                             color: '#f5f1e8',
                                                             letterSpacing: '0.05em',
                                                             marginBottom: '0.4rem'
-                                                        }}>辰的<span style={{color: '#c9a961', fontWeight: 400}}>书房</span></h2>
+                                                        }}>云<span style={{color: '#c9a961', fontWeight: 400}}>书房</span></h2>
                                                         <div style={{
                                                             fontFamily: '"Cormorant Garamond", "Noto Serif SC", serif',
                                                             fontStyle: 'italic',
                                                             fontSize: '0.85rem',
                                                             color: '#d4b87a',
                                                             opacity: 0.7
-                                                        }}>星辰记忆仓 · Stellar Memory Vault</div>
+                                                        }}>Cloud Memory Vault</div>
                                                     </div>
 
                                                     <div style={{padding: '2rem 1.5rem'}}>
