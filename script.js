@@ -2925,7 +2925,9 @@ ${batchContent}`;
 - SVG 必须包含完整的 xmlns 和 viewBox 属性。
 - 标记放在回复中你希望图片出现的位置。
 - 写实场景或高精度需求超出 SVG 能力时坦诚说明。可爱风、扁平风、装饰风是你的强项。
-- 不要每次对话都主动画——只在被要求时，或者你觉得画一个能让柒柒开心时才画。`;
+- 不要每次对话都主动画——只在被要求时，或者你觉得画一个能让柒柒开心时才画。
+
+⚠️【严禁幻觉】你没有外部画图API、没有DALL-E、没有Imagen、没有任何图片生成接口。你唯一的画图方式就是上面的 [[DRAW:标题|SVG代码]] 格式。绝对不要输出 <img> 标签、不要输出 ![image](...) markdown 图片、不要假装"正在生成图片"或"绘图已完成"。如果你发现自己想输出一个图片URL或img标签——停下来，那是幻觉，改用 [[DRAW:...|<svg>...</svg>]] 格式手写 SVG。`;
 
                 const limit = (parseInt(config.historyLimit) || 10) * 2; 
                 let contextMsgs = newMessages.slice(-limit);
