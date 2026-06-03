@@ -177,15 +177,15 @@
                     copyBlocks.push(inner.trim());
                     return `\x01COPY${copyBlocks.length - 1}\x01`;
                 });
-                // ★ v8.1 画图信号 [[DRAW:标题|SVG代码]] 提取
+                // ★ v8.1 画图信号 [[DRAW:标题|SVG代码]] 提取 —— 兼容中文括号【】
                 const drawBlocks = [];
-                cleaned = cleaned.replace(/\[\[DRAW:([^|\]]*)\|([\s\S]*?)\]\]/g, (_, title, svg) => {
+                cleaned = cleaned.replace(/(?:\[\[|【)DRAW[:：]([^|\]】]*)(?:\||｜)([\s\S]*?)(?:\]\]|】)/g, (_, title, svg) => {
                     drawBlocks.push({ title: title.trim(), svg: svg.trim() });
                     return `\x01DRAW${drawBlocks.length - 1}\x01`;
                 });
-                // ★ v8.2 AI绘图信号 [[IMG:描述|英文prompt]] 提取 (Pollinations)
+                // ★ v8.2 AI绘图信号 [[IMG:描述|英文prompt]] 提取 (Pollinations) —— 兼容中文括号【】
                 const imgBlocks = [];
-                cleaned = cleaned.replace(/\[\[IMG:([^|\]]*)\|([\s\S]*?)\]\]/g, (_, desc, prompt) => {
+                cleaned = cleaned.replace(/(?:\[\[|【)IMG[:：]([^|\]】]*)(?:\||｜)([\s\S]*?)(?:\]\]|】)/g, (_, desc, prompt) => {
                     imgBlocks.push({ desc: desc.trim(), prompt: prompt.trim() });
                     return `\x01IMG${imgBlocks.length - 1}\x01`;
                 });
