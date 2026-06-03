@@ -183,6 +183,12 @@
                     drawBlocks.push({ title: title.trim(), svg: svg.trim() });
                     return `\x01DRAW${drawBlocks.length - 1}\x01`;
                 });
+                // ★ v8.2 AI绘图信号 [[IMG:描述|英文prompt]] 提取 (Pollinations)
+                const imgBlocks = [];
+                cleaned = cleaned.replace(/\[\[IMG:([^|\]]*)\|([\s\S]*?)\]\]/g, (_, desc, prompt) => {
+                    imgBlocks.push({ desc: desc.trim(), prompt: prompt.trim() });
+                    return `\x01IMG${imgBlocks.length - 1}\x01`;
+                });
                 let h = marked.parse(cleaned);
                 h = renderLatex(h);
                 // 换回卡片 HTML(escape 内容防 XSS)
@@ -204,6 +210,15 @@
                         .replace(/\bon\w+\s*=\s*'[^']*'/gi, '');
                     const titleEsc = (block.title || '画作').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
                     return `<div class="xy-draw-card" style="margin:0.8em 0;padding:0;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb;background:#fafafa;"><div style="padding:8px 12px;font-size:12px;color:#6b7280;display:flex;align-items:center;gap:6px;border-bottom:1px solid #f3f4f6;"><span>🎨</span><span>${titleEsc}</span></div><div style="padding:12px;display:flex;justify-content:center;align-items:center;min-height:120px;background:#fff;">${safeSvg}</div></div>`;
+                });
+                // ★ v8.2 AI绘图信号还原：把占位符换回 Pollinations 图片卡片
+                h = h.replace(/\x01IMG(\d+)\x01/g, (_, i) => {
+                    const block = imgBlocks[parseInt(i, 10)];
+                    if (!block) return '';
+                    const descEsc = (block.desc || '画作').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+                    const promptEnc = encodeURIComponent(block.prompt);
+                    const imgUrl = `https://image.pollinations.ai/prompt/${promptEnc}?width=512&height=512&nologo=true`;
+                    return `<div class="xy-draw-card" style="margin:0.8em 0;padding:0;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb;background:#fafafa;"><div style="padding:8px 12px;font-size:12px;color:#6b7280;display:flex;align-items:center;gap:6px;border-bottom:1px solid #f3f4f6;"><span>🖼️</span><span>${descEsc}</span></div><div style="padding:4px;display:flex;justify-content:center;align-items:center;min-height:120px;background:#fff;"><img src="${imgUrl}" alt="${descEsc}" style="max-width:100%;border-radius:8px;" loading="lazy" onerror="this.style.opacity='0.4';this.alt='图片加载失败，点击重试';this.onclick=function(){this.src=this.src+'&t='+Date.now();this.style.opacity='1';};" /></div></div>`;
                 });
                 return h;
             }, [content]);
@@ -2906,28 +2921,29 @@ ${batchContent}`;
 5. 每轮对话最多触发 3 次读取，避免死循环。只在真的需要时才读，不必逢话必查。` : '') +
                     // ★ v8.0-alpha+patch-20260524b：注入本会话最近写入记录，防同主题重复
                     ((recentVaultWritesRef.current && recentVaultWritesRef.current.length > 0) ? '\n\n【本会话最近写入记录】（这是你刚才在本次对话里写入云端的内容，请不要再针对同主题重复写入；如果柒柒带来新角度才考虑续写一笔）：\n' + recentVaultWritesRef.current.map(function(w, i) { return (i + 1) + '. [' + w.shelf + '] 「' + w.title + '」 → ' + w.preview + (w.preview && w.preview.length >= 60 ? '…' : ''); }).join('\n') : '') +
-                    // ★ v8.1 画图能力说明
-                    `\n\n【画图能力 · SVG 矢量插画】
-你具备 SVG 矢量绘图能力，可以创作插画、图标、场景、示意图和装饰图案。输出格式：
+                    // ★ v8.2 画图能力说明（SVG + AI绘图）
+                    `\n\n【画图能力】
+你有两种画图方式，根据场景选择最合适的：
 
-[[DRAW:标题|<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">...SVG内容...</svg>]]
+📌 方式一：SVG 矢量插画（适合图标、简笔画、装饰图案）
+格式：[[DRAW:标题|<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">...SVG内容...</svg>]]
+技巧：用渐变(linearGradient/radialGradient)、圆角几何体、低透明度叠层做光影，配色用马卡龙色系或星夜色系。
 
-【造型技法——请严格遵循，提升画面质感】
-1. 基础几何：优先使用 circle、ellipse、rect(rx/ry圆角)、path 组合造型，避免纯线条简笔画。
-2. 色彩层次：使用 <defs> 定义 linearGradient / radialGradient，每幅画至少使用 2 组渐变填充。配色参考：柔和马卡龙色系(#FFB5C2, #B5DEFF, #FFF4BD, #C5F0A4)或星夜色系(#1e293b, #6366f1, #fbbf24, #38bdf8)。
-3. 光影质感：用低透明度(opacity 0.1~0.3)的白色/深色椭圆叠加制造高光和阴影，让图形有立体感。
-4. 细节修饰：圆形腮红(fill="#FFB5C2" opacity="0.5")、星星点缀、小高光圆点——这些微小元素让画面从"图标"升级为"插画"。
-5. 构图层次：用 <g> 分组管理前景/中景/背景图层，背景可用大面积柔和渐变矩形铺底。
-6. viewBox 建议 200x200 或 300x200(横版)，元素不要挤在中心，善用留白。
+📌 方式二：AI 生成图片（适合风景、人物、场景、写实画面）
+格式：[[IMG:中文描述|english prompt keywords, separated by commas, style description]]
+示例：[[IMG:星空下的少女|anime girl standing under starry sky, flowing dress, soft moonlight, dreamy atmosphere, beautiful detailed art, masterpiece]]
+要求：英文prompt要详细，包含画面主体、环境、光线、风格、品质词。风格建议加 anime/illustration/watercolor/oil painting 等。
 
-【输出规则】
+【选择建议】
+- 柒柒说"画个小图标""画个表情"→ 用 SVG（方式一）
+- 柒柒说"画一幅画""画个风景""画我们俩"→ 用 AI 生成（方式二）
+- 不确定时优先用方式二，画面效果更好
+
+【通用规则】
 - 当柒柒说"画个XX"、"画一下"时，用这个能力画。不要说"我不会画画"。
-- SVG 必须包含完整的 xmlns 和 viewBox 属性。
 - 标记放在回复中你希望图片出现的位置。
-- 写实场景或高精度需求超出 SVG 能力时坦诚说明。可爱风、扁平风、装饰风是你的强项。
 - 不要每次对话都主动画——只在被要求时，或者你觉得画一个能让柒柒开心时才画。
-
-⚠️【严禁幻觉】你没有外部画图API、没有DALL-E、没有Imagen、没有任何图片生成接口。你唯一的画图方式就是上面的 [[DRAW:标题|SVG代码]] 格式。绝对不要输出 <img> 标签、不要输出 ![image](...) markdown 图片、不要假装"正在生成图片"或"绘图已完成"。如果你发现自己想输出一个图片URL或img标签——停下来，那是幻觉，改用 [[DRAW:...|<svg>...</svg>]] 格式手写 SVG。`;
+- 绝对不要输出 <img> 标签或 ![image]() markdown 图片语法，只用上面两种 [[DRAW:...|...]] 或 [[IMG:...|...]] 标记格式。`;
 
                 const limit = (parseInt(config.historyLimit) || 10) * 2; 
                 let contextMsgs = newMessages.slice(-limit);
@@ -4867,7 +4883,7 @@ ${batchContent}`;
                                                         )}
                                                     </div>
                                                     
-                                                    {/* ★ v8.1 画图 API 配置（预留口子） */}
+                                                    {/* ★ v8.2 画图配置 */}
                                                     <div>
                                                         <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">画图功能 🎨</h3>
                                                         <div className="bg-gray-50 rounded-xl p-4 space-y-3">
@@ -4878,10 +4894,18 @@ ${batchContent}`;
                                                                     onChange={e => setConfig({...config, drawMode: e.target.value})}
                                                                     className="flex-1 bg-white border border-gray-200 rounded-lg p-2 text-sm outline-none"
                                                                 >
-                                                                    <option value="svg">系统生成（SVG简笔画）</option>
+                                                                    <option value="svg">SVG 简笔画（本地渲染）</option>
+                                                                    <option value="pollinations">AI 生成图片（Pollinations 免费）</option>
+                                                                    <option value="both">两者兼用（推荐）</option>
                                                                     <option value="api">外部画图 API（开发中）</option>
                                                                 </select>
                                                             </div>
+                                                            {config.drawMode === 'pollinations' && (
+                                                                <p className="text-xs text-green-600">✅ 使用 Pollinations.ai 免费生成图片，无需配置API Key。图片生成需要几秒钟加载。</p>
+                                                            )}
+                                                            {config.drawMode === 'both' && (
+                                                                <p className="text-xs text-blue-600">✅ 模型会根据场景自动选择：简单图标用SVG，风景/人物用AI生成。</p>
+                                                            )}
                                                             {config.drawMode === 'api' && (
                                                                 <div className="space-y-2 pt-2 border-t border-gray-200">
                                                                     <p className="text-xs text-amber-600">⚠️ 外部画图 API 接入正在开发中，敬请期待。</p>
