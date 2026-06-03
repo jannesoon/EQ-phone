@@ -213,7 +213,31 @@
                 });
                 // ★ v8.2 AI绘图信号还原：把占位符换回 Pollinations 图片卡片（含自动重试）
                 if (imgBlocks.length > 0) {
-                    h = `<style>@keyframes spin{to{transform:rotate(360deg)}}</style>` + h;
+                    h = `<style>@keyframes spin{to{transform:rotate(360deg)}}.xy-img-spinner{width:40px;height:40px;border:3px solid #e5e7eb;border-top-color:#6366f1;border-radius:50%;animation:spin 1s linear infinite;margin:0 auto;}</style>` + h;
+                }
+                // 注册全局图片重试函数(只注册一次)
+                if (!window._xyImgRetry) {
+                    window._xyImgRetry = function(uid) {
+                        var img = document.getElementById(uid);
+                        var loader = document.getElementById(uid + '_loader');
+                        if (!img || !loader) return;
+                        var r = parseInt(img.dataset.retry) || 0;
+                        if (r < 3) {
+                            img.dataset.retry = r + 1;
+                            loader.querySelector('.xy-img-status').textContent = '⏳ 排队中，第' + (r+1) + '次重试...';
+                            setTimeout(function(){ img.src = img.dataset.baseUrl + '&t=' + Date.now(); }, 3000 * (r+1));
+                        } else {
+                            loader.innerHTML = '<div class="xy-img-status" style="color:#ef4444;cursor:pointer;" onclick="window._xyImgReload(\'' + uid + '\')">⚠️ 图片加载失败，点击重试</div>';
+                        }
+                    };
+                    window._xyImgReload = function(uid) {
+                        var img = document.getElementById(uid);
+                        var loader = document.getElementById(uid + '_loader');
+                        if (!img || !loader) return;
+                        img.dataset.retry = '0';
+                        loader.innerHTML = '<div class="xy-img-status" style="margin-bottom:8px;">🎨 重新加载中...</div><div class="xy-img-spinner"></div>';
+                        img.src = img.dataset.baseUrl + '&t=' + Date.now();
+                    };
                 }
                 h = h.replace(/\x01IMG(\d+)\x01/g, (_, i) => {
                     const block = imgBlocks[parseInt(i, 10)];
@@ -225,12 +249,11 @@
                     const uid = 'polimg_' + Date.now() + '_' + i;
                     return `<div class="xy-draw-card" style="margin:0.8em 0;padding:0;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb;background:#fafafa;">` +
                         `<div style="padding:8px 12px;font-size:12px;color:#6b7280;display:flex;align-items:center;gap:6px;border-bottom:1px solid #f3f4f6;"><span>🖼️</span><span>${descEsc}</span></div>` +
-                        `<div id="${uid}_wrap" style="padding:4px;display:flex;flex-direction:column;justify-content:center;align-items:center;min-height:160px;background:#fff;">` +
-                            `<div id="${uid}_loader" style="text-align:center;color:#9ca3af;font-size:12px;"><div style="margin-bottom:8px;">🎨 AI 正在绘制中...</div><div style="width:40px;height:40px;border:3px solid #e5e7eb;border-top-color:#6366f1;border-radius:50%;animation:spin 1s linear infinite;margin:0 auto;"></div></div>` +
-                            `<img id="${uid}" src="${imgUrl}" alt="${descEsc}" style="max-width:100%;border-radius:8px;display:none;" loading="lazy" data-retry="0" data-max-retry="3" data-base-url="${imgUrl}" ` +
+                        `<div style="padding:4px;display:flex;flex-direction:column;justify-content:center;align-items:center;min-height:160px;background:#fff;">` +
+                            `<div id="${uid}_loader" style="text-align:center;color:#9ca3af;font-size:12px;"><div class="xy-img-status" style="margin-bottom:8px;">🎨 AI 正在绘制中...</div><div class="xy-img-spinner"></div></div>` +
+                            `<img id="${uid}" src="${imgUrl}" alt="${descEsc}" style="max-width:100%;border-radius:8px;display:none;" loading="lazy" data-retry="0" data-base-url="${imgUrl}" ` +
                             `onload="this.style.display='block';document.getElementById('${uid}_loader').style.display='none';" ` +
-                            `onerror="var r=parseInt(this.dataset.retry)||0;if(r<3){this.dataset.retry=r+1;var self=this;document.getElementById('${uid}_loader').querySelector('div').textContent='⏳ 排队中，第'+(r+1)+'次重试...';setTimeout(function(){self.src=self.dataset.baseUrl+'&t='+Date.now();},3000*(r+1));}else{document.getElementById('${uid}_loader').innerHTML='<div style=\\'color:#ef4444;cursor:pointer\\' onclick=\\'var img=document.getElementById(\\\"${uid}\\\");img.dataset.retry=0;img.src=img.dataset.baseUrl+\"&t=\"+Date.now();this.parentElement.innerHTML=\"<div style=\\\"margin-bottom:8px;\\\">🎨 重新加载中...</div><div style=\\\"width:40px;height:40px;border:3px solid #e5e7eb;border-top-color:#6366f1;border-radius:50%;animation:spin 1s linear infinite;margin:0 auto;\\\"></div>\";\\'>⚠️ 图片加载失败，点击重试</div>';}" ` +
-                            `/>` +
+                            `onerror="window._xyImgRetry('${uid}')" />` +
                         `</div></div>`;
                 });
                 return h;
