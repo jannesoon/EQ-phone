@@ -224,7 +224,9 @@
                         var r = parseInt(img.dataset.retry) || 0;
                         if (r < 3) {
                             img.dataset.retry = r + 1;
-                            loader.querySelector('.xy-img-status').textContent = '⏳ 排队中，第' + (r+1) + '次重试...';
+                            img.dataset.ts = Date.now();
+                            var status = loader.querySelector('.xy-img-status');
+                            if (status) status.textContent = '⏳ 排队中，第' + (r+1) + '次重试...';
                             setTimeout(function(){ img.src = img.dataset.baseUrl + '&t=' + Date.now(); }, 3000 * (r+1));
                         } else {
                             loader.innerHTML = '<div class="xy-img-status" style="color:#ef4444;cursor:pointer;" onclick="window._xyImgReload(\'' + uid + '\')">⚠️ 图片加载失败，点击重试</div>';
@@ -235,9 +237,26 @@
                         var loader = document.getElementById(uid + '_loader');
                         if (!img || !loader) return;
                         img.dataset.retry = '0';
+                        img.dataset.ts = Date.now();
+                        loader.style.display = '';
                         loader.innerHTML = '<div class="xy-img-status" style="margin-bottom:8px;">🎨 重新加载中...</div><div class="xy-img-spinner"></div>';
+                        img.style.display = 'none';
                         img.src = img.dataset.baseUrl + '&t=' + Date.now();
                     };
+                    // ★ 超时看门狗：每10秒扫描一次，超过30秒未加载完成的图片自动触发重试
+                    setInterval(function() {
+                        var imgs = document.querySelectorAll('img[id^="polimg_"][data-ts]');
+                        var now = Date.now();
+                        imgs.forEach(function(img) {
+                            if (img.style.display !== 'none') return; // 已加载成功
+                            var ts = parseInt(img.dataset.ts) || 0;
+                            if (ts > 0 && (now - ts) > 30000) {
+                                console.log('[画图超时] ' + img.id + ' 超过30秒未响应，触发重试');
+                                img.dataset.ts = now;
+                                window._xyImgRetry(img.id);
+                            }
+                        });
+                    }, 10000);
                 }
                 h = h.replace(/\x01IMG(\d+)\x01/g, (_, i) => {
                     const block = imgBlocks[parseInt(i, 10)];
@@ -251,8 +270,8 @@
                         `<div style="padding:8px 12px;font-size:12px;color:#6b7280;display:flex;align-items:center;gap:6px;border-bottom:1px solid #f3f4f6;"><span>🖼️</span><span>${descEsc}</span></div>` +
                         `<div style="padding:4px;display:flex;flex-direction:column;justify-content:center;align-items:center;min-height:160px;background:#fff;">` +
                             `<div id="${uid}_loader" style="text-align:center;color:#9ca3af;font-size:12px;"><div class="xy-img-status" style="margin-bottom:8px;">🎨 AI 正在绘制中...</div><div class="xy-img-spinner"></div></div>` +
-                            `<img id="${uid}" src="${imgUrl}" alt="${descEsc}" style="max-width:100%;border-radius:8px;display:none;" loading="lazy" data-retry="0" data-base-url="${imgUrl}" ` +
-                            `onload="this.style.display='block';document.getElementById('${uid}_loader').style.display='none';" ` +
+                            `<img id="${uid}" src="${imgUrl}" alt="${descEsc}" style="max-width:100%;border-radius:8px;display:none;" loading="lazy" data-retry="0" data-base-url="${imgUrl}" data-ts="${Date.now()}" ` +
+                            `onload="this.style.display='block';this.removeAttribute('data-ts');document.getElementById('${uid}_loader').style.display='none';" ` +
                             `onerror="window._xyImgRetry('${uid}')" />` +
                         `</div></div>`;
                 });
