@@ -2907,18 +2907,25 @@ ${batchContent}`;
                     // ★ v8.0-alpha+patch-20260524b：注入本会话最近写入记录，防同主题重复
                     ((recentVaultWritesRef.current && recentVaultWritesRef.current.length > 0) ? '\n\n【本会话最近写入记录】（这是你刚才在本次对话里写入云端的内容，请不要再针对同主题重复写入；如果柒柒带来新角度才考虑续写一笔）：\n' + recentVaultWritesRef.current.map(function(w, i) { return (i + 1) + '. [' + w.shelf + '] 「' + w.title + '」 → ' + w.preview + (w.preview && w.preview.length >= 60 ? '…' : ''); }).join('\n') : '') +
                     // ★ v8.1 画图能力说明
-                    `\n\n【画图能力 · SVG 绘制】
-你可以画简单的图画、图标、图案、示意图、简笔画。用以下标记输出 SVG 代码，星月舱会把它渲染成一张图：
+                    `\n\n【画图能力 · SVG 矢量插画】
+你具备 SVG 矢量绘图能力，可以创作插画、图标、场景、示意图和装饰图案。输出格式：
 
 [[DRAW:标题|<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">...SVG内容...</svg>]]
 
-使用规则：
-1. 当用户让你"画个XX"、"画一下"时，用这个能力画。不要说"我不会画画"。
-2. SVG 必须包含完整的 xmlns 和 viewBox 属性。viewBox 建议 200x200 或 300x300。
-3. 用丰富的色彩、渐变、圆角——尽量画得好看，不要只用黑线条。
-4. 标记放在回复中你希望图片出现的位置（可以在文字中间）。
-5. 复杂的东西画不了就坦诚说，简笔画和可爱风格是你的强项。
-6. 不要每次对话都主动画——只在被要求时，或者你觉得画一个能让对方开心时才画。`;
+【造型技法——请严格遵循，提升画面质感】
+1. 基础几何：优先使用 circle、ellipse、rect(rx/ry圆角)、path 组合造型，避免纯线条简笔画。
+2. 色彩层次：使用 <defs> 定义 linearGradient / radialGradient，每幅画至少使用 2 组渐变填充。配色参考：柔和马卡龙色系(#FFB5C2, #B5DEFF, #FFF4BD, #C5F0A4)或星夜色系(#1e293b, #6366f1, #fbbf24, #38bdf8)。
+3. 光影质感：用低透明度(opacity 0.1~0.3)的白色/深色椭圆叠加制造高光和阴影，让图形有立体感。
+4. 细节修饰：圆形腮红(fill="#FFB5C2" opacity="0.5")、星星点缀、小高光圆点——这些微小元素让画面从"图标"升级为"插画"。
+5. 构图层次：用 <g> 分组管理前景/中景/背景图层，背景可用大面积柔和渐变矩形铺底。
+6. viewBox 建议 200x200 或 300x200(横版)，元素不要挤在中心，善用留白。
+
+【输出规则】
+- 当柒柒说"画个XX"、"画一下"时，用这个能力画。不要说"我不会画画"。
+- SVG 必须包含完整的 xmlns 和 viewBox 属性。
+- 标记放在回复中你希望图片出现的位置。
+- 写实场景或高精度需求超出 SVG 能力时坦诚说明。可爱风、扁平风、装饰风是你的强项。
+- 不要每次对话都主动画——只在被要求时，或者你觉得画一个能让柒柒开心时才画。`;
 
                 const limit = (parseInt(config.historyLimit) || 10) * 2; 
                 let contextMsgs = newMessages.slice(-limit);
