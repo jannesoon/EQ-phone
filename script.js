@@ -338,7 +338,7 @@
             { id: 'green',  name: '淡绿', bg: '#dcfce7', hover: '#bbf7d0' },
         ];
 
-        const UPDATE_VERSION = "v8.0-alpha+patch-20260526-copy"; 
+        const UPDATE_VERSION = "v8.1-alpha-20260603"; 
         // ============================================
 
         // ================= IndexedDB 工具层（用于聊天记录，突破 localStorage 5MB 限制）=================
@@ -4345,7 +4345,6 @@ ${batchContent}`;
                                             <p className="text-gray-400 text-sm mb-8">在「外观 ✨」设置中填写相恋起始日，这里会展示你们的故事 💕</p>
                                         )}
                                         
-                                        <p className="text-gray-400 text-xs max-w-md">输入框极其纯净。发送网址会自动读取，时间流逝也会被安静感知。</p>
                                     </div>
                                 ) : (() => {
                                     // ★ 判断当前背景是否深色，以便切换文字颜色
@@ -5257,14 +5256,27 @@ ${batchContent}`;
                                                         {/* ============================================ */}
 
                                                         {!isOwnerDevice() && (
-                                                            // ========== 伪装页：所有非主人设备看到这个 ==========
+                                                            // ========== 云书房配置入口：所有新用户看到这个 ==========
                                                             <div style={{maxWidth: '420px', margin: '2rem auto', textAlign: 'center'}}>
-                                                                <div style={{fontSize: '2rem', marginBottom: '1rem'}}>🔐</div>
+                                                                <div style={{fontSize: '2rem', marginBottom: '1rem'}}>☁️</div>
+                                                                <h3 style={{
+                                                                    color: '#f5f1e8',
+                                                                    fontSize: '1.1rem',
+                                                                    fontWeight: 500,
+                                                                    marginBottom: '0.8rem'
+                                                                }}>连接你的云书房</h3>
+                                                                <p style={{
+                                                                    color: 'rgba(245,241,232,0.6)',
+                                                                    fontSize: '0.85rem',
+                                                                    lineHeight: '1.7',
+                                                                    marginBottom: '2rem'
+                                                                }}>云书房让 AI 拥有跨会话的长期记忆。<br/>填入你的 Supabase 项目地址和密钥即可连接。</p>
+                                                                
                                                                 <input 
-                                                                    type="password"
-                                                                    value={vaultPasswordInput}
-                                                                    onChange={(e) => setVaultPasswordInput(e.target.value)}
-                                                                    placeholder="输入访问密码"
+                                                                    type="text"
+                                                                    value={tempSupabaseUrl}
+                                                                    onChange={(e) => setTempSupabaseUrl(e.target.value)}
+                                                                    placeholder="Supabase 项目 URL"
                                                                     style={{
                                                                         width: '100%',
                                                                         padding: '0.8rem 1rem',
@@ -5272,54 +5284,81 @@ ${batchContent}`;
                                                                         border: '1px solid rgba(201,169,97,0.3)',
                                                                         borderRadius: '4px',
                                                                         color: '#f5f1e8',
-                                                                        fontSize: '0.95rem',
+                                                                        fontSize: '0.85rem',
+                                                                        marginBottom: '0.8rem',
+                                                                        outline: 'none',
+                                                                        fontFamily: 'inherit'
+                                                                    }}
+                                                                />
+                                                                <input 
+                                                                    type="password"
+                                                                    value={tempSupabaseKey}
+                                                                    onChange={(e) => setTempSupabaseKey(e.target.value)}
+                                                                    placeholder="Supabase Publishable Key（anon key）"
+                                                                    style={{
+                                                                        width: '100%',
+                                                                        padding: '0.8rem 1rem',
+                                                                        background: 'rgba(245,241,232,0.05)',
+                                                                        border: '1px solid rgba(201,169,97,0.3)',
+                                                                        borderRadius: '4px',
+                                                                        color: '#f5f1e8',
+                                                                        fontSize: '0.85rem',
                                                                         marginBottom: '1rem',
                                                                         outline: 'none',
                                                                         fontFamily: 'inherit'
                                                                     }}
                                                                 />
+                                                                
+                                                                {supabaseError && (
+                                                                    <p style={{color: '#f87171', fontSize: '0.8rem', marginBottom: '1rem'}}>{supabaseError}</p>
+                                                                )}
+                                                                
                                                                 <button 
-                                                                    onClick={() => {
-                                                                        // 任何密码都"通过"，但跳到"开发中"占位页
-                                                                        setVaultUnlocked(true);
-                                                                        setVaultPasswordInput('');
+                                                                    onClick={async () => {
+                                                                        const result = await testSupabaseConnection(tempSupabaseUrl.trim(), tempSupabaseKey.trim());
+                                                                        if (result && result.ok) {
+                                                                            localStorage.setItem('xingchen_supabase_url', tempSupabaseUrl.trim());
+                                                                            localStorage.setItem('xingchen_supabase_key', tempSupabaseKey.trim());
+                                                                            setSupabaseUrl(tempSupabaseUrl.trim());
+                                                                            setSupabaseKey(tempSupabaseKey.trim());
+                                                                            setSupabaseClient(result.client);
+                                                                            setSupabaseStatus('connected');
+                                                                            // 连接成功后自动标记为主人设备
+                                                                            localStorage.setItem('xingchen_device_owner', 'qiqi');
+                                                                            setVaultUnlocked(true);
+                                                                            showToast('☁️ 云书房已连接');
+                                                                        }
                                                                     }}
+                                                                    disabled={supabaseStatus === 'testing'}
                                                                     style={{
                                                                         width: '100%',
                                                                         padding: '0.8rem',
-                                                                        background: 'linear-gradient(135deg, #c9a961, #d4b87a)',
+                                                                        background: supabaseStatus === 'testing' ? '#666' : 'linear-gradient(135deg, #c9a961, #d4b87a)',
                                                                         color: '#1a1d2e',
                                                                         border: 'none',
                                                                         borderRadius: '4px',
                                                                         fontSize: '0.95rem',
                                                                         fontWeight: 600,
-                                                                        cursor: 'pointer',
+                                                                        cursor: supabaseStatus === 'testing' ? 'wait' : 'pointer',
                                                                         fontFamily: 'inherit',
                                                                         letterSpacing: '0.05em'
                                                                     }}
-                                                                >进入</button>
+                                                                >{supabaseStatus === 'testing' ? '连接中...' : '☁️ 连接云书房'}</button>
                                                                 
-                                                                {vaultUnlocked && (
-                                                                    <div style={{
-                                                                        marginTop: '2rem',
-                                                                        padding: '2.5rem 1.5rem',
-                                                                        background: 'rgba(245,241,232,0.04)',
-                                                                        border: '1px dashed rgba(201,169,97,0.3)',
-                                                                        borderRadius: '6px',
-                                                                        color: 'rgba(245,241,232,0.7)'
-                                                                    }}>
-                                                                        <div style={{fontSize: '2rem', marginBottom: '0.8rem'}}>🌙</div>
-                                                                        <div style={{
-                                                                            fontSize: '1rem',
-                                                                            color: '#c9a961',
-                                                                            fontWeight: 500,
-                                                                            marginBottom: '0.5rem'
-                                                                        }}>功能开发中</div>
-                                                                        <div style={{fontSize: '0.85rem', lineHeight: '1.7'}}>
-                                                                            敬请期待 ✨
-                                                                        </div>
-                                                                    </div>
-                                                                )}
+                                                                <div style={{
+                                                                    marginTop: '2rem',
+                                                                    padding: '1.2rem',
+                                                                    background: 'rgba(245,241,232,0.04)',
+                                                                    border: '1px dashed rgba(201,169,97,0.2)',
+                                                                    borderRadius: '6px',
+                                                                    color: 'rgba(245,241,232,0.5)',
+                                                                    fontSize: '0.8rem',
+                                                                    lineHeight: '1.8'
+                                                                }}>
+                                                                    <p>还没有云书房？</p>
+                                                                    <p style={{color: '#c9a961'}}>加群咨询搭建：<b>请联系作者</b></p>
+                                                                    <p style={{marginTop: '0.5rem', fontSize: '0.75rem'}}>不想使用云端？关闭此页即可，聊天记忆会保存在本地浏览器中。</p>
+                                                                </div>
                                                             </div>
                                                         )}
 
