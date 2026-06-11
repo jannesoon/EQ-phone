@@ -462,7 +462,7 @@
             { id: 'green',  name: '淡绿', bg: '#dcfce7', hover: '#bbf7d0' },
         ];
 
-        const UPDATE_VERSION = "v8.3-minimax-20260611"; 
+        const UPDATE_VERSION = "v8.3.1-minimax-20260611"; 
         // ============================================
 
         // ================= IndexedDB 工具层（用于聊天记录，突破 localStorage 5MB 限制）=================
@@ -517,16 +517,24 @@
         const _mmxCfg = { key: '', url: 'https://api.minimaxi.com/v1/image_generation', model: 'image-01', ar: '1:1' };
 
         // 调 MiniMax 文生图 API，成功返回 dataUrl（jpeg base64）
+        const MMX_VALID_AR = ['1:1', '16:9', '4:3', '3:2', '2:3', '3:4', '9:16', '21:9'];
         const xyMinimaxGenerate = async (prompt, ar) => {
             if (!_mmxCfg.key) throw new Error('未配置 MiniMax Key（设置→通用→画图功能，或复用语音 Key）');
+            // ★ v8.3.1 防御：空 prompt 发过去服务端报玄学错误（2013 missing parameter text），这里直接拦下
+            prompt = (prompt || '').trim();
+            if (!prompt) throw new Error('画图 prompt 为空（标记里 | 后面没写内容）');
+            // ★ v8.3.1 防御：非法宽高比回退默认，避免 2013
+            let finalAr = (ar || _mmxCfg.ar || '1:1').trim();
+            if (MMX_VALID_AR.indexOf(finalAr) === -1) finalAr = '1:1';
             const body = {
                 model: _mmxCfg.model || 'image-01',
                 prompt: prompt,
-                aspect_ratio: ar || _mmxCfg.ar || '1:1',
+                aspect_ratio: finalAr,
                 response_format: 'base64',
                 n: 1,
                 prompt_optimizer: true
             };
+            console.log('[星月舱 画图] → 发起生成', { url: _mmxCfg.url, model: body.model, ar: body.aspect_ratio, promptLen: prompt.length, promptHead: prompt.slice(0, 60) });
             const resp = await fetch(_mmxCfg.url || 'https://api.minimaxi.com/v1/image_generation', {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${_mmxCfg.key.trim()}`, 'Content-Type': 'application/json' },
@@ -574,7 +582,9 @@
             const img = document.getElementById(uid);
             const loader = document.getElementById(uid + '_loader');
             if (!img || !loader) return;
-            const prompt = decodeURIComponent(img.dataset.prompt || '');
+            let prompt = decodeURIComponent(img.dataset.prompt || '');
+            // ★ v8.3.1 兜底：标记里 prompt 是空的（生成时模型没写）→ 用卡片上的中文描述（alt）重画
+            if (!prompt.trim() && img.alt) prompt = img.alt;
             const imgId = img.dataset.imgid || ('mmx_' + Date.now());
             const ar = img.dataset.ar || '';
             if (!prompt) { loader.innerHTML = '<div class="xy-img-status" style="color:#ef4444;">⚠️ 缺少 prompt，无法重新生成</div>'; return; }
@@ -3151,7 +3161,7 @@ ${batchContent}`;
 格式：[[IMG:中文描述|english prompt keywords, separated by commas, style description]]
 可选：在 prompt 后追加宽高比，如 [[IMG:描述|prompt|ar=9:16]]（可用 1:1, 3:4, 4:3, 9:16, 16:9, 2:3, 3:2, 21:9，不写则用柒柒设置的默认值）
 示例：[[IMG:星空下的少女|anime girl standing under starry sky, flowing dress, soft moonlight, dreamy atmosphere, beautiful detailed art, masterpiece|ar=3:4]]
-要求：英文prompt要详细，包含画面主体、环境、光线、风格、品质词。风格建议加 anime/illustration/watercolor/oil painting 等。
+要求：英文prompt要详细，包含画面主体、环境、光线、风格、品质词。风格建议加 anime/illustration/watercolor/oil painting 等。**| 后面的 prompt 段绝对不能留空**——画面描述要写进标记里的 prompt 段，不是只写在正文里。
 注意：图片在你回复完成后才开始生成（需要几秒），生成好会直接出现在你放标记的位置，柒柒看得到，你不需要描述"图片正在生成"。` : '') +
                     ((config.drawMode === 'both' || !config.drawMode) ? `
 
@@ -3425,6 +3435,9 @@ ${batchContent}`;
                     let prompt = mt.rest, ar = '';
                     const arMatch = mt.rest.match(/^([\s\S]*?)(?:\||｜)\s*ar\s*=\s*([\d]+:[\d]+)\s*$/);
                     if (arMatch) { prompt = arMatch[1].trim(); ar = arMatch[2]; }
+                    // ★ v8.3.1 兜底：模型偶尔只写中文描述、prompt 段留空——直接拿描述当 prompt
+                    //   MiniMax 原生支持中文 prompt（官方示例就有"女孩在图书馆的窗户前"），不挑食
+                    if (!prompt.trim() && mt.desc) prompt = mt.desc;
                     const imgId = 'mmx_' + Date.now() + '_' + Math.floor(Math.random() * 100000);
                     try {
                         const dataUrl = await xyMinimaxGenerate(prompt, ar);
