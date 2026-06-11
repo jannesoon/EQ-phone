@@ -462,7 +462,7 @@
             { id: 'green',  name: '淡绿', bg: '#dcfce7', hover: '#bbf7d0' },
         ];
 
-        const UPDATE_VERSION = "v8.3.1-minimax-20260611"; 
+        const UPDATE_VERSION = "v8.3.2-minimax-20260611"; 
         // ============================================
 
         // ================= IndexedDB 工具层（用于聊天记录，突破 localStorage 5MB 限制）=================
@@ -3151,6 +3151,8 @@ ${batchContent}`;
                     // ★ v8.0-alpha+patch-20260524b：注入本会话最近写入记录，防同主题重复
                     ((recentVaultWritesRef.current && recentVaultWritesRef.current.length > 0) ? '\n\n【本会话最近写入记录】（这是你刚才在本次对话里写入云端的内容，请不要再针对同主题重复写入；如果柒柒带来新角度才考虑续写一笔）：\n' + recentVaultWritesRef.current.map(function(w, i) { return (i + 1) + '. [' + w.shelf + '] 「' + w.title + '」 → ' + w.preview + (w.preview && w.preview.length >= 60 ? '…' : ''); }).join('\n') : '') +
                     // ★ v8.3 画图能力说明（SVG + MiniMax 生图），按 drawMode 条件注入
+                    //   v8.3.2：drawMode === 'off' 时整段不注入——避免切到外部画图模型时被标记机制"截胡"转 MiniMax
+                    (config.drawMode === 'off' ? '' :
                     `\n\n【画图能力】` +
                     ((config.drawMode === 'svg' || config.drawMode === 'both' || !config.drawMode) ? `
 📌 方式一：SVG 矢量插画（适合图标、简笔画、装饰图案）
@@ -3175,7 +3177,7 @@ ${batchContent}`;
 - 当柒柒说"画个XX"、"画一下"时，用这个能力画。不要说"我不会画画"。
 - 标记放在回复中你希望图片出现的位置。
 - 不要每次对话都主动画——只在被要求时，或者你觉得画一个能让柒柒开心时才画。
-- 绝对不要输出 <img> 标签或 ![image]() markdown 图片语法，只用上面的画图标记格式。`;
+- 绝对不要输出 <img> 标签或 ![image]() markdown 图片语法，只用上面的画图标记格式。`);
 
                 const limit = (parseInt(config.historyLimit) || 10) * 2; 
                 let contextMsgs = newMessages.slice(-limit);
@@ -3426,8 +3428,8 @@ ${batchContent}`;
                     matches.push({ full: m[0], desc: (m[1] || '').trim(), rest: (m[2] || '').trim() });
                 }
                 if (matches.length === 0) return text;
-                // SVG-only 模式不处理（理论上 prompt 没给方式二，模型不会输出 IMG，这里是兜底）
-                if (config.drawMode === 'svg') return text;
+                // SVG-only / 关闭模式不处理：off 是硬开关（外部画图模型的输出绝不转 MiniMax），svg 是兜底
+                if (config.drawMode === 'svg' || config.drawMode === 'off') return text;
                 let result = text;
                 // 串行生成防限流（一条回复通常只有 1 张）
                 for (const mt of matches) {
@@ -5176,11 +5178,15 @@ ${batchContent}`;
                                                                     onChange={e => setConfig({...config, drawMode: e.target.value})}
                                                                     className="flex-1 bg-white border border-gray-200 rounded-lg p-2 text-sm outline-none"
                                                                 >
+                                                                    <option value="off">关闭画图（不注入画图能力）</option>
                                                                     <option value="svg">SVG 简笔画（本地渲染）</option>
                                                                     <option value="minimax">AI 生成图片（MiniMax）</option>
                                                                     <option value="both">两者兼用（推荐）</option>
                                                                 </select>
                                                             </div>
+                                                            {config.drawMode === 'off' && (
+                                                                <p className="text-xs text-gray-500">⏸️ 画图能力已关闭：不会向模型注入画图说明，也不会调用 MiniMax 生图。适合临时切到外部画图模型、或想省生图费用的时候。历史消息里已生成的图片不受影响，照常显示。</p>
+                                                            )}
                                                             {config.drawMode === 'both' && (
                                                                 <p className="text-xs text-blue-600">✅ 模型会根据场景自动选择：简单图标用SVG，风景/人物用 MiniMax 生成。</p>
                                                             )}
