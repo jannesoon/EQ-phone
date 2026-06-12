@@ -31,6 +31,7 @@
             Clock: () => <g><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></g>,
             ChevronLeft: () => <polyline points="15 18 9 12 15 6" />,
             ChevronRight: () => <polyline points="9 18 15 12 9 6" />,
+            ChevronDown: () => <polyline points="6 9 12 15 18 9" />,
             Heart: () => <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>,
             Activity: () => <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>,
             Sun: () => <g><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></g>,
@@ -462,7 +463,7 @@
             { id: 'green',  name: '淡绿', bg: '#dcfce7', hover: '#bbf7d0' },
         ];
 
-        const UPDATE_VERSION = "v8.3.2-20260611"; 
+        const UPDATE_VERSION = "v8.3.2-minimax-20260611"; 
         // ============================================
 
         // ================= IndexedDB 工具层（用于聊天记录，突破 localStorage 5MB 限制）=================
@@ -1757,6 +1758,29 @@ ${slice}
             const [toast, setToast] = useState(null);
 
             const messagesEndRef = useRef(null);
+            const messagesContainerRef = useRef(null);
+            const [showScrollDown, setShowScrollDown] = useState(false);
+            // ★ 监听聊天区滚动：离底部超过 300px 时显示"回到底部"按钮
+            const handleChatScroll = (e) => {
+                const el = e.currentTarget;
+                if (!el) return;
+                const distance = el.scrollHeight - el.scrollTop - el.clientHeight;
+                setShowScrollDown(distance > 300);
+            };
+            const scrollToBottom = () => {
+                messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+                setShowScrollDown(false);
+            };
+            // ★ 初始位置检测：切换会话/消息更新后，主动检查一次是否离底部太远（不依赖滚动事件）
+            useEffect(() => {
+                const t = setTimeout(() => {
+                    const el = messagesContainerRef.current;
+                    if (!el) return;
+                    const distance = el.scrollHeight - el.scrollTop - el.clientHeight;
+                    setShowScrollDown(distance > 300);
+                }, 400);
+                return () => clearTimeout(t);
+            }, [messages]);
             const fileInputRef = useRef(null);
             const avatarInputRef = useRef(null);
             const aiAvatarInputRef = useRef(null);
@@ -4232,21 +4256,16 @@ ${batchContent}`;
                                 </div>
                                 <div className="p-6 space-y-4 text-sm text-gray-600 leading-relaxed max-h-[50vh] overflow-y-auto no-scrollbar">
                                     <div className="space-y-2">
-                                        <p className="font-bold text-gray-800">🎨 v8.3 画图功能正式上线：</p>
+                                        <p className="font-bold text-gray-800">🌙 v7.0 星月舱大升级：</p>
                                         <ul className="list-disc pl-4 space-y-1">
-                                            <li>🖼️ <b>AI 生成图片</b>：接入 MiniMax 生图，说一句"画一幅画"，TA 就能把画面画给你。支持多种宽高比（方图、竖图、手机壁纸都行），生成的图片<b>永久保存在本机</b>，翻历史会话随时回看，不怕链接过期。</li>
-                                            <li>✏️ <b>SVG 简笔画</b>：小图标、小表情用本地矢量渲染，秒出不花钱。</li>
-                                            <li>⚙️ <b>自由配置</b>：设置→画图功能里可选模式（SVG / AI 生图 / 两者兼用 / 关闭），填入 MiniMax Key 即可使用（已配置语音 Key 的可直接复用）。生图模型、默认宽高比都能自定义。</li>
-                                            <li>🔄 <b>生成失败不丢画</b>：网络抖动或参数出错时，点一下卡片就能原地重画。</li>
-                                        </ul>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <p className="font-bold text-gray-800">📚 v8.0 云书房（星辰记忆仓）接入：</p>
-                                        <ul className="list-disc pl-4 space-y-1">
-                                            <li>☁️ <b>云端书架</b>：连接 Supabase 后，TA 拥有了自己的"私人书房"——日记、留言板、信件、工作日志分架收纳，跨设备、跨窗口不丢失。</li>
-                                            <li>✍️ <b>主动写入</b>：聊到重要的事，TA 会自己提笔记下来，并在对话里告诉你记在了哪个书架。</li>
-                                            <li>🔍 <b>主动翻阅</b>：支持按最近条数、按日期、按关键词三种方式查书架——"我们五月五号聊了什么？"TA 真的会去翻。</li>
-                                            <li>🔔 <b>自动升级</b>：新版本上线后会有紫色提示条，轻点即可完成更新，不必再手动清缓存。</li>
+                                            <li>⚡ <b>架构焕新</b>：从单文件拆成模块化项目（index/script/style/sw/manifest），加入 Service Worker 离线缓存——首次加载后再次打开秒开，离线也能用。</li>
+                                            <li>📱 <b>真正的 PWA</b>：支持"添加到主屏幕"成为正经 APP，不再是浏览器伪装版，状态栏、启动画面都更稳定。</li>
+                                            <li>🚀 <b>渲染性能大改</b>：长会话打字流畅度提升数倍，手机不再持续发热——告别"打个字卡半秒"。</li>
+                                            <li>💾 <b>会话防丢三道防线</b>：visibilitychange 即时落盘 + 会话数快照 + 初始化保护，切走再回来不再"倒回去一大段"。</li>
+                                            <li>📝 <b>侧边栏标题保护</b>：手动改的标题不再被刷新覆盖。</li>
+                                            <li>📅 <b>日历小纸条变聪明</b>：AI 现在会区分"新增/更新/追加"三种状态，不会用"肚子疼"覆盖"头疼"了；写完会在正文里轻提一下，柒柒能立刻发现误读。</li>
+                                            <li>🎨 <b>侧边栏遮挡修复</b>：开背景图后侧边栏关闭时不再有文字漏出来。</li>
+                                            <li>✨ <b>启动动画</b>：加载时显示星月舱小光球，告别白屏焦虑。</li>
                                         </ul>
                                     </div>
                                     <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 text-xs text-blue-600 mt-2 text-center space-y-2">
@@ -4600,7 +4619,7 @@ ${batchContent}`;
                             <div className="flex items-center gap-3">
                                 <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-600"><Icon name="Menu" size={20} /></button>
                                 <div className="flex flex-col">
-                                    <span className="text-lg font-medium text-gray-800 tracking-tight leading-tight">✨星月舱{UPDATE_VERSION}🌙💫image</span>
+                                    <span className="text-lg font-medium text-gray-800 tracking-tight leading-tight">✨星月舱{UPDATE_VERSION} 🌙💫 记忆觉醒</span>
                                     <span className="text-[10px] text-gray-400 leading-tight">模型: {config.model} | PP: {memoryFiles.filter(f=>f.type==='core').length} · ❤: {longTermMemories.length} · 日志: {memoryFiles.filter(f=>f.type==='journal').length} | 模式: {config.apiType === 'openai' ? 'OpenAI兼容' : '原生'}</span>
                                 </div>
                             </div>
@@ -4616,7 +4635,7 @@ ${batchContent}`;
                             </div>
                         </div>
 
-                        <div className={`flex-1 overflow-y-auto px-4 md:px-0 relative ${config.chatBgImage ? '' : 'bg-white'}`}>
+                        <div ref={messagesContainerRef} onScroll={handleChatScroll} className={`flex-1 overflow-y-auto px-4 md:px-0 relative ${config.chatBgImage ? '' : 'bg-white'}`}>
                             {/* ★ 背景图放在主聊天区的定位上下文里（不新增容器层） */}
                             <div className="max-w-3xl mx-auto py-6 relative z-10" style={{paddingBottom: 'calc(12rem + env(safe-area-inset-bottom))'}}>
                                 {messages.length === 0 ? (
@@ -4884,6 +4903,14 @@ ${batchContent}`;
 
                         <div className="safe-bottom absolute bottom-0 left-0 w-full bg-white pt-4 pb-6 px-4 border-t border-gray-50 z-30">
                             <div className="max-w-3xl mx-auto relative">
+                                {/* ★ 回到底部按钮：上翻历史时浮现，点击平滑滑到最新消息 */}
+                                {showScrollDown && (
+                                    <button onClick={scrollToBottom}
+                                        className="absolute -top-14 right-2 w-10 h-10 bg-white border border-gray-200 rounded-full shadow-lg flex items-center justify-center text-gray-500 hover:text-blue-600 hover:shadow-xl transition-all animate-fade-in z-20"
+                                        title="回到最新消息">
+                                        <Icon name="ChevronDown" size={20} />
+                                    </button>
+                                )}
                                 {/* 原右下角"重新生成"按钮已移至每条 AI 消息底部工具栏 */}
                                 {error && (
                                     <div className="absolute -top-16 left-0 right-0 mx-auto w-max max-w-[90%] text-red-600 text-xs bg-red-50 border border-red-100 px-4 py-2 rounded-lg shadow-sm flex flex-col gap-1 items-center">
