@@ -1086,9 +1086,16 @@
                     // ★ v8.3.3 防御：模型有时用 shelf_type / shelfType 而非 shelf
                     if (!args.shelf && args.shelf_type) args.shelf = args.shelf_type;
                     if (!args.shelf && args.shelfType) args.shelf = args.shelfType;
+                    // 遍历所有 key 尝试找到像 shelf 的值
                     if (!args.shelf) {
-                        console.error('[星月舱 vault_write] ❌ shelf 缺失，原始 args:', JSON.stringify(args));
-                        return '❌ 写入失败：缺少目标书架（shelf）。请指定要写入的书架，如 diary、memos、board 等。';
+                        const allKeys = Object.keys(args);
+                        const shelfKey = allKeys.find(k => /shelf/i.test(k));
+                        if (shelfKey) args.shelf = args[shelfKey];
+                    }
+                    if (!args.shelf) {
+                        const rawArgs = JSON.stringify(args).slice(0, 200);
+                        console.error('[星月舱 vault_write] ❌ shelf 缺失，原始 args:', rawArgs);
+                        return '❌ 写入失败：缺少目标书架（shelf）。收到的参数：' + rawArgs + '。请在调用时指定 shelf 参数，如 shelf:"diary"';
                     }
                     const protectedShelves = ['pp', 'contract', 'covenant'];
                     if (protectedShelves.includes(args.shelf)) {
@@ -4043,9 +4050,10 @@ ${batchContent}`;
                                 for (const tc of messageObj.tool_calls) {
                                     const toolName = tc.function?.name;
                                     let toolArgs = {};
-                                    try { toolArgs = JSON.parse(tc.function?.arguments || '{}'); } catch(e) { toolArgs = {}; }
+                                    const rawArgStr = tc.function?.arguments || '{}';
+                                    try { toolArgs = JSON.parse(rawArgStr); } catch(e) { console.error('[星月舱 Tool Use] ⚠️ arguments JSON 解析失败:', rawArgStr); toolArgs = {}; }
                                     
-                                    console.log(`[星月舱 Tool Use] 🛠️ ${toolName}`, toolArgs);
+                                    console.log(`[星月舱 Tool Use] 🛠️ ${toolName}`, 'rawArgs:', rawArgStr, 'parsed:', toolArgs);
                                     
                                     // ★ v8.3.3 参数容错：模型可能用 shelf_type 而非 shelf
                                     if (toolName === 'vault_write' || toolName === 'vault_read') {
