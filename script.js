@@ -1061,6 +1061,9 @@
             const executeToolCall = async (toolName, args) => {
                 if (toolName === 'vault_read') {
                     if (!supabaseClient) return '❌ 云端还没连接，无法读取星辰记忆仓';
+                    // ★ v8.3.3 参数容错
+                    if (!args.shelf && args.shelf_type) args.shelf = args.shelf_type;
+                    if (!args.shelf && args.shelfType) args.shelf = args.shelfType;
                     try {
                         let query = supabaseClient.from('entries').select('id, shelf_type, title, content, author, source, created_at');
                         if (args.shelf) query = query.eq('shelf_type', args.shelf);
@@ -1080,6 +1083,13 @@
                 
                 if (toolName === 'vault_write') {
                     if (!supabaseClient) return '❌ 云端还没连接，无法写入星辰记忆仓';
+                    // ★ v8.3.3 防御：模型有时用 shelf_type / shelfType 而非 shelf
+                    if (!args.shelf && args.shelf_type) args.shelf = args.shelf_type;
+                    if (!args.shelf && args.shelfType) args.shelf = args.shelfType;
+                    if (!args.shelf) {
+                        console.error('[星月舱 vault_write] ❌ shelf 缺失，原始 args:', JSON.stringify(args));
+                        return '❌ 写入失败：缺少目标书架（shelf）。请指定要写入的书架，如 diary、memos、board 等。';
+                    }
                     const protectedShelves = ['pp', 'contract', 'covenant'];
                     if (protectedShelves.includes(args.shelf)) {
                         return `❌ 「${args.shelf}」是公约/盟约书架，仅柒柒可写。如果你想建议修改，请在 board 留言告诉柒柒。`;
@@ -4037,9 +4047,15 @@ ${batchContent}`;
                                     
                                     console.log(`[星月舱 Tool Use] 🛠️ ${toolName}`, toolArgs);
                                     
+                                    // ★ v8.3.3 参数容错：模型可能用 shelf_type 而非 shelf
+                                    if (toolName === 'vault_write' || toolName === 'vault_read') {
+                                        if (!toolArgs.shelf && toolArgs.shelf_type) toolArgs.shelf = toolArgs.shelf_type;
+                                        if (!toolArgs.shelf && toolArgs.shelfType) toolArgs.shelf = toolArgs.shelfType;
+                                    }
+                                    
                                     // 更新 UI 状态——"辰正在..."
                                     const toolLabel = toolName === 'vault_read' ? `📖 正在查阅${toolArgs.shelf ? '「' + toolArgs.shelf + '」书架' : '云端书房'}...` : 
-                                                       toolName === 'vault_write' ? `📮 正在写入「${toolArgs.shelf}」书架...` : `🛠️ ${toolName}...`;
+                                                       toolName === 'vault_write' ? `📮 正在写入${toolArgs.shelf ? '「' + toolArgs.shelf + '」' : ''}书架...` : `🛠️ ${toolName}...`;
                                     setActiveToolCalls(prev => [...prev, { id: tc.id, label: toolLabel }]);
                                     
                                     // 执行
