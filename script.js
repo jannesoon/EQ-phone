@@ -1083,19 +1083,17 @@
                 
                 if (toolName === 'vault_write') {
                     if (!supabaseClient) return '❌ 云端还没连接，无法写入星辰记忆仓';
-                    // ★ v8.3.3 防御：模型有时用 shelf_type / shelfType 而非 shelf
+                    // ★ v8.3.3 防御：代理可能未转发 tool schema，导致参数为空
                     if (!args.shelf && args.shelf_type) args.shelf = args.shelf_type;
                     if (!args.shelf && args.shelfType) args.shelf = args.shelfType;
-                    // 遍历所有 key 尝试找到像 shelf 的值
                     if (!args.shelf) {
-                        const allKeys = Object.keys(args);
-                        const shelfKey = allKeys.find(k => /shelf/i.test(k));
+                        // 遍历所有 key 尝试找到像 shelf 的值
+                        const shelfKey = Object.keys(args).find(k => /shelf/i.test(k));
                         if (shelfKey) args.shelf = args[shelfKey];
                     }
                     if (!args.shelf) {
-                        const rawArgs = JSON.stringify(args).slice(0, 200);
-                        console.error('[星月舱 vault_write] ❌ shelf 缺失，原始 args:', rawArgs);
-                        return '❌ 写入失败：缺少目标书架（shelf）。收到的参数：' + rawArgs + '。请在调用时指定 shelf 参数，如 shelf:"diary"';
+                        console.error('[星月舱 vault_write] ❌ shelf 缺失，原始 args:', JSON.stringify(args));
+                        return '❌ 工具参数传输异常（shelf 为空，可能是 API 代理未转发 tools schema）。请不要再重试工具调用，改用文本信号写入，格式为 [[VAULT:书架名:标题|正文内容]]，例如 [[VAULT:diary:今天的日记|今天很开心……]]。可用书架：diary, memos, board, letters, worklog, about-qiqi, songs。';
                     }
                     const protectedShelves = ['pp', 'contract', 'covenant'];
                     if (protectedShelves.includes(args.shelf)) {
