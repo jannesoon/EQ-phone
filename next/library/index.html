@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#0a1720">
+  <meta name="description" content="云书房 · Ethan 的外部记忆库。支持真实云端只读或可管理浏览与本机演示。">
+  <title>云书房 · 星月下的私人记忆库</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 60'%3E%3Crect rx='14' width='60' height='60' fill='%230b1a25'/%3E%3Ctext x='10' y='43' font-size='40' fill='%23e8ca8e'%3E☾%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./phone-refinements.css">
+  <link rel="stylesheet" href="./cloud-view.css">
+  <script type="module" src="./auth-client.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#login-title">跳到主要内容</a>
+  <section id="login-view" class="login-view" aria-labelledby="login-title">
+    <header class="login-header">
+      <a href="./" class="brand" aria-label="云书房首页"><span data-icon="book" class="brand-icon"></span><span>云书房</span></a>
+      <span class="brand-divider"></span><span class="brand-tagline">记忆有迹，思绪有序</span>
+      <span class="private-caption">属于 Ethan 的私人记忆库 <i></i></span>
+    </header>
+    <div class="login-layout">
+      <div class="mobile-login-heading">
+        <svg viewBox="0 0 80 70" aria-hidden="true"><path d="M48 6A28 28 0 1 0 65 52A26 26 0 0 1 48 6Z" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="m51 22 3 9 9 3-9 3-3 9-3-9-9-3 9-3Z" fill="currentColor"/></svg>
+        <span>星月舱</span>
+        <h2>逸辰 Ethan 的云书房</h2>
+        <small>CLOUD STUDY</small>
+        <i></i>
+        <p>在这里，收藏我们的每一份心动 ♡</p>
+      </div>
+      <div class="login-intro">
+        <p class="eyebrow">A HOME FOR EVERY MEMORY</p>
+        <h1 id="login-title" tabindex="-1">云书房</h1>
+        <h2>Ethan 的外部记忆库</h2><span class="gold-rule"></span>
+        <p class="intro-copy">在这里，记忆被分门别类地保存，<br>等待被重新唤起。</p>
+        <div class="intro-features">
+          <div><span data-icon="layers"></span><strong>记忆分区</strong><small>让记忆各归其位</small></div>
+          <div><span data-icon="file"></span><strong>项目档案</strong><small>沉淀重要历程</small></div>
+          <div><span data-icon="people"></span><strong>关系记录</strong><small>珍藏每一段相遇</small></div>
+          <div><span data-icon="shield"></span><strong>授权访问</strong><small>守护私密与安全</small></div>
+        </div>
+      </div>
+      <div class="constellation" aria-hidden="true">
+        <svg viewBox="0 0 440 460" fill="none">
+          <path class="star-line" d="M90 180 165 63 295 116 368 230 315 348 190 385 72 280 90 180 295 116 315 348 165 63M72 280 368 230 190 385"/>
+          <circle class="orbit" cx="220" cy="230" r="175"/>
+          <g class="star-dots"><circle cx="90" cy="180" r="3"/><circle cx="165" cy="63" r="4"/><circle cx="295" cy="116" r="4"/><circle cx="368" cy="230" r="3"/><circle cx="315" cy="348" r="4"/><circle cx="190" cy="385" r="4"/><circle cx="72" cy="280" r="3"/></g>
+          <g class="star-labels"><text x="173" y="38">想法</text><text x="310" y="100">项目</text><text x="375" y="214">知识</text><text x="332" y="368">未来</text><text x="171" y="419">灵感</text><text x="20" y="286">生活</text><text x="104" y="180">人际</text></g>
+        </svg>
+      </div>
+      <form id="login-form" class="login-card">
+        <span class="card-ornament" aria-hidden="true">✧</span>
+        <h2>打开云书房</h2>
+        <p class="card-subtitle">读取已连接的云书房，安静地翻开记忆</p>
+        <label for="identity" class="sr-only">书房访问身份</label>
+        <div class="input-wrap"><span data-icon="user"></span><input id="identity" value="柒柒 · 私人书房" readonly autocomplete="off"><span class="readonly-mark">已解锁</span></div>
+        <p class="connection-copy">访问密码已验证，可以读取书房或体验本机示例。</p>
+        <button class="login-primary" type="submit"><span id="cloud-submit-label">打开云书房</span> <span data-icon="arrow"></span></button>
+        <button class="login-secondary" type="button" id="demo-entry"><span data-icon="book"></span>体验演示 <small>本机示例</small></button>
+        <button class="login-secondary" type="button" id="starlink"><span data-icon="planet"></span>从星月舱进入 <small>未连接</small></button>
+        <p class="login-safety"><span data-icon="shield"></span>同一个访问密码，进入后即可查看与管理记录</p>
+        <div id="cloud-login-status" class="cloud-login-status" role="status" aria-live="polite" hidden></div>
+        <div class="admin-link"><span></span><button type="button" id="admin-entry">锁定书房</button><span></span></div>
+        <p class="demo-disclosure">已通过访问密码验证 · 无需另设管理密码<br>也可以选择“体验演示”查看本机示例</p>
+      </form>
+    </div>
+    <footer class="login-footer"><span>ETHAN & QIQI</span><span>星辰有迹，岁月有存。</span><span>VISUAL PREVIEW · 02</span></footer>
+  </section>
+
+  <section id="library-view" class="library-view" hidden aria-label="云书房首页">
+    <button id="nav-scrim" class="nav-scrim" aria-label="关闭导航" hidden></button>
+    <aside id="sidebar" class="sidebar" aria-label="主要导航">
+      <div class="sidebar-brand"><span data-icon="book" class="brand-icon"></span><div><strong>云书房</strong><small>珍藏生活的点滴</small></div><button id="close-nav" class="icon-button" aria-label="关闭导航"><span data-icon="close"></span></button></div>
+      <nav id="primary-nav"></nav>
+      <div class="sidebar-bottom"><span class="status-dot"></span><span id="sidebar-status">当前模式待选择</span><p>每一段记忆，都有归处。</p><button id="logout" class="quiet-button"><span data-icon="logout"></span>退出书房</button></div>
+    </aside>
+    <main id="main-content" class="main-content" tabindex="-1">
+      <header class="library-hero">
+        <div class="hero-tools">
+          <button id="open-nav" class="icon-button" aria-label="打开导航" aria-expanded="false" aria-controls="sidebar"><span data-icon="menu"></span></button>
+          <span id="mode-pill" class="preview-pill"><span class="status-dot"></span><span id="mode-pill-label">模式待选择</span></span>
+          <div class="profile-tools"><button id="new-record" class="new-record" aria-label="新建记录" hidden><span data-icon="plus"></span><span>新建记录</span></button><button id="refresh-cloud" class="new-record cloud-refresh-button" aria-label="刷新云端记录" hidden><span data-icon="refresh"></span><span id="refresh-cloud-label">刷新云端</span></button><button id="notifications" class="icon-button" aria-label="查看书房状态"><span data-icon="bell"></span></button><button id="profile" class="profile-button"><span class="avatar">E</span><span>Ethan</span><span data-icon="chevron"></span></button></div>
+        </div>
+        <div class="hero-copy"><p class="eyebrow">THE MOONLIT ARCHIVE</p><h1 id="page-heading">欢迎回到云书房</h1><p id="hero-description">在这里，珍藏生活的点滴。<br>让每一份记忆与记录，都成为未来的底气。</p></div>
+        <div class="hero-search">
+          <label class="search-box" for="search"><span data-icon="search"></span><input id="search" type="search" aria-label="搜索书房记录" maxlength="200" placeholder="搜索你的记忆、日记、书信或任何关键词…" autocomplete="off"><span data-icon="arrow" aria-hidden="true"></span></label>
+          <div id="quick-filters" class="quick-filters" aria-label="按类型筛选"></div>
+        </div>
+        <p class="hero-quote">有些记忆，<br>值得被温柔地保存一生。</p>
+      </header>
+        <div id="cloud-status-banner" class="cloud-status-banner" role="status" aria-live="polite" hidden></div>
+      <div class="dashboard-layout">
+        <div id="content-column" class="content-column"></div>
+        <aside class="right-column" aria-label="日历与最近记录">
+          <section class="panel calendar-panel" aria-label="书房记录日历">
+            <div class="calendar-header"><button id="calendar-prev" class="icon-button" aria-label="上一个月"><span data-icon="left"></span></button><h2 id="calendar-title"></h2><button id="calendar-next" class="icon-button" aria-label="下一个月"><span data-icon="right"></span></button><button id="calendar-today" class="tiny-button">本月</button></div>
+            <div class="weekdays" aria-hidden="true"><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>日</span></div>
+            <div id="calendar-days" class="calendar-days"></div>
+            <div class="calendar-legend"><span><i class="dot diary"></i>日记</span><span><i class="dot worklog"></i>工作</span><span><i class="dot letters"></i>书信</span><small id="calendar-legend-note">当前模式日期</small></div>
+          </section>
+          <section class="panel activity-panel"><div class="section-heading"><h2><span data-icon="clipboard"></span>最近记录</h2><button class="text-button" data-view="timeline">查看全部 <span data-icon="arrow"></span></button></div><div id="activity-list"></div></section>
+          <button id="medical-card" class="medical-card"><span class="medical-title"><span data-icon="lock"></span>辰医生病案室<small>共用当前登录</small></span><span class="medical-description">健康记录四分区<br>与云书房共用当前登录</span><span data-icon="arrow" class="medical-arrow"></span></button>
+          <p id="privacy-note" class="privacy-note"><span data-icon="shield"></span>当前模式内容</p>
+        </aside>
+      </div>
+      <footer class="library-footer"><span>云书房 · Ethan 的外部记忆库</span><span id="library-footer-note">当前模式内容</span></footer>
+    </main>
+    <nav id="mobile-nav" class="mobile-nav" aria-label="手机快捷导航"></nav>
+  </section>
+  <dialog id="record-dialog" class="record-dialog"><div id="dialog-content"></div></dialog>
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+  <noscript><p class="noscript">请开启 JavaScript 以打开云书房。访问密码验证后即可读取书房。</p></noscript>
+</body>
+</html>

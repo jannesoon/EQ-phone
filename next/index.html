@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#8b5cf6">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="星月舱">
+    <title>星月舱 · 手机界面候选</title>
+
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%238b5cf6' stroke='%238b5cf6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z'/></svg>">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%238b5cf6' stroke='%238b5cf6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z'/></svg>">
+
+    <!-- 页面运行依赖随星月舱一起保存，不再依赖外部 CDN。 -->
+    <link rel="stylesheet" href="vendor/tailwind.css?v=57">
+    <script src="vendor/react.production.min.js?v=57"></script>
+    <script src="vendor/react-dom.production.min.js?v=57"></script>
+    <script src="vendor/babel.min.js?v=57"></script>
+    <script src="vendor/marked.umd.js?v=57"></script>
+    <link rel="stylesheet" href="vendor/katex.min.css?v=57">
+    <script src="vendor/katex.min.js?v=57"></script>
+    <!-- ★ Supabase 客户端 —— 用于星辰记忆仓的云端存储 -->
+    <script src="vendor/supabase.js?v=57"></script>
+
+    <link rel="stylesheet" href="style.css?v=84430">
+
+    <style>
+        /* 启动加载动画 —— 在 React 还没接管页面时显示，避免白屏焦虑 */
+        #boot-loader {
+            position: fixed; inset: 0; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; gap: 16px;
+            background: #fafafa; z-index: 9999;
+            transition: opacity 0.3s ease-out;
+        }
+        #boot-loader.fade-out { opacity: 0; pointer-events: none; }
+        .boot-spark {
+            width: 56px; height: 56px;
+            background: linear-gradient(135deg, #8b5cf6, #ec4899);
+            border-radius: 50%;
+            animation: bootPulse 1.4s ease-in-out infinite;
+            box-shadow: 0 0 40px rgba(139, 92, 246, 0.4);
+        }
+        @keyframes bootPulse {
+            0%, 100% { transform: scale(1); opacity: 0.85; }
+            50% { transform: scale(1.15); opacity: 1; }
+        }
+        .boot-text {
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            color: #8b5cf6; font-size: 14px; letter-spacing: 0.05em;
+        }
+    </style>
+<link rel="stylesheet" href="mobile-cabin.css"><link rel="stylesheet" href="mobile-integration.css"></head>
+<body class="bg-white text-gray-900 overflow-hidden">
+    <script src="mobile-runtime.js"></script>
+    <div id="boot-loader">
+        <div class="boot-spark"></div>
+        <div class="boot-text">✨ 星月舱启动中 🌙</div>
+    </div>
+    
+    <!-- 本地运行依赖加载失败检测 -->
+    <script>
+    (function checkCDN() {
+        var missing = [];
+        if (typeof React === 'undefined') missing.push('React');
+        if (typeof ReactDOM === 'undefined') missing.push('ReactDOM');
+        if (typeof Babel === 'undefined') missing.push('Babel');
+        if (missing.length > 0) {
+            var loader = document.getElementById('boot-loader');
+            if (loader) {
+                loader.innerHTML = '<div style="text-align:center;padding:24px;font-family:-apple-system,sans-serif;">' +
+                    '<div style="font-size:40px;margin-bottom:16px;">🌙</div>' +
+                    '<div style="color:#8b5cf6;font-size:16px;font-weight:600;margin-bottom:8px;">星月舱启动失败</div>' +
+                    '<div style="color:#666;font-size:13px;line-height:1.6;">' +
+                    '以下本地依赖加载失败：<br><b>' + missing.join(', ') + '</b><br><br>' +
+                    '请重新运行本地资源准备或安装程序。' +
+                    '</div></div>';
+            }
+        }
+    })();
+    </script>
+    
+    <div id="root"></div>
+
+    <script src="openai-compatible.js?v=84360"></script>
+    <script src="app-settings.js?v=84360"></script>
+    <script type="text/babel" src="app-shell.jsx?v=84200"></script>
+    <script type="text/babel" src="api-settings.jsx?v=8378"></script>
+    <script src="chat-client.js?v=84470"></script>
+    <script src="session-manager.js?v=84350"></script>
+    <script src="title-generator.js?v=8378"></script>
+    <script src="recent-life.js?v=8378"></script>
+    <script src="context-assembler.js?v=84320"></script>
+    <script src="rolling-continuity.js?v=84200"></script>
+    <script src="rich-content.js?v=8378"></script>
+    <script src="voice-manager.js?v=84380"></script>
+    <script src="speech-director.js?v=84380"></script>
+    <script src="drawing-manager.js?v=8378"></script>
+    <script src="health-manager.js?v=8378"></script>
+    <script type="text/babel" src="health-calendar.jsx?v=8378"></script>
+    <script src="backup-manager.js?v=8378"></script>
+    <script type="text/babel" src="migration-panel.jsx?v=8378"></script>
+    <script type="text/babel" src="device-pairing-panel.jsx?v=8378"></script>
+    <script src="cloud-library.js?v=8378"></script>
+    <script src="diary-intent.js?v=8378"></script>
+    <script src="memory-candidate-intent.js?v=84240"></script>
+    <script src="portable-worldbook.js?v=8378"></script>
+    <script src="memory-vault-router.js?v=84460"></script>
+    <script src="history-tool-policy.js?v=84450"></script>
+    <script src="agent-client.js?v=84460"></script>
+    <script src="video-client.js?v=84470"></script>
+    <script src="attachment-content.js?v=84430"></script>
+    <script type="text/babel" src="video-settings-panel.jsx?v=84470"></script>
+    <script type="text/babel" src="task-center-panel.jsx?v=84260"></script>
+    <script type="text/babel" src="identity-core-panel.jsx?v=8378"></script>
+    <script type="text/babel" src="memory-governance-panel.jsx?v=8378"></script>
+    <script type="text/babel" src="memory-overview-panel.jsx?v=8378"></script>
+    <script type="text/babel" src="portable-worldbook-panel.jsx?v=84240"></script>
+    <script type="text/babel" src="memory-sources-panel.jsx?v=84410"></script>
+    <script type="text/babel" src="session-checkpoint-panel.jsx?v=8378"></script>
+    <script src="sync-queue.js?v=84390"></script>
+    <script src="host-sync-client.js?v=84400"></script>
+    <script type="text/babel" src="mobile-library.jsx"></script>
+    <script type="text/babel" src="mobile-cabin.jsx"></script>
+    <script type="text/babel" src="script.js?v=84470"></script>
+
+    <script>
+        // 隐藏启动动画 —— 等 root 里有内容了就淡出
+        (function hideBootLoader() {
+            const tryHide = () => {
+                const root = document.getElementById('root');
+                if (root && root.children.length > 0) {
+                    const loader = document.getElementById('boot-loader');
+                    if (loader) {
+                        loader.classList.add('fade-out');
+                        setTimeout(() => loader.remove(), 300);
+                    }
+                } else {
+                    setTimeout(tryHide, 100);
+                }
+            };
+            tryHide();
+            // 兜底：最长 15 秒强制隐藏，避免首次访问超慢时永远看不到错误
+            setTimeout(() => {
+                const loader = document.getElementById('boot-loader');
+                if (loader) loader.remove();
+            }, 15000);
+        })();
+
+        // 注册 Service Worker 实现离线缓存（第二次启动起秒开）
+        // ★ v8.0-alpha+patch-20260524：增强升级检测，避免缓存卡住
+        if (false && 'serviceWorker' in navigator && location.protocol !== 'file:') {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js').then(reg => {
+                    console.log('[星月舱] Service Worker 注册成功', reg.scope);
+
+                    // 1. 启动时主动检查更新（绕过 iOS Safari 的懒检测周期）
+                    reg.update().catch(() => {});
+
+                    // 2. 每 30 分钟再检查一次（如果柒柒一直开着页面没刷新）
+                    setInterval(() => {
+                        reg.update().catch(() => {});
+                    }, 30 * 60 * 1000);
+
+                    // 3. 检测到新 SW 安装完成 → 自动 reload 让新版生效
+                    reg.addEventListener('updatefound', () => {
+                        const newWorker = reg.installing;
+                        if (!newWorker) return;
+                        newWorker.addEventListener('statechange', () => {
+                            // installed 状态意味着新 SW 已下载完成、随时可接管
+                            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                console.log('[星月舱] 发现新版本，3 秒后自动刷新加载新版');
+                                // 给柒柒一个温和提示
+                                if (typeof document !== 'undefined') {
+                                    const toast = document.createElement('div');
+                                    toast.textContent = '✨ 检测到星月舱新版本，即将刷新…';
+                                    toast.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#8b5cf6;color:#fff;padding:10px 20px;border-radius:20px;font-size:14px;z-index:99999;box-shadow:0 4px 20px rgba(139,92,246,0.4);';
+                                    document.body.appendChild(toast);
+                                }
+                                setTimeout(() => window.location.reload(), 3000);
+                            }
+                        });
+                    });
+                }).catch(e => {
+                    console.warn('[星月舱] Service Worker 注册失败', e);
+                });
+            });
+        }
+    </script>
+</body>
+</html>
+
+
+
+
+

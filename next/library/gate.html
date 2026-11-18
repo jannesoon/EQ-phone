@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#0a1720">
+  <meta name="description" content="云书房 · Ethan 的外部记忆库。支持真实云端只读浏览与本机演示。">
+  <title>云书房 · 星月下的私人记忆库</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 60'%3E%3Crect rx='14' width='60' height='60' fill='%230b1a25'/%3E%3Ctext x='10' y='43' font-size='40' fill='%23e8ca8e'%3E☾%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./phone-refinements.css">
+  <link rel="stylesheet" href="./cloud-view.css">
+  <link rel="stylesheet" href="./gate.css">
+  <script type="module" src="./gate.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#gate-heading">跳到主要内容</a>
+  <section id="login-view" class="login-view" aria-labelledby="login-title">
+    <header class="login-header">
+      <a href="./" class="brand" aria-label="云书房首页"><span data-icon="book" class="brand-icon"></span><span>云书房</span></a>
+      <span class="brand-divider"></span><span class="brand-tagline">记忆有迹，思绪有序</span>
+      <span class="private-caption">属于 Ethan 的私人记忆库 <i></i></span>
+    </header>
+    <div class="login-layout">
+      <div class="mobile-login-heading">
+        <svg viewBox="0 0 80 70" aria-hidden="true"><path d="M48 6A28 28 0 1 0 65 52A26 26 0 0 1 48 6Z" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="m51 22 3 9 9 3-9 3-3 9-3-9-9-3 9-3Z" fill="currentColor"/></svg>
+        <span>星月舱</span>
+        <h2>逸辰 Ethan 的云书房</h2>
+        <small>CLOUD STUDY</small>
+        <i></i>
+        <p>在这里，收藏我们的每一份心动 ♡</p>
+      </div>
+      <div class="login-intro">
+        <p class="eyebrow">A HOME FOR EVERY MEMORY</p>
+        <h1 id="login-title" tabindex="-1">云书房</h1>
+        <h2>Ethan 的外部记忆库</h2><span class="gold-rule"></span>
+        <p class="intro-copy">在这里，记忆被分门别类地保存，<br>等待被重新唤起。</p>
+        <div class="intro-features">
+          <div><span data-icon="layers"></span><strong>记忆分区</strong><small>让记忆各归其位</small></div>
+          <div><span data-icon="file"></span><strong>项目档案</strong><small>沉淀重要历程</small></div>
+          <div><span data-icon="people"></span><strong>关系记录</strong><small>珍藏每一段相遇</small></div>
+          <div><span data-icon="shield"></span><strong>授权访问</strong><small>守护私密与安全</small></div>
+        </div>
+      </div>
+      <div class="constellation" aria-hidden="true">
+        <svg viewBox="0 0 440 460" fill="none">
+          <path class="star-line" d="M90 180 165 63 295 116 368 230 315 348 190 385 72 280 90 180 295 116 315 348 165 63M72 280 368 230 190 385"/>
+          <circle class="orbit" cx="220" cy="230" r="175"/>
+          <g class="star-dots"><circle cx="90" cy="180" r="3"/><circle cx="165" cy="63" r="4"/><circle cx="295" cy="116" r="4"/><circle cx="368" cy="230" r="3"/><circle cx="315" cy="348" r="4"/><circle cx="190" cy="385" r="4"/><circle cx="72" cy="280" r="3"/></g>
+          <g class="star-labels"><text x="173" y="38">想法</text><text x="310" y="100">项目</text><text x="375" y="214">知识</text><text x="332" y="368">未来</text><text x="171" y="419">灵感</text><text x="20" y="286">生活</text><text x="104" y="180">人际</text></g>
+        </svg>
+      </div>
+      <form id="gate-form" class="login-card" aria-labelledby="gate-heading">
+        <span class="card-ornament" aria-hidden="true">✧</span>
+        <h2 id="gate-heading" tabindex="-1">欢迎回到云书房</h2>
+        <p id="gate-description" class="card-subtitle">正在准备书房入口…</p>
+        <div id="gate-fields" hidden>
+          <label class="gate-label" for="gate-password">访问密码</label>
+          <div class="input-wrap"><span data-icon="lock" aria-hidden="true"></span><input id="gate-password" name="password" type="password" minlength="8" maxlength="128" autocomplete="current-password" required aria-describedby="password-hint"><button id="show-password" type="button" aria-label="显示密码" aria-pressed="false">显示</button></div>
+          <p id="password-hint" class="gate-hint">输入你为这间书房设置的密码。</p>
+          <div id="confirm-field" hidden>
+            <label class="gate-label" for="gate-confirmation">再输入一次</label>
+            <div class="input-wrap"><span data-icon="lock" aria-hidden="true"></span><input id="gate-confirmation" name="confirmation" type="password" minlength="8" maxlength="128" autocomplete="new-password" disabled></div>
+          </div>
+          <label class="gate-remember"><input id="gate-remember" type="checkbox" name="remember">记住这台设备 <small>30 天</small></label>
+        </div>
+        <p id="gate-message" class="gate-message" role="status" aria-live="polite"></p>
+        <button id="gate-submit" class="login-primary" type="submit" disabled><span>正在准备…</span><span aria-hidden="true">→</span></button>
+        <button id="gate-retry" class="login-secondary" type="button" hidden>重新连接</button>
+        <p class="gate-footnote">ETHAN & QIQI · 一盏灯，等你回家</p>
+        <noscript><p>请开启 JavaScript 后输入访问密码。</p></noscript>
+      </form>
+    </div>
+    <footer class="login-footer"><span>ETHAN & QIQI</span><span>星辰有迹，岁月有存。</span><span>PRIVATE STUDY</span></footer>
+  </section>
+</body>
+</html>

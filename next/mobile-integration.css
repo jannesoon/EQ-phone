@@ -1,0 +1,40 @@
+@media(max-width:767px){
+.app-shell{position:relative;isolation:isolate;}
+.app-shell:not([data-mobile-view="chat"])>[data-mobile-legacy-sidebar]{display:none!important}
+.app-shell:not([data-mobile-view="chat"])>.xy-chat-main>:not(.fixed){display:none!important}
+.app-shell[data-mobile-view="chat"] .xy-chat-main{height:calc(100dvh - 84px - env(safe-area-inset-bottom))!important;min-width:0}
+/* Keep the legacy sidebar as a controlled drawer instead of a flex sibling. */
+.app-shell[data-mobile-view="chat"]>[data-mobile-legacy-sidebar]{
+    position:absolute;
+    top:calc(4rem + env(safe-area-inset-top,0px));
+    right:auto;
+    bottom:calc(84px + env(safe-area-inset-bottom,0px));
+    left:0;
+    z-index:20;
+    max-width:80vw;
+    flex:0 0 auto;
+    box-shadow:12px 0 28px rgba(15,23,42,.16);
+}
+.mc-preview-note{position:fixed;top:0;left:0;right:0;z-index:80;padding:5px 12px;text-align:center;background:#292747;color:#f0e8d8;font:11px/1.4 sans-serif;pointer-events:none}
+}
+/* Compact poster composition: keep the face and shortcuts within a phone viewport. */
+.mc-topbar{margin-bottom:14px;gap:8px}
+.mc-brand-kicker{font-size:8px;letter-spacing:.1em}
+.mc-hero-card--poster .mc-hero-card__visual{height:340px}
+.mc-hero-card--poster .mc-hero-card__body{margin-top:-112px;padding:18px 16px 14px;gap:10px;background:linear-gradient(transparent,rgba(30,25,66,.92) 40%)}
+.mc-hero-card--poster .mc-hero-card__theme{position:absolute;right:10px;top:-211px}
+.mc-hero-card--poster .mc-hero-card__theme-label{display:none}
+.mc-hero-card--poster .mc-hero-card__theme .mc-persona-switch{background:rgba(24,21,59,.68);backdrop-filter:blur(12px)}
+.mc-hero-card--poster h2{font-size:26px}
+.mc-shortcut-card{min-height:78px;align-items:center;padding:9px 6px;text-align:center;background:linear-gradient(135deg,#a999de33,#7069ad33)}
+.mc-shortcut-card__hint{display:none}
+.mc-shortcut-card__icon{background:transparent;border:0}
+.mc-page--home>.mc-section>.mc-section-heading{display:none}
+.mc-screen.mc-screen--embedded{padding:0 0 calc(88px + env(safe-area-inset-bottom,0px));overflow:hidden}
+.mc-library-persistent{height:100%;width:100%;min-height:0}
+.mc-library-persistent[hidden]{display:none!important}
+.mc-library-frame{display:block;height:100%;width:100%;border:0;background:#0e1b28}
+.mc-library-connection{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px;text-align:center;gap:16px;color:#ede9fa}
+.mc-library-connection>span{font-size:48px;color:#edcfa0}
+.mc-library-connection h1{font-size:26px;margin:0}
+.mc-library-connection p{max-width:27em;margin:0;line-height:1.7}
