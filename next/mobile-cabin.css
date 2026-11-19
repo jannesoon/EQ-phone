@@ -11,11 +11,11 @@
     --mc-bg-deep: #090b27;
     --mc-bg-mid: #15133f;
     --mc-bg-purple: #28205c;
-    --mc-surface: rgba(37, 35, 87, 0.68);
-    --mc-surface-strong: rgba(46, 41, 105, 0.82);
-    --mc-surface-soft: rgba(255, 255, 255, 0.07);
-    --mc-border: rgba(225, 219, 255, 0.17);
-    --mc-border-bright: rgba(245, 221, 153, 0.52);
+    --mc-surface: rgba(54, 47, 117, 0.58);
+    --mc-surface-strong: rgba(56, 47, 126, 0.78);
+    --mc-surface-soft: rgba(255, 255, 255, 0.08);
+    --mc-border: rgba(229, 222, 255, 0.2);
+    --mc-border-bright: rgba(245, 221, 153, 0.58);
     --mc-gold: #f4d995;
     --mc-gold-soft: #ffedbc;
     --mc-lavender: #c1baff;
@@ -23,7 +23,7 @@
     --mc-blue: #82b8ff;
     --mc-green: #86d7b2;
     --mc-orange: #f2b77e;
-    --mc-danger: #fa9baf;
+    --mc-danger: #c6bedc;
     --mc-radius-lg: 25px;
     --mc-radius-md: 18px;
     --mc-radius-sm: 14px;
@@ -77,8 +77,8 @@
     overflow-y: auto;
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
-    padding: calc(18px + env(safe-area-inset-top, 0px)) 16px 90px;
-    padding-bottom: calc(90px + env(safe-area-inset-bottom, 0px));
+    padding: calc(20px + env(safe-area-inset-top, 0px)) 16px 116px;
+    padding-bottom: calc(116px + env(safe-area-inset-bottom, 0px));
     background:
         radial-gradient(circle at 14% 4%, rgba(132, 112, 255, 0.28), transparent 29%),
         radial-gradient(circle at 104% 24%, rgba(94, 96, 240, 0.2), transparent 32%),
@@ -233,7 +233,7 @@
 
 .mc-topbar {
     align-items: center;
-    margin-bottom: 29px;
+    margin-bottom: 20px;
 }
 
 .mc-brand-lockup {
@@ -250,8 +250,8 @@
     border: 1px solid rgba(244, 217, 149, 0.38);
     border-radius: 13px;
     color: var(--mc-gold);
-    background: linear-gradient(145deg, rgba(247, 221, 157, 0.18), rgba(125, 108, 243, 0.2));
-    box-shadow: 0 5px 22px rgba(244, 217, 149, 0.12);
+    background: linear-gradient(145deg, rgba(247, 221, 157, 0.2), rgba(125, 108, 243, 0.26));
+    box-shadow: 0 5px 22px rgba(244, 217, 149, 0.15);
 }
 
 .mc-brand-kicker,
@@ -309,6 +309,12 @@
     box-shadow: 0 0 10px currentColor;
 }
 
+.mc-status__label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 .mc-status--online {
     color: var(--mc-green);
 }
@@ -319,6 +325,10 @@
 
 .mc-status--offline {
     color: var(--mc-danger);
+}
+
+.mc-status--offline .mc-status__dot {
+    box-shadow: 0 0 0 2px rgba(198, 190, 220, 0.08);
 }
 
 .mc-status--unknown {
@@ -345,7 +355,7 @@
     display: block;
     min-height: 0;
     overflow: hidden;
-    margin-bottom: 13px;
+    margin-bottom: 17px;
     padding: 0;
     border-radius: var(--mc-radius-lg);
 }
@@ -384,13 +394,14 @@
     max-width: none;
     margin: 6px 0 0;
     color: var(--mc-muted-strong);
-    font-size: 12px;
+    font-size: 13px;
+    line-height: 1.55;
 }
 
 .mc-hero-card__visual {
     position: relative;
     width: 100%;
-    height: clamp(230px, 64vw, 300px);
+    height: clamp(270px, 74vw, 344px);
     overflow: hidden;
     background: linear-gradient(160deg, rgba(105, 102, 211, 0.68), rgba(28, 24, 79, 0.92));
 }
@@ -414,9 +425,9 @@
     position: relative;
     z-index: 2;
     display: grid;
-    gap: 14px;
-    padding: 17px 18px 16px;
-    background: linear-gradient(145deg, rgba(70, 64, 142, 0.79), rgba(25, 25, 68, 0.93));
+    gap: 16px;
+    padding: 20px 18px 18px;
+    background: linear-gradient(145deg, rgba(70, 64, 142, 0.82), rgba(25, 25, 68, 0.95));
 }
 
 .mc-hero-card__actions {
@@ -609,7 +620,7 @@
 }
 
 .mc-section {
-    margin-top: 25px;
+    margin-top: 29px;
 }
 
 .mc-section--stacked {
@@ -619,11 +630,11 @@
 
 .mc-section-heading {
     align-items: end;
-    margin-bottom: 11px;
+    margin-bottom: 13px;
 }
 
 .mc-section-heading h2 {
-    font-size: 20px;
+    font-size: 21px;
     line-height: 1.2;
 }
 
@@ -652,12 +663,12 @@
 .mc-shortcut-card {
     display: flex;
     min-width: 0;
-    min-height: 111px;
+    min-height: 108px;
     flex-direction: column;
     align-items: flex-start;
     justify-content: flex-start;
-    gap: 5px;
-    padding: 13px 10px 10px;
+    gap: 7px;
+    padding: 14px 11px 11px;
     border: 1px solid var(--mc-border);
     border-radius: var(--mc-radius-sm);
     color: var(--mc-ink);
@@ -686,8 +697,8 @@
 .mc-feature-card__icon,
 .mc-empty-state__icon {
     display: grid;
-    width: 32px;
-    height: 32px;
+    width: 35px;
+    height: 35px;
     place-items: center;
     border: 1px solid rgba(244, 217, 149, 0.22);
     border-radius: 10px;
@@ -698,7 +709,7 @@
 .mc-shortcut-card__label {
     width: 100%;
     overflow: hidden;
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 750;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -708,7 +719,8 @@
     width: 100%;
     overflow: hidden;
     color: var(--mc-muted);
-    font-size: 10px;
+    font-size: 11px;
+    line-height: 1.35;
     text-overflow: ellipsis;
     white-space: nowrap;
 }

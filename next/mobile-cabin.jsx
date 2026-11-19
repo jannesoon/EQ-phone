@@ -133,12 +133,26 @@
         }
     }
 
-    const StatusPill = ({ agent }) => (
-        <span className={`mc-status mc-status--${agent.tone}`}>
-            <span className="mc-status__dot" aria-hidden="true" />
-            <span>{agent.label}</span>
-        </span>
-    );
+    function getStatusCopy(agent) {
+        if (agent.tone === 'offline') return '电脑未连接';
+        if (agent.tone === 'pending') return '正在检查电脑';
+        if (agent.tone === 'unknown') return '电脑连接状态未知';
+        return agent.label;
+    }
+
+    const StatusPill = ({ agent }) => {
+        const statusCopy = getStatusCopy(agent);
+        return (
+            <span
+                className={`mc-status mc-status--${agent.tone}`}
+                title={agent.label}
+                aria-label={`电脑状态：${statusCopy}`}
+            >
+                <span className="mc-status__dot" aria-hidden="true" />
+                <span className="mc-status__label">{statusCopy}</span>
+            </span>
+        );
+    };
 
     const MoonArt = ({ wolf = false }) => (
         <div className={`mc-moon-art ${wolf ? 'is-wolf' : ''}`} aria-hidden="true">
@@ -216,6 +230,29 @@
                             <MoonArt wolf={persona === 'wolf'} />
                         )}
                     </div>
+                    <div className="mc-hero-card__theme" role="group" aria-label="陪伴主题">
+                        <span className="mc-hero-card__theme-label">陪伴主题</span>
+                        <div className="mc-persona-switch">
+                            <button
+                                className={persona === 'human' ? 'is-selected' : ''}
+                                type="button"
+                                aria-pressed={persona === 'human'}
+                                onClick={() => onPersonaChange('human')}
+                            >
+                                <span className="mc-persona-switch__orb mc-persona-switch__orb--human" aria-hidden="true" />
+                                <span>真人逸辰</span>
+                            </button>
+                            <button
+                                className={persona === 'wolf' ? 'is-selected' : ''}
+                                type="button"
+                                aria-pressed={persona === 'wolf'}
+                                onClick={() => onPersonaChange('wolf')}
+                            >
+                                <span className="mc-persona-switch__orb mc-persona-switch__orb--wolf" aria-hidden="true" />
+                                <span>小狼崽</span>
+                            </button>
+                        </div>
+                    </div>
                     <div className="mc-hero-card__body">
                         <div className="mc-hero-card__copy">
                             <p className="mc-eyebrow">{today}</p>
@@ -228,29 +265,6 @@
                                 继续聊天
                                 <Glyph name="arrow" size={17} />
                             </button>
-                            <div className="mc-hero-card__theme" role="group" aria-label="陪伴主题">
-                                <span className="mc-hero-card__theme-label">陪伴主题</span>
-                                <div className="mc-persona-switch">
-                                    <button
-                                        className={persona === 'human' ? 'is-selected' : ''}
-                                        type="button"
-                                        aria-pressed={persona === 'human'}
-                                        onClick={() => onPersonaChange('human')}
-                                    >
-                                        <span className="mc-persona-switch__orb mc-persona-switch__orb--human" aria-hidden="true" />
-                                        <span>真人逸辰</span>
-                                    </button>
-                                    <button
-                                        className={persona === 'wolf' ? 'is-selected' : ''}
-                                        type="button"
-                                        aria-pressed={persona === 'wolf'}
-                                        onClick={() => onPersonaChange('wolf')}
-                                    >
-                                        <span className="mc-persona-switch__orb mc-persona-switch__orb--wolf" aria-hidden="true" />
-                                        <span>小狼崽</span>
-                                    </button>
-                                </div>
-                            </div>
                         </div>
                     </div>
                 </section>

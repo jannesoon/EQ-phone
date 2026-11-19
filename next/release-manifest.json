@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-11-19T02:42:54.277Z",
+  "generatedAt": "2026-11-19T07:36:09.755Z",
   "entrypoint": "index.html",
   "outputRoot": ".",
   "sourceRoots": [
@@ -9,7 +9,7 @@
     "cloud-candidate/static"
   ],
   "parameters": {
-    "releaseVersion": "phone-r3",
+    "releaseVersion": "phone-r4",
     "apiBase": "https://jeeapoehmvwpsujsfhao.supabase.co/functions/v1/yunshufang-web-api",
     "agentBase": "https://desktop-8i3jek4.taild484c1.ts.net",
     "hostConnectionAvailable": false,
@@ -111,19 +111,24 @@
       "sha256": "e9e998f4b1fbfdee7eea2f8e57fe93bf1524a6df5f83d8af0d02bbcdea588500"
     },
     {
+      "path": "icons/app-icon.png",
+      "bytes": 25879,
+      "sha256": "1694966cb9ce8c1136e0ed8917a467041c9f24c11ae2638c336a384676e16f49"
+    },
+    {
       "path": "identity-core-panel.jsx",
       "bytes": 19770,
       "sha256": "23f5180627af711eb905b46bd76dc5fdb17e89685fd5061b22aafbcfaf3d8fbc"
     },
     {
       "path": "index.html",
-      "bytes": 11108,
-      "sha256": "0d9b4f6ca907f896eef73e16f4644ad96a6fef7bc336e6f8570edf3e0d5aa34f"
+      "bytes": 10426,
+      "sha256": "dc9070017a1d60a3b5746a338ab16df9560c683f67c3f6c7dc317b02f32ab1c1"
     },
     {
       "path": "library/app.js",
-      "bytes": 152036,
-      "sha256": "b31515a1b6911a3077a42a2611a15d9c1a48a8f12cb6da1f05233e9ea1b74e18"
+      "bytes": 152058,
+      "sha256": "c313855bb4a68613b9739728559954a6aa948f9ba83f466d7ac52bf9daac17c8"
     },
     {
       "path": "library/assets/doctor-office-clean.png",
@@ -167,8 +172,8 @@
     },
     {
       "path": "library/auth-client.js",
-      "bytes": 3048,
-      "sha256": "621042eca96b23eeabb5559f59683d26371688d38def800ed24274bd08ce1312"
+      "bytes": 3059,
+      "sha256": "43f5c388c58c5212dc62c281fd40da1797f1a8a5b63ed1a3e1ff11cbf5306589"
     },
     {
       "path": "library/cloud-view.css",
@@ -187,18 +192,18 @@
     },
     {
       "path": "library/gate.html",
-      "bytes": 5830,
-      "sha256": "e0a3b216be750f9ed8af5cac5033c74e0c34213c70fc0268c970d2f03296d595"
+      "bytes": 5885,
+      "sha256": "1454e30d8520382941a1a612ec95d079589d78ec932860426165513b7ec3c2ef"
     },
     {
       "path": "library/gate.js",
-      "bytes": 4421,
-      "sha256": "6ffaabf9585b7f5f5ee9c90dae43f9b444c31f9e8ea2164173ae4219d1bec8b6"
+      "bytes": 4432,
+      "sha256": "2069ec19354528af218fda001624400614e9d306ff1f2b9cf23c5eca51189af0"
     },
     {
       "path": "library/index.html",
-      "bytes": 10789,
-      "sha256": "8026bf2165527bd49b1b28d844c7cdc9f51e29284cf29fd0aba7e4f17bb1dfb2"
+      "bytes": 10833,
+      "sha256": "72305da69a19ddbbf9e97300b439924a971e9feeeb33bba71289ec5d78584bef"
     },
     {
       "path": "library/phone-refinements.css",
@@ -217,13 +222,13 @@
     },
     {
       "path": "library/transport.js",
-      "bytes": 7963,
-      "sha256": "6264ae2fa5e8e081f57faa89d2ac8fe78ddfcfa5726374dcfcdfaa44eac65496"
+      "bytes": 9183,
+      "sha256": "b2980f2f5f87f5a16d7fd706598afb67bfc5bc058ec8cda16bdd7784755bd76b"
     },
     {
       "path": "manifest.json",
-      "bytes": 1092,
-      "sha256": "4cb25cd6882c007a7890b3e4dce676c23984b4b2f18e8a3254af7152751d47c6"
+      "bytes": 446,
+      "sha256": "504386265922788f45e13b8482193417ea35f065e2784a48e8a3619e3e253103"
     },
     {
       "path": "memory-candidate-intent.js",
@@ -257,18 +262,18 @@
     },
     {
       "path": "mobile-cabin.css",
-      "bytes": 24774,
-      "sha256": "d308591588b1c44a1150b793ce6083a12cf92c187d2e065d44e7c2c72370f8da"
+      "bytes": 25008,
+      "sha256": "ccf3082c439f7dd012b885f9bd8a3d65ecf636f3b5353193bb890245fb8c6df5"
     },
     {
       "path": "mobile-cabin.jsx",
-      "bytes": 30201,
-      "sha256": "2006e584c5bf4466fa9f6ed23abbe64b708cb5ed7644b2f592a08b1f8c06e07d"
+      "bytes": 30538,
+      "sha256": "afd7b79402dd3bb8e8b9afeeb1eb93e4f5494ce4effeda6747870a218061b831"
     },
     {
       "path": "mobile-integration.css",
-      "bytes": 5984,
-      "sha256": "1302b44c6ca6548acf1deed1f61d450fe15dd4f560040c9ab53fbed3e0418678"
+      "bytes": 7691,
+      "sha256": "6ac08b9d379b4d2b3a40b211b41ffa87a8f3dedee102567c0efc9fd03eba168f"
     },
     {
       "path": "mobile-library.jsx",

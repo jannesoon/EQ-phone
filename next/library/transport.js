@@ -1,4 +1,4 @@
-import { RUNTIME_CONFIG } from './runtime-config.js';
+import { RUNTIME_CONFIG } from './runtime-config.js?v=phone-r4';
 
 export const SESSION_HEADER = 'X-Yunshufang-Session';
 export const SESSION_STORAGE_KEY = 'yunshufang.session.v1';
@@ -11,10 +11,16 @@ export class ApiConfigError extends Error {
   }
 }
 
+const SESSION_STORAGE_ERROR_CODE = 'SESSION_STORAGE_UNAVAILABLE';
+
 function safeStorage(storage) {
   return storage && typeof storage.getItem === 'function' && typeof storage.setItem === 'function' && typeof storage.removeItem === 'function'
     ? storage
     : null;
+}
+
+function readDefaultStorage(name) {
+  try { return globalThis[name]; } catch { return null; }
 }
 
 function expiryMs(value) {
@@ -99,17 +105,27 @@ function responseError(response, payload) {
   return error;
 }
 
+function sessionStorageError(kind) {
+  const message = kind === 'remember'
+    ? '云书房登录未完成：无法更新“记住登录”状态，请允许本站使用持久化存储后重试。'
+    : '云书房登录未完成：当前浏览器无法保存会话，请允许本站使用存储空间后重试。';
+  const error = new Error(message);
+  error.name = 'SessionStorageError';
+  error.code = SESSION_STORAGE_ERROR_CODE;
+  return error;
+}
+
 export function createTransport({
   apiBase = RUNTIME_CONFIG.apiBase,
   fetchImpl = globalThis.fetch,
-  sessionStorageImpl = globalThis.sessionStorage,
-  localStorageImpl = globalThis.localStorage,
+  sessionStorageImpl,
+  localStorageImpl,
   clock = () => Date.now(),
 } = {}) {
   const base = normalizeApiBase(apiBase);
   const storageKey = sessionStorageKeyForApiBase(base);
-  const sessionStore = safeStorage(sessionStorageImpl);
-  const localStore = safeStorage(localStorageImpl);
+  const sessionStore = safeStorage(sessionStorageImpl === undefined ? readDefaultStorage('sessionStorage') : sessionStorageImpl);
+  const localStore = safeStorage(localStorageImpl === undefined ? readDefaultStorage('localStorage') : localStorageImpl);
 
   function isConfigured() { return Boolean(base); }
   function apiUrl(path) {
@@ -129,9 +145,32 @@ export function createTransport({
       throw new Error('云书房登录返回的会话不完整');
     }
     const record = JSON.stringify({ token, expiresAt });
-    sessionStore?.setItem(storageKey, record);
-    if (remember === true) localStore?.setItem(storageKey, record);
-    else localStore?.removeItem(storageKey);
+    if (!sessionStore) throw sessionStorageError('session');
+    try {
+      sessionStore.setItem(storageKey, record);
+    } catch {
+      clearSession();
+      throw sessionStorageError('session');
+    }
+    if (remember === true) {
+      if (!localStore) {
+        clearSession();
+        throw sessionStorageError('remember');
+      }
+      try {
+        localStore.setItem(storageKey, record);
+      } catch {
+        clearSession();
+        throw sessionStorageError('remember');
+      }
+    } else {
+      try {
+        localStore?.removeItem(storageKey);
+      } catch {
+        clearSession();
+        throw sessionStorageError('remember');
+      }
+    }
     return { token, expiresAt };
   }
   async function request(path, options = {}) {
