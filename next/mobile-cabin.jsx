@@ -427,6 +427,16 @@
     }
 
     function ProfileView({ agent, persona, imageSource, imageFailed, onImageError, onAction, onPersonaChange }) {
+        const [updateState, setUpdateState] = useState({ checking: false, available: false, text: '检查网页的新版本' });
+        const checkUpdate = async () => {
+            if (updateState.available) { onAction('update'); return; }
+            if (!global.XingyuePhoneUpdate) { setUpdateState({ checking: false, available: false, text: '当前入口暂不支持检查更新' }); return; }
+            setUpdateState({ checking: true, available: false, text: '正在检查…' });
+            try {
+                const result = await global.XingyuePhoneUpdate.check();
+                setUpdateState({ checking: false, available: result.hasUpdate, text: result.hasUpdate ? '有新版本，点击更新页面' : '已经是最新版本' });
+            } catch (_) { setUpdateState({ checking: false, available: false, text: '暂时无法检查，请稍后重试' }); }
+        };
         return (
             <div className="mc-page">
                 <header className="mc-page-header">
@@ -488,6 +498,7 @@
                         <div className="mc-list-card mc-list-card--large">
                             <button type="button" onClick={() => onAction('backup')}><Glyph name="backup" size={20} /><span><strong>备份与恢复</strong><small>守好你的资料</small></span><Glyph name="chevron" size={18} /></button>
                             <button type="button" onClick={() => onAction('vault')}><Glyph name="vault" size={20} /><span><strong>云书房</strong><small>前往云书房</small></span><Glyph name="chevron" size={18} /></button>
+                            <button type="button" disabled={updateState.checking} onClick={checkUpdate}><Glyph name="cloud" size={20} /><span><strong>{updateState.available ? '更新页面' : '检查更新'}</strong><small role="status">{updateState.text}</small></span><Glyph name="chevron" size={18} /></button>
                         </div>
                     </div>
                 </section>

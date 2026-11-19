@@ -8123,6 +8123,26 @@ X 等对自动化浏览器登录敏感的网站，优先让柒柒在她日常使
                         avatarUrl={config.aiAvatar || ''} userName={config.userName || '柒柒'}
                         onAction={action => {
                             if (action === 'chat') { setMobileView('chat'); setSidebarOpen(false); }
+                            else if (action === 'update') {
+                                if (isLoading) {
+                                    showToast('当前正在生成，请先等待本轮完成后再更新。');
+                                    return;
+                                }
+                                const hasUnsentDraft = Boolean(input.trim() || attachments.length > 0 || pendingVideo || pendingTextAttachment);
+                                if (hasUnsentDraft && !window.confirm('当前有尚未发送的文字或附件，更新后可能丢失。确认继续更新吗？')) return;
+                                if (typeof window.XingyuePhoneUpdate?.apply !== 'function') {
+                                    showToast('更新模块尚未就绪，请稍后再试。');
+                                    return;
+                                }
+                                try {
+                                    const updateResult = window.XingyuePhoneUpdate.apply();
+                                    if (updateResult && typeof updateResult.catch === 'function') {
+                                        updateResult.catch(error => showToast(`更新失败：${error?.message || '请稍后再试'}`));
+                                    }
+                                } catch (error) {
+                                    showToast(`更新失败：${error?.message || '请稍后再试'}`);
+                                }
+                            }
                             else if (action === 'health') setHealthModalOpen(true);
                             else if (action === 'vault' || action === 'diary') setMobileView('library');
                             else if (action === 'drawing') { setMobileView('chat'); setSidebarOpen(false); showToast('在聊天中向逸辰描述想创作的图片。'); }
@@ -8604,88 +8624,152 @@ X 等对自动化浏览器登录敏感的网站，优先让柒柒在她日常使
                             );
                         })()}
                         <div className="safe-top mc-chat-header flex items-center justify-between p-4 h-16 bg-white/80 backdrop-blur sticky top-0 z-10 border-b border-gray-100" role="banner" aria-label="聊天标题与连接状态" style={{height: 'calc(4rem + env(safe-area-inset-top))'}}>
-                            <div className="mc-chat-header__identity flex items-center gap-2 md:gap-3 min-w-0">
-                                <button onClick={() => setSidebarOpen(!sidebarOpen)} className="mc-chat-menu-button p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-600 flex-shrink-0" aria-label="打开聊天会话抽屉"><Icon name="Menu" size={20} /></button>
-                                <div className="mc-chat-title flex flex-col min-w-0">
-                                    <span className="mc-chat-mobile-name" style={{display: 'none'}}>{config.aiName || 'Ethan'} ♡</span><span className="mc-chat-legacy-title md:hidden text-sm font-semibold text-gray-800 tracking-tight leading-tight whitespace-nowrap">星月舱 {UPDATE_VERSION.split('-')[0]}</span>
-                                    <span className="mc-chat-legacy-title hidden md:block text-lg font-medium text-gray-800 tracking-tight leading-tight whitespace-nowrap">✨ 星月舱 {UPDATE_VERSION} 🌙💫</span>
-                                    <span
-                                        className={`mc-chat-agent-status text-[10px] leading-tight ${localAgentStatus.state === 'online' ? 'text-emerald-500' : localAgentStatus.state === 'checking' ? 'text-amber-500' : 'text-gray-400'}`}
-                                        role="status"
-                                        aria-live="polite"
-                                        title={localAgentStatus.reason || localAgentStatus.label}
-                                    >
-                                        <span className="mr-1">{localAgentStatus.state === 'online' ? '●' : localAgentStatus.state === 'checking' ? '◌' : '○'}</span>
-                                        {window.XINGYUE_MOBILE_DESIGN_PREVIEW ? '设计预览：聊天服务未连接' : localAgentStatus.label}
-                                    </span>
-                                    <span
-                                        className={`mc-chat-sync-status text-[10px] leading-tight ${hostSyncStatus.state === 'saved' ? 'text-emerald-500' : ['saving', 'queued'].includes(hostSyncStatus.state) ? 'text-amber-500' : hostSyncStatus.state === 'conflict' ? 'text-red-500' : hostSyncStatus.state === 'readonly' ? 'text-indigo-500' : 'text-gray-400'}`}
-                                        role="status"
-                                        aria-live="polite"
-                                        title={hostSyncStatus.reason || hostSyncStatus.lastSavedAt || hostSyncStatus.label}
-                                    >
-                                        <span className="mr-1">{hostSyncStatus.state === 'saved' ? '✓' : ['saving', 'queued'].includes(hostSyncStatus.state) ? '◌' : hostSyncStatus.state === 'conflict' ? '!' : '○'}</span>
-                                        {hostSyncStatus.label}
-                                    </span>
-                                    {!window.XingyueHostSync?.isLocalWriter?.() && (
-                                        <button
-                                            onClick={handleWritingHandoff}
-                                            className="mc-chat-handoff text-[10px] text-indigo-600 underline underline-offset-2 text-left"
-                                        >同步最新消息并在{desktopBridgeAvailable ? '电脑' : '手机'}继续</button>
-                                    )}
-                                    {hostSyncStatus.state === 'conflict' && (
-                                        <button
-                                            onClick={async () => {
-                                                if (!window.confirm('确认以已经验收的2.0主机数据为准？手机冲突版本仍会保存在电脑备份中。')) return;
-                                                try {
-                                                    const hostData = await window.XingyueHostSync?.acceptHost2Conflicts();
-                                                    await applyHostChatData(hostData);
-                                                    showToast('手机已恢复为2.0主机最新版，冲突提示已清除');
-                                                } catch (error) { showToast(`冲突确认失败：${error.message}`); }
-                                            }}
-                                            className="mc-chat-conflict text-[10px] text-red-600 underline underline-offset-2"
-                                        >按主机2.0确认</button>
-                                    )}
+                            <div className="mc-chat-header__desktop flex items-center justify-between w-full min-w-0">
+                                <div className="mc-chat-header__identity flex items-center gap-2 md:gap-3 min-w-0">
+                                    <button onClick={() => setSidebarOpen(!sidebarOpen)} className="mc-chat-menu-button p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-600 flex-shrink-0" aria-label="打开聊天会话抽屉"><Icon name="Menu" size={20} /></button>
+                                    <div className="mc-chat-title flex flex-col min-w-0">
+                                        <span className="mc-chat-legacy-title md:hidden text-sm font-semibold text-gray-800 tracking-tight leading-tight whitespace-nowrap">星月舱 {UPDATE_VERSION.split('-')[0]}</span>
+                                        <span className="mc-chat-legacy-title hidden md:block text-lg font-medium text-gray-800 tracking-tight leading-tight whitespace-nowrap">✨ 星月舱 {UPDATE_VERSION} 🌙💫</span>
+                                        <span
+                                            className={`mc-chat-agent-status text-[10px] leading-tight ${localAgentStatus.state === 'online' ? 'text-emerald-500' : localAgentStatus.state === 'checking' ? 'text-amber-500' : 'text-gray-400'}`}
+                                            role="status"
+                                            aria-live="polite"
+                                            title={localAgentStatus.reason || localAgentStatus.label}
+                                        >
+                                            <span className="mr-1">{localAgentStatus.state === 'online' ? '●' : localAgentStatus.state === 'checking' ? '◌' : '○'}</span>
+                                            {window.XINGYUE_MOBILE_DESIGN_PREVIEW ? '设计预览：聊天服务未连接' : localAgentStatus.label}
+                                        </span>
+                                        <span
+                                            className={`mc-chat-sync-status text-[10px] leading-tight ${hostSyncStatus.state === 'saved' ? 'text-emerald-500' : ['saving', 'queued'].includes(hostSyncStatus.state) ? 'text-amber-500' : hostSyncStatus.state === 'conflict' ? 'text-red-500' : hostSyncStatus.state === 'readonly' ? 'text-indigo-500' : 'text-gray-400'}`}
+                                            role="status"
+                                            aria-live="polite"
+                                            title={hostSyncStatus.reason || hostSyncStatus.lastSavedAt || hostSyncStatus.label}
+                                        >
+                                            <span className="mr-1">{hostSyncStatus.state === 'saved' ? '✓' : ['saving', 'queued'].includes(hostSyncStatus.state) ? '◌' : hostSyncStatus.state === 'conflict' ? '!' : '○'}</span>
+                                            {hostSyncStatus.label}
+                                        </span>
+                                        {!window.XingyueHostSync?.isLocalWriter?.() && (
+                                            <button
+                                                onClick={handleWritingHandoff}
+                                                className="mc-chat-handoff text-[10px] text-indigo-600 underline underline-offset-2 text-left"
+                                            >同步最新消息并在{desktopBridgeAvailable ? '电脑' : '手机'}继续</button>
+                                        )}
+                                        {hostSyncStatus.state === 'conflict' && (
+                                            <button
+                                                onClick={async () => {
+                                                    if (!window.confirm('确认以已经验收的2.0主机数据为准？手机冲突版本仍会保存在电脑备份中。')) return;
+                                                    try {
+                                                        const hostData = await window.XingyueHostSync?.acceptHost2Conflicts();
+                                                        await applyHostChatData(hostData);
+                                                        showToast('手机已恢复为2.0主机最新版，冲突提示已清除');
+                                                    } catch (error) { showToast(`冲突确认失败：${error.message}`); }
+                                                }}
+                                                className="mc-chat-conflict text-[10px] text-red-600 underline underline-offset-2"
+                                            >按主机2.0确认</button>
+                                        )}
+                                    </div>
                                 </div>
-                            </div>
-                            <div className="flex items-center gap-2 flex-shrink-0">
-                                <button onClick={cycleTheme} className="mc-chat-theme-button p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-600" aria-label="切换主题" title="切换主题">
-                                    {config.theme === 'dark' ? <Icon name="Moon" size={20} /> : config.theme === 'claude' ? <Icon name="Coffee" size={20} /> : <Icon name="Sun" size={20} />}
-                                </button>
-                                <div className="mc-chat-settings-button cursor-pointer ml-1" onClick={() => setSettingsOpen(true)} role="button" tabIndex={0} aria-label="打开设置" title="设置">
-                                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 flex items-center justify-center shadow-md hover:shadow-lg hover:scale-105 transition-all">
-                                        <Icon name="Sparkles" size={18} className="text-white"/>
+                                <div className="flex items-center gap-2 flex-shrink-0">
+                                    <button onClick={cycleTheme} className="mc-chat-theme-button p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-600" aria-label="切换主题" title="切换主题">
+                                        {config.theme === 'dark' ? <Icon name="Moon" size={20} /> : config.theme === 'claude' ? <Icon name="Coffee" size={20} /> : <Icon name="Sun" size={20} />}
+                                    </button>
+                                    <div className="mc-chat-settings-button cursor-pointer ml-1" onClick={() => setSettingsOpen(true)} role="button" tabIndex={0} aria-label="打开设置" title="设置">
+                                        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 flex items-center justify-center shadow-md hover:shadow-lg hover:scale-105 transition-all">
+                                            <Icon name="Sparkles" size={18} className="text-white"/>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
+
+                            <div className="mc-chat-header__mobile" aria-label="手机聊天标题栏">
+                                <button onClick={() => { setMobileView('home'); setSidebarOpen(false); }} className="mc-chat-mobile-back" aria-label="返回星月舱首页" title="返回首页"><Icon name="ChevronLeft" size={21} /></button>
+                                <button onClick={() => setSidebarOpen(!sidebarOpen)} className="mc-chat-mobile-sessions" aria-label="打开聊天会话" title="会话"><Icon name="Menu" size={19} /></button>
+                                <div className="mc-chat-mobile-profile">
+                                    <div className="mc-chat-mobile-avatar" aria-hidden="true">
+                                        <img src={config.aiAvatar || 'assets/ethan-human.png'} alt="" />
+                                    </div>
+                                    <div className="mc-chat-mobile-profile__copy">
+                                        <strong>{config.aiName || 'Ethan'}</strong>
+                                        <span className={`mc-chat-mobile-profile__status ${localAgentStatus.state === 'online' ? 'is-online' : localAgentStatus.state === 'checking' ? 'is-checking' : 'is-pending'}`}>
+                                            <span aria-hidden="true">{localAgentStatus.state === 'online' ? '●' : localAgentStatus.state === 'checking' ? '◌' : '○'}</span>
+                                            {window.XINGYUE_MOBILE_DESIGN_PREVIEW ? '预览未连接' : localAgentStatus.state === 'checking' ? '检测中' : localAgentStatus.state !== 'online' ? '电脑未连接' : localAgentStatus.pairingState === 'connected' ? '已配对' : ['unpaired','revoked'].includes(localAgentStatus.pairingState) ? '待配对' : '配对待确认'}
+                                        </span>
+                                    </div>
+                                </div>
+                                <button onClick={() => setSettingsOpen(true)} className="mc-chat-mobile-more" aria-label="打开聊天更多设置" title="更多"><Icon name="MoreVertical" size={20} /></button>
+                            </div>
+
+                            <details className={`mc-chat-mobile-connection ${hostSyncStatus.state === 'conflict' ? 'is-conflict' : hostSyncStatus.state === 'readonly' ? 'is-readonly' : localAgentStatus.state === 'online' ? 'is-connected' : 'is-unpaired'}`} open={hostSyncStatus.state === 'conflict'}>
+                                <summary className="mc-chat-mobile-connection__summary" aria-label="展开连接与同步状态">
+                                    <span className="mc-chat-mobile-connection__label"><Icon name="ShieldCheck" size={14} />连接与同步</span>
+                                    <span className="mc-chat-mobile-connection__state">{hostSyncStatus.state === 'conflict' ? '需处理冲突' : hostSyncStatus.state === 'readonly' ? '只读模式' : localAgentStatus.state === 'checking' ? '检测中' : localAgentStatus.state !== 'online' ? '电脑未连接' : localAgentStatus.pairingState === 'connected' ? '已配对' : '配对待确认'}</span>
+                                </summary>
+                                <div className="mc-chat-mobile-connection__body">
+                                    <p className="mc-chat-mobile-connection__notice" role="status" aria-live="polite">
+                                        {hostSyncStatus.state === 'conflict' ? '检测到同步冲突，请核对后再选择恢复方式。' : hostSyncStatus.state === 'readonly' ? '当前由另一台设备继续，点击下方按钮可以交接。' : localAgentStatus.state !== 'online' ? '电脑暂未连通，请检查电脑服务和手机私人网络；已有配对会保留。' : ['unpaired','revoked'].includes(localAgentStatus.pairingState) ? '电脑已在线，请在“我的 → 设备连接”完成设备配对。' : '连接和同步状态会在这里更新。'}
+                                    </p>
+                                    <div className="mc-chat-mobile-connection__statuses">
+                                        <span className={`mc-chat-agent-status ${localAgentStatus.state === 'online' ? 'text-emerald-500' : localAgentStatus.state === 'checking' ? 'text-amber-500' : 'text-gray-400'}`} role="status" aria-live="polite" title={localAgentStatus.reason || localAgentStatus.label}>
+                                            <span aria-hidden="true">{localAgentStatus.state === 'online' ? '●' : localAgentStatus.state === 'checking' ? '◌' : '○'}</span>{window.XINGYUE_MOBILE_DESIGN_PREVIEW ? '设计预览：聊天服务未连接' : localAgentStatus.label}
+                                        </span>
+                                        <span className={`mc-chat-sync-status ${hostSyncStatus.state === 'saved' ? 'text-emerald-500' : ['saving', 'queued'].includes(hostSyncStatus.state) ? 'text-amber-500' : hostSyncStatus.state === 'conflict' ? 'text-red-500' : hostSyncStatus.state === 'readonly' ? 'text-indigo-500' : 'text-gray-400'}`} role="status" aria-live="polite" title={hostSyncStatus.reason || hostSyncStatus.lastSavedAt || hostSyncStatus.label}>
+                                            <span aria-hidden="true">{hostSyncStatus.state === 'saved' ? '✓' : ['saving', 'queued'].includes(hostSyncStatus.state) ? '◌' : hostSyncStatus.state === 'conflict' ? '!' : '○'}</span>{hostSyncStatus.label}
+                                        </span>
+                                    </div>
+                                    <div className="mc-chat-mobile-connection__actions">
+                                        {!window.XingyueHostSync?.isLocalWriter?.() && <button onClick={handleWritingHandoff} className="mc-chat-handoff" aria-label="同步最新消息并继续">同步最新消息并在{desktopBridgeAvailable ? '电脑' : '手机'}继续</button>}
+                                        {hostSyncStatus.state === 'conflict' && <button onClick={async () => {
+                                            if (!window.confirm('确认以已经验收的2.0主机数据为准？手机冲突版本仍会保存在电脑备份中。')) return;
+                                            try {
+                                                const hostData = await window.XingyueHostSync?.acceptHost2Conflicts();
+                                                await applyHostChatData(hostData);
+                                                showToast('手机已恢复为2.0主机最新版，冲突提示已清除');
+                                            } catch (error) { showToast(`冲突确认失败：${error.message}`); }
+                                        }} className="mc-chat-conflict" aria-label="按主机2.0确认冲突">按主机2.0确认</button>}
+                                        <button onClick={cycleTheme} className="mc-chat-mobile-theme" aria-label="切换主题"><Icon name={config.theme === 'dark' ? 'Moon' : config.theme === 'claude' ? 'Coffee' : 'Sun'} size={15} />主题</button>
+                                        <button onClick={() => setSettingsOpen(true)} className="mc-chat-mobile-settings" aria-label="打开设置"><Icon name="Settings" size={15} />设置</button>
+                                    </div>
+                                </div>
+                            </details>
                         </div>
 
                         <div ref={messagesContainerRef} onScroll={handleChatScroll} className={`xy-chat-scroll mc-chat-scroll flex-1 overflow-y-auto px-4 md:px-0 relative ${config.chatBgImage ? '' : 'bg-white'}`} role="log" aria-label="聊天消息" aria-live="polite">
                             {/* ★ 背景图放在主聊天区的定位上下文里（不新增容器层） */}
                             <div className="mc-chat-messages max-w-3xl mx-auto py-6 relative z-10" style={{paddingBottom: 'calc(12rem + env(safe-area-inset-bottom))'}}>
                                 {messages.length === 0 ? (
-                                    <div className="mt-16 flex flex-col items-center justify-center animate-fade-in px-4 text-center">
+                                    <>
+                                    <div className="mc-chat-empty-state animate-fade-in" aria-label="空白聊天页">
+                                        <div className="mc-chat-empty-stars" aria-hidden="true">
+                                            <span className="mc-chat-empty-stars__one">✦</span>
+                                            <span className="mc-chat-empty-stars__two">·</span>
+                                            <span className="mc-chat-empty-stars__three">✧</span>
+                                            <span className="mc-chat-empty-stars__four">·</span>
+                                        </div>
+                                        <div className="mc-chat-empty-portrait-wrap" aria-hidden="true">
+                                            <div className="mc-chat-empty-portrait">
+                                                <img src={config.aiAvatar || 'assets/ethan-human.png'} alt="" />
+                                            </div>
+                                            <span className="mc-chat-empty-portrait__sparkle">✦</span>
+                                        </div>
+                                        <div className="mc-chat-empty-copy">
+                                            <span className="mc-chat-empty-kicker">星月交辉</span>
+                                            <h1>{config.aiName || 'Ethan'}</h1>
+                                            <p>我在这里，等你慢慢说。</p>
+                                        </div>
+                                    </div>
+                                    <div className="mc-chat-empty-desktop mt-16 flex flex-col items-center justify-center animate-fade-in px-4 text-center">
                                         <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent text-3xl md:text-4xl font-semibold mb-4 tracking-tight">欢迎回到星月舱 ✨</div>
-                                        
                                         {config.loveStartDate ? (() => {
                                             const start = new Date(config.loveStartDate);
                                             const now = new Date();
                                             const diffDays = Math.floor((now - start) / 86400000);
                                             const displayName = config.partnerName || config.aiName || 'TA';
-                                            
-                                            // ★ 自动里程碑
                                             const milestones = [100,200,300,365,400,500,520,600,700,730,800,900,1000,1095,1200,1314,1500,1826,2000,2555,3000,3650];
                                             const todayMilestone = milestones.includes(diffDays) ? diffDays : null;
-                                            
-                                            // ★ 下一个里程碑
                                             const nextMilestone = milestones.find(m => m > diffDays);
                                             const daysToNextMilestone = nextMilestone ? nextMilestone - diffDays : null;
-                                            
-                                            // ★ 纪念日检查（config.anniversaries）
                                             const monthDayStr = `${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
                                             const todayAnniversary = config.anniversaries?.[monthDayStr];
-                                            
-                                            // ★ 下一个日历纪念日
                                             let nextAnniversary = null;
                                             let daysToNextAnniversary = null;
                                             if (config.anniversaries) {
@@ -8701,53 +8785,26 @@ X 等对自动化浏览器登录敏感的网站，优先让柒柒在她日常使
                                                     }
                                                 }
                                             }
-                                            
                                             return (
                                                 <div className="space-y-4 mb-8">
-                                                    {/* 相恋天数 */}
-                                                    <p className="text-gray-600 text-base">
-                                                        你与<span className="font-semibold text-purple-600">{displayName}</span>已相恋
-                                                    </p>
-                                                    <div className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 bg-clip-text text-transparent">
-                                                        {diffDays} <span className="text-2xl">天</span>
-                                                    </div>
-                                                    
-                                                    {/* 今日特殊提示 */}
-                                                    {todayMilestone && (
-                                                        <div className="inline-block bg-gradient-to-r from-pink-100 to-purple-100 text-pink-600 px-4 py-2 rounded-full text-sm font-medium animate-scale-in">
-                                                            🎉 今天是第 {todayMilestone} 天纪念日！
-                                                        </div>
-                                                    )}
-                                                    {todayAnniversary && (
-                                                        <div className="inline-block bg-gradient-to-r from-amber-100 to-pink-100 text-amber-600 px-4 py-2 rounded-full text-sm font-medium animate-scale-in">
-                                                            ✨ 今天是{todayAnniversary}！
-                                                        </div>
-                                                    )}
-                                                    
-                                                    {/* 下一个纪念日倒计时 */}
-                                                    {!todayMilestone && !todayAnniversary && (
-                                                        <div className="text-xs text-gray-400 space-y-1">
-                                                            {nextAnniversary && daysToNextAnniversary && (
-                                                                <p>距离<span className="text-purple-500 font-medium">{nextAnniversary}</span>还有 {daysToNextAnniversary} 天</p>
-                                                            )}
-                                                            {nextMilestone && daysToNextMilestone && (
-                                                                <p>距离第 <span className="text-pink-500 font-medium">{nextMilestone}</span> 天还有 {daysToNextMilestone} 天</p>
-                                                            )}
-                                                        </div>
-                                                    )}
+                                                    <p className="text-gray-600 text-base">你与<span className="font-semibold text-purple-600">{displayName}</span>已相恋</p>
+                                                    <div className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 bg-clip-text text-transparent">{diffDays} <span className="text-2xl">天</span></div>
+                                                    {todayMilestone && <div className="inline-block bg-gradient-to-r from-pink-100 to-purple-100 text-pink-600 px-4 py-2 rounded-full text-sm font-medium animate-scale-in">🎉 今天是第 {todayMilestone} 天纪念日！</div>}
+                                                    {todayAnniversary && <div className="inline-block bg-gradient-to-r from-amber-100 to-pink-100 text-amber-600 px-4 py-2 rounded-full text-sm font-medium animate-scale-in">✨ 今天是{todayAnniversary}！</div>}
+                                                    {!todayMilestone && !todayAnniversary && <div className="text-xs text-gray-400 space-y-1">
+                                                        {nextAnniversary && daysToNextAnniversary && <p>距离<span className="text-purple-500 font-medium">{nextAnniversary}</span>还有 {daysToNextAnniversary} 天</p>}
+                                                        {nextMilestone && daysToNextMilestone && <p>距离第 <span className="text-pink-500 font-medium">{nextMilestone}</span> 天还有 {daysToNextMilestone} 天</p>}
+                                                    </div>}
                                                 </div>
                                             );
-                                        })() : (
-                                            <p className="text-gray-400 text-sm mb-8">在「外观 ✨」设置中填写相恋起始日，这里会展示你们的故事 💕</p>
-                                        )}
-
+                                        })() : <p className="text-gray-400 text-sm mb-8">在「外观 ✨」设置中填写相恋起始日，这里会展示你们的故事 💕</p>}
                                         <div className="mc-chat-config-summary mt-8 max-w-md rounded-xl border border-white/60 bg-white/45 px-4 py-3 text-[11px] leading-relaxed text-gray-500 backdrop-blur-sm">
                                             <div className="font-medium text-gray-600 mb-1">当前对话配置</div>
                                             <div className="break-words">模型：{config.model || '未配置'}</div>
                                             <div>PP：{memoryFiles.filter(f=>f.type==='core').length} · ❤：{longTermMemories.length} · 日志：{memoryFiles.filter(f=>f.type==='journal').length} · 模式：OpenAI兼容</div>
                                         </div>
-                                        
                                     </div>
+                                    </>
                                 ) : (() => {
                                     // ★ 判断当前背景是否深色，以便切换文字颜色
                                     let isDarkBg = false;

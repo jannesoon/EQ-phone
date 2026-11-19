@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-11-19T13:47:18.279Z",
+  "generatedAt": "2026-11-19T15:44:11.753Z",
   "entrypoint": "index.html",
   "outputRoot": ".",
   "sourceRoots": [
@@ -9,7 +9,7 @@
     "cloud-candidate/static"
   ],
   "parameters": {
-    "releaseVersion": "phone-r6",
+    "releaseVersion": "phone-r7",
     "apiBase": "https://jeeapoehmvwpsujsfhao.supabase.co/functions/v1/yunshufang-web-api",
     "agentBase": "https://desktop-8i3jek4.taild484c1.ts.net/mobile-host",
     "hostConnectionAvailable": false,
@@ -122,13 +122,13 @@
     },
     {
       "path": "index.html",
-      "bytes": 10426,
-      "sha256": "b22370185599a393474e2d66251bcec76d5b63ab79b777df61fe20cb63c592d8"
+      "bytes": 10476,
+      "sha256": "3218615de42662d949ec45322b71c5e1be01e349ffac693126bedd6252eaa27a"
     },
     {
       "path": "library/app.js",
       "bytes": 152058,
-      "sha256": "fd39cf790a41b898f32792dee3654b5da826e6257d78e9e34c591a6820222199"
+      "sha256": "12c7227850793e12c630d7e16e008c2eaa5fa9cb07b2de3b4b66f65478609980"
     },
     {
       "path": "library/assets/doctor-office-clean.png",
@@ -173,7 +173,7 @@
     {
       "path": "library/auth-client.js",
       "bytes": 3059,
-      "sha256": "7c0862e9a3b7cb20a995ed35b33d3fa64bc9639db17b3568becee99c1589ff7f"
+      "sha256": "10fcbdf4d2e9381bc36a8e05f92d106211264caf14aaf7bcc5755c5d8590b1f0"
     },
     {
       "path": "library/cloud-view.css",
@@ -193,17 +193,17 @@
     {
       "path": "library/gate.html",
       "bytes": 5885,
-      "sha256": "1be63f3318155f02b55a2d309c5336669abca841cdffdf7ade23ba6cdf98dd75"
+      "sha256": "2aa94cc3ce1699eb7a51e41e034ac6e1631d88c5183deeab832bd102d248bac8"
     },
     {
       "path": "library/gate.js",
       "bytes": 4432,
-      "sha256": "01a82952a5d4b3d17d143d24f4e5c7b035b559df48765bd7d4103c3dee6f6e89"
+      "sha256": "72f9dd9e19408742b1f52b06dbd81fa2bfb16472f6b726fde5994bc32e422798"
     },
     {
       "path": "library/index.html",
       "bytes": 10833,
-      "sha256": "6667db39926239ec82aba31a90d0d85c948e49997f96a8056635e412b3d4e348"
+      "sha256": "d2d0e443090bea50004e633aa5da686efe2f94a81e3c6fbcad48ef17914a015d"
     },
     {
       "path": "library/phone-refinements.css",
@@ -223,12 +223,12 @@
     {
       "path": "library/transport.js",
       "bytes": 9183,
-      "sha256": "262d2197e0a782d5f115f94151102c986aa2cff8283869cacf545524e2dbbf44"
+      "sha256": "7667130c1114968ff895353d6ea3d354a2fa981909552548489ff542279ad933"
     },
     {
       "path": "manifest.json",
-      "bytes": 446,
-      "sha256": "8dc1e5b79d46bbcf4a0fadd6abe4d01672ba77e2e9fb5062e39e8760a821df6a"
+      "bytes": 435,
+      "sha256": "d01a38770796bf2817e87c9121761a7d2eae9445d3827e31d8bdcbced1583c10"
     },
     {
       "path": "memory-candidate-intent.js",
@@ -267,13 +267,13 @@
     },
     {
       "path": "mobile-cabin.jsx",
-      "bytes": 33166,
-      "sha256": "70e32c4f948bda74c78b50f2f6426ddac8d1d4dd97dd4a253999583ec22e3090"
+      "bytes": 34370,
+      "sha256": "e2b237de9a744c604fc82d4d974a33d0ce093dea381464ccd96e1aee16772837"
     },
     {
       "path": "mobile-integration.css",
-      "bytes": 18931,
-      "sha256": "93d0b4ef4c1adeefa3572cb8b09ff5fd155b5d13ad8881283b2270f970086349"
+      "bytes": 29302,
+      "sha256": "0493849d9729169dfa14f36cc3a9894dbadd9b5644c7515a7003ad393d39d074"
     },
     {
       "path": "mobile-library.jsx",
@@ -282,13 +282,23 @@
     },
     {
       "path": "mobile-runtime.js",
-      "bytes": 631,
-      "sha256": "d766adad9fbcc0f1fe92d36e2a2f7aae90f50c481baff658893a0e3e095ddcdb"
+      "bytes": 663,
+      "sha256": "8cc73eb38325773e516818ad68bdafa36350bed93fde9ce71330ebe9bcb1b1bc"
     },
     {
       "path": "openai-compatible.js",
       "bytes": 7520,
       "sha256": "7854223efb43253aadbb5ded522e3017ac454bdb38917247dcc025218e778402"
+    },
+    {
+      "path": "phone-sw.js",
+      "bytes": 8576,
+      "sha256": "ba962a1d7731c15ce370003d0ff1fe3feb6fa59bc61f68affebc404432efb7f3"
+    },
+    {
+      "path": "phone-update.js",
+      "bytes": 5128,
+      "sha256": "abdb88f5e97d743c672b8520711a4cfc44eff61abe6aa814fbaa7bbabc61cce3"
     },
     {
       "path": "portable-worldbook-panel.jsx",
@@ -317,8 +327,8 @@
     },
     {
       "path": "script.js",
-      "bytes": 945425,
-      "sha256": "ff9eb49593b4a6e29db2c6484a7d51a69f5abc3aeb4517298eb167fec54775bd"
+      "bytes": 954263,
+      "sha256": "1e8fc5b3f26a71306186db28938c6a267340ee9173c2230784a9ff6fef10b77b"
     },
     {
       "path": "session-checkpoint-panel.jsx",
