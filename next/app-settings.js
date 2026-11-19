@@ -126,6 +126,7 @@
 
     const applyTheme = (theme) => {
         document.body.className = `overflow-hidden ${theme === 'default' ? 'bg-white text-gray-900' : `theme-${theme}`}`;
+        document.body.classList.add('mc-force-mobile');
     };
 
     const getNextTheme = (theme) => {
