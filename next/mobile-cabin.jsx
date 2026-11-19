@@ -337,19 +337,20 @@
                 <section className="mc-feature-card mc-feature-card--health">
                     <div className="mc-feature-card__icon"><Glyph name="activity" size={24} /></div>
                     <div>
-                        <p className="mc-eyebrow">HEALTH CALENDAR</p>
+                        <p className="mc-eyebrow">HEALTH CALENDAR · 今日照护</p>
                         <h2>健康日历</h2>
-                        <p>从今天开始，照顾好自己的节奏。</p>
+                        <p>打开健康日历，查看或记录今天的身体状态。</p>
                     </div>
                     <button className="mc-icon-button" type="button" aria-label="打开健康日历" onClick={() => onAction('health')}>
                         <Glyph name="arrow" size={18} />
                     </button>
                 </section>
                 <div className="mc-two-column">
-                    <button className="mc-tile" type="button" onClick={() => onAction('diary')}>
+                    <button className="mc-tile mc-tile--diary" type="button" onClick={() => onAction('diary')}>
                         <span className="mc-tile__icon"><Glyph name="pen" size={21} /></span>
+                        <span className="mc-tile__eyebrow">DIARY ENTRY</span>
                         <strong>星月日记</strong>
-                        <span>记录当下</span>
+                        <span>打开日记本</span>
                     </button>
                     <button className="mc-tile" type="button" onClick={() => onAction('drawing')}>
                         <span className="mc-tile__icon"><Glyph name="palette" size={21} /></span>
@@ -359,11 +360,11 @@
                 </div>
                 <section className="mc-section mc-section--stacked">
                     <SectionHeading eyebrow="YOUR RECORDS" title="近期生活" />
-                    <div className="mc-info-card">
+                    <div className="mc-info-card mc-info-card--life-empty">
                         <EmptyState
                             icon="calendar"
-                            title="尚未读取记录"
-                            text="日记、健康和日程会在这里汇总。"
+                            title="查看生活记录"
+                            text="从健康日历、星月日记和日程入口查看已保存内容。"
                         />
                     </div>
                 </section>
@@ -425,7 +426,7 @@
         );
     }
 
-    function ProfileView({ agent, persona, onAction, onPersonaChange }) {
+    function ProfileView({ agent, persona, imageSource, imageFailed, onImageError, onAction, onPersonaChange }) {
         return (
             <div className="mc-page">
                 <header className="mc-page-header">
@@ -437,7 +438,13 @@
                     <span className="mc-page-header__icon"><Glyph name="user" size={24} /></span>
                 </header>
                 <section className="mc-profile-card">
-                    <div className="mc-profile-card__avatar"><Glyph name={persona === 'wolf' ? 'sparkles' : 'user'} size={26} /></div>
+                    <div className="mc-profile-card__avatar">
+                        {imageSource && !imageFailed ? (
+                            <img src={imageSource} alt={persona === 'wolf' ? '小狼崽主题图' : '逸辰主题图'} onError={onImageError} />
+                        ) : (
+                            <Glyph name={persona === 'wolf' ? 'sparkles' : 'user'} size={26} />
+                        )}
+                    </div>
                     <div>
                         <p className="mc-eyebrow">CURRENT THEME</p>
                         <h2>{persona === 'wolf' ? '小狼崽主题' : '真人逸辰主题'}</h2>
@@ -448,21 +455,40 @@
                 <section className="mc-theme-card">
                     <div>
                         <h2>陪伴主题</h2>
-                        <p>换一种颜色，陪你走过今天。</p>
+                        <p>选择一个形象，首页和我的页会同步展示。</p>
                     </div>
                     <div className="mc-theme-card__actions">
-                        <button type="button" className={persona === 'human' ? 'is-selected' : ''} aria-pressed={persona === 'human'} onClick={() => onPersonaChange('human')}>真人逸辰</button>
-                        <button type="button" className={persona === 'wolf' ? 'is-selected' : ''} aria-pressed={persona === 'wolf'} onClick={() => onPersonaChange('wolf')}>小狼崽</button>
+                        <button type="button" className={persona === 'human' ? 'is-selected' : ''} aria-pressed={persona === 'human'} onClick={() => onPersonaChange('human')}>
+                            <span className="mc-theme-option__swatch mc-theme-option__swatch--human" aria-hidden="true"><Glyph name="user" size={17} /></span>
+                            <span className="mc-theme-option__copy"><strong>真人逸辰</strong><small>人像主题</small></span>
+                        </button>
+                        <button type="button" className={persona === 'wolf' ? 'is-selected' : ''} aria-pressed={persona === 'wolf'} onClick={() => onPersonaChange('wolf')}>
+                            <span className="mc-theme-option__swatch mc-theme-option__swatch--wolf" aria-hidden="true"><Glyph name="sparkles" size={17} /></span>
+                            <span className="mc-theme-option__copy"><strong>小狼崽</strong><small>星光主题</small></span>
+                        </button>
                     </div>
                 </section>
                 <section className="mc-section mc-section--stacked">
                     <SectionHeading eyebrow="SETTINGS" title="设置与连接" />
-                    <div className="mc-list-card mc-list-card--large">
-                        <button type="button" onClick={() => onAction('settings')}><Glyph name="settings" size={20} /><span><strong>通用设置</strong><small>外观与使用偏好</small></span><Glyph name="chevron" size={18} /></button>
-                        <button type="button" onClick={() => onAction('voice')}><Glyph name="mic" size={20} /><span><strong>语音设置</strong><small>选择喜欢的声音</small></span><Glyph name="chevron" size={18} /></button>
-                        <button type="button" onClick={() => onAction('devices')}><Glyph name="devices" size={20} /><span><strong>设备连接</strong><small>查看设备状态</small></span><Glyph name="chevron" size={18} /></button>
-                        <button type="button" onClick={() => onAction('backup')}><Glyph name="backup" size={20} /><span><strong>备份与恢复</strong><small>守好你的资料</small></span><Glyph name="chevron" size={18} /></button>
-                        <button type="button" onClick={() => onAction('vault')}><Glyph name="vault" size={20} /><span><strong>云书房</strong><small>前往云书房</small></span><Glyph name="chevron" size={18} /></button>
+                    <div className="mc-profile-group">
+                        <p className="mc-profile-group__label">电脑与同步</p>
+                        <div className="mc-list-card mc-list-card--large">
+                            <button type="button" onClick={() => onAction('devices')}><Glyph name="devices" size={20} /><span><strong>设备连接</strong><small>查看当前电脑连接状态</small></span><Glyph name="chevron" size={18} /></button>
+                        </div>
+                    </div>
+                    <div className="mc-profile-group">
+                        <p className="mc-profile-group__label">使用偏好</p>
+                        <div className="mc-list-card mc-list-card--large">
+                            <button type="button" onClick={() => onAction('settings')}><Glyph name="settings" size={20} /><span><strong>通用设置</strong><small>外观与使用偏好</small></span><Glyph name="chevron" size={18} /></button>
+                            <button type="button" onClick={() => onAction('voice')}><Glyph name="mic" size={20} /><span><strong>语音设置</strong><small>选择喜欢的声音</small></span><Glyph name="chevron" size={18} /></button>
+                        </div>
+                    </div>
+                    <div className="mc-profile-group">
+                        <p className="mc-profile-group__label">资料与书房</p>
+                        <div className="mc-list-card mc-list-card--large">
+                            <button type="button" onClick={() => onAction('backup')}><Glyph name="backup" size={20} /><span><strong>备份与恢复</strong><small>守好你的资料</small></span><Glyph name="chevron" size={18} /></button>
+                            <button type="button" onClick={() => onAction('vault')}><Glyph name="vault" size={20} /><span><strong>云书房</strong><small>前往云书房</small></span><Glyph name="chevron" size={18} /></button>
+                        </div>
                     </div>
                 </section>
             </div>
@@ -569,6 +595,9 @@
                                 <ProfileView
                                     agent={agent}
                                     persona={persona}
+                                    imageSource={imageSource}
+                                    imageFailed={imageFailed}
+                                    onImageError={() => markImageFailed(imageSource)}
                                     onAction={dispatchAction}
                                     onPersonaChange={setTheme}
                                 />

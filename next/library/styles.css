@@ -246,3 +246,70 @@
   .core-entry-section .shelf-label small{font-size:8px}
 }
 .purge-confirmation-input{display:block;width:min(100%,280px);margin:10px 0 16px;padding:12px;border:1px solid #c3a66b77;border-radius:8px;background:#101e29;color:#f2e8d4;font:inherit}.purge-confirmation-input:focus-visible{outline:2px solid #dfbc78;outline-offset:2px}.danger-button:disabled{opacity:.45;cursor:not-allowed}.cloud-record-actions #purge-eligibility{flex-basis:100%;margin:0}
+
+/* Embedded phone polish: keep the warm study room readable at narrow widths. */
+@media (max-width:600px){
+  html,body{max-width:100%;overflow-x:hidden}
+  #login-view,#library-view{width:100%;max-width:100%;overflow-x:hidden}
+  #login-view .login-layout{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-bottom:calc(24px + env(safe-area-inset-bottom,0px))}
+  #login-view .mobile-login-heading{top:calc(8% + env(safe-area-inset-top,0px));left:max(12px,env(safe-area-inset-left,0px));right:max(12px,env(safe-area-inset-right,0px));min-width:0}
+  #login-view .mobile-login-heading h2{max-width:100%;font-size:clamp(22px,7.4vw,30px);white-space:normal;overflow-wrap:anywhere}
+  #login-view .mobile-login-heading p{max-width:100%;overflow-wrap:anywhere}
+  #login-view .login-card{width:100%;max-width:calc(100vw - 32px);min-width:0}
+  #login-view .login-card button,#login-view .login-card .input-wrap{max-width:100%;min-width:0}
+  #login-view .demo-disclosure{overflow-wrap:anywhere}
+
+  #library-view{--mobile-nav-height:calc(62px + env(safe-area-inset-bottom,0px))}
+  #library-view .main-content{width:100%;min-width:0;overflow-x:hidden}
+  #library-view .library-hero{width:100%;min-width:0;height:clamp(232px,34svh,268px);padding-top:calc(58px + env(safe-area-inset-top,0px));padding-left:max(14px,env(safe-area-inset-left,0px));padding-right:max(14px,env(safe-area-inset-right,0px))}
+  #library-view:not([data-view="home"]) .library-hero{height:clamp(178px,27svh,210px);padding-top:calc(50px + env(safe-area-inset-top,0px))}
+  #library-view .hero-tools{top:calc(9px + env(safe-area-inset-top,0px));left:max(12px,env(safe-area-inset-left,0px));right:max(12px,env(safe-area-inset-right,0px));min-width:0}
+  #library-view .hero-copy{min-width:0;max-width:100%}
+  #library-view .hero-copy h1,#library-view .hero-copy>p:last-child{max-width:100%;overflow-wrap:anywhere}
+  #library-view .hero-copy h1{font-size:clamp(25px,8vw,32px)}
+  #library-view .hero-search{left:max(12px,env(safe-area-inset-left,0px));right:max(12px,env(safe-area-inset-right,0px));width:auto;min-width:0;max-width:none}
+  #library-view:not([data-view="home"]) .hero-search{bottom:-15px}
+  #library-view .search-box,#library-view .search-box input{min-width:0}
+  #library-view .search-box input{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #library-view .quick-filters{min-width:0;max-width:100%;overscroll-behavior-x:contain}
+  #library-view .dashboard-layout{min-width:0;padding-left:max(12px,env(safe-area-inset-left,0px));padding-right:max(12px,env(safe-area-inset-right,0px));gap:12px}
+  #library-view .content-column,#library-view .right-column,#library-view .panel,#library-view .large-panel,#library-view .section-heading{min-width:0}
+  #library-view .section-heading h2,#library-view .section-caption{min-width:0;overflow-wrap:anywhere}
+  #library-view .results-grid{grid-template-columns:minmax(0,1fr);min-width:0}
+  #library-view .results-grid .memory-card,#library-view .results-grid .memory-open,#library-view .results-grid .memory-text{width:100%;min-width:0}
+  #library-view .results-grid .memory-text h3,#library-view .results-grid .memory-text p{overflow-wrap:anywhere;word-break:break-word}
+  #library-view .phone-core-grid,#library-view .phone-core-grid>button{min-width:0}
+  #library-view .phone-core-grid strong,#library-view .phone-core-grid small{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #library-view .reading-table{max-width:100%;overflow-x:auto}
+  #library-view .library-footer{padding-bottom:calc(var(--mobile-nav-height) + 12px)}
+  #library-view .mobile-nav{min-height:var(--mobile-nav-height);padding:6px 6px calc(6px + env(safe-area-inset-bottom,0px));gap:2px}
+  #library-view .mobile-nav button{flex:1 1 0;width:100%;min-width:0;min-height:49px;padding:5px 2px;gap:2px;font-size:clamp(9px,2.8vw,10px);line-height:1.15;white-space:nowrap}
+  #library-view .mobile-nav button svg{width:20px;height:20px}
+  #library-view .mobile-nav button.active{color:#684bb2;background:#f0ebff}
+  #library-view .filter-chip.active,#library-view .filter-chip:hover{border-color:#8c70d2;background:#f2edff;color:#6044a8}
+  #library-view .toast{bottom:calc(var(--mobile-nav-height) + 10px);max-width:calc(100% - 24px)}
+
+  #record-dialog{position:fixed;inset:auto 0 0;margin:0;width:100%;max-width:none;max-height:min(92svh,760px);border-right:0;border-bottom:0;border-left:0;border-radius:24px 24px 0 0;overscroll-behavior:contain;padding-bottom:env(safe-area-inset-bottom,0px)}
+  #record-dialog .dialog-top{position:sticky;padding:24px max(16px,env(safe-area-inset-right,0px)) 12px max(16px,env(safe-area-inset-left,0px));overflow-wrap:anywhere}
+  #record-dialog .dialog-top:before{content:"";position:absolute;top:9px;left:50%;width:40px;height:4px;border-radius:4px;background:#b8a995;transform:translateX(-50%);opacity:.7}
+  #record-dialog .dialog-top>span{min-width:0;overflow-wrap:anywhere}
+  #record-dialog .dialog-body{padding:16px max(16px,env(safe-area-inset-right,0px)) calc(24px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+  #record-dialog .dialog-body h2{font-size:clamp(22px,6.4vw,28px);overflow-wrap:anywhere}
+  #record-dialog .record-meta{gap:7px 10px}
+  #record-dialog .record-body{font-size:15px;line-height:1.9}
+  #record-dialog .reading-table{max-width:100%;overflow-x:auto}
+  #record-dialog .dialog-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:18px}
+  #record-dialog .dialog-actions>button{width:100%;min-width:0;min-height:44px;padding:10px 8px;overflow-wrap:anywhere}
+  #record-dialog .dialog-actions .push-right{margin-left:0}
+  #record-dialog .edit-form input,#record-dialog .edit-form select,#record-dialog .edit-form textarea{max-width:100%;min-width:0}
+  #record-dialog .edit-form textarea{min-height:150px;max-height:40svh}
+}
+
+@media (max-width:370px){
+  #library-view .mobile-nav{padding-left:3px;padding-right:3px}
+  #library-view .mobile-nav button{font-size:9px}
+  #library-view .hero-tools{gap:3px}
+  #library-view .profile-tools{gap:2px}
+  #record-dialog .dialog-body{padding-left:12px;padding-right:12px}
+  #record-dialog .dialog-actions{grid-template-columns:1fr}
+}

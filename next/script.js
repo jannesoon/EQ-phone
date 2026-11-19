@@ -8578,7 +8578,7 @@ X 等对自动化浏览器登录敏感的网站，优先让柒柒在她日常使
                         </div>
                     </div>
 
-                    <div className="xy-chat-main flex-1 flex flex-col h-full relative">
+                    <div className="xy-chat-main mc-chat-main flex-1 flex flex-col h-full relative">
                         {/* ★ 聊天背景图层：absolute 绑定到主聊天区，绝不跨到侧边栏 */}
                         {config.chatBgImage && (() => {
                             const presetMatch = config.chatBgImage.match(/^preset:(.+)$/);
@@ -8603,21 +8603,25 @@ X 等对自动化浏览器登录敏感的网站，优先让柒柒在她日常使
                                 }}/>
                             );
                         })()}
-                        <div className="safe-top flex items-center justify-between p-4 h-16 bg-white/80 backdrop-blur sticky top-0 z-10 border-b border-gray-100" style={{height: 'calc(4rem + env(safe-area-inset-top))'}}>
-                            <div className="flex items-center gap-2 md:gap-3 min-w-0">
-                                <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-600 flex-shrink-0"><Icon name="Menu" size={20} /></button>
-                                <div className="flex flex-col min-w-0">
-                                    <span className="md:hidden text-sm font-semibold text-gray-800 tracking-tight leading-tight whitespace-nowrap">星月舱 {UPDATE_VERSION.split('-')[0]}</span>
-                                    <span className="hidden md:block text-lg font-medium text-gray-800 tracking-tight leading-tight whitespace-nowrap">✨ 星月舱 {UPDATE_VERSION} 🌙💫</span>
+                        <div className="safe-top mc-chat-header flex items-center justify-between p-4 h-16 bg-white/80 backdrop-blur sticky top-0 z-10 border-b border-gray-100" role="banner" aria-label="聊天标题与连接状态" style={{height: 'calc(4rem + env(safe-area-inset-top))'}}>
+                            <div className="mc-chat-header__identity flex items-center gap-2 md:gap-3 min-w-0">
+                                <button onClick={() => setSidebarOpen(!sidebarOpen)} className="mc-chat-menu-button p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-600 flex-shrink-0" aria-label="打开聊天会话抽屉"><Icon name="Menu" size={20} /></button>
+                                <div className="mc-chat-title flex flex-col min-w-0">
+                                    <span className="mc-chat-mobile-name" style={{display: 'none'}}>{config.aiName || 'Ethan'} ♡</span><span className="mc-chat-legacy-title md:hidden text-sm font-semibold text-gray-800 tracking-tight leading-tight whitespace-nowrap">星月舱 {UPDATE_VERSION.split('-')[0]}</span>
+                                    <span className="mc-chat-legacy-title hidden md:block text-lg font-medium text-gray-800 tracking-tight leading-tight whitespace-nowrap">✨ 星月舱 {UPDATE_VERSION} 🌙💫</span>
                                     <span
-                                        className={`text-[10px] leading-tight ${localAgentStatus.state === 'online' ? 'text-emerald-500' : localAgentStatus.state === 'checking' ? 'text-amber-500' : 'text-gray-400'}`}
+                                        className={`mc-chat-agent-status text-[10px] leading-tight ${localAgentStatus.state === 'online' ? 'text-emerald-500' : localAgentStatus.state === 'checking' ? 'text-amber-500' : 'text-gray-400'}`}
+                                        role="status"
+                                        aria-live="polite"
                                         title={localAgentStatus.reason || localAgentStatus.label}
                                     >
                                         <span className="mr-1">{localAgentStatus.state === 'online' ? '●' : localAgentStatus.state === 'checking' ? '◌' : '○'}</span>
                                         {window.XINGYUE_MOBILE_DESIGN_PREVIEW ? '设计预览：聊天服务未连接' : localAgentStatus.label}
                                     </span>
                                     <span
-                                        className={`text-[10px] leading-tight ${hostSyncStatus.state === 'saved' ? 'text-emerald-500' : ['saving', 'queued'].includes(hostSyncStatus.state) ? 'text-amber-500' : hostSyncStatus.state === 'conflict' ? 'text-red-500' : hostSyncStatus.state === 'readonly' ? 'text-indigo-500' : 'text-gray-400'}`}
+                                        className={`mc-chat-sync-status text-[10px] leading-tight ${hostSyncStatus.state === 'saved' ? 'text-emerald-500' : ['saving', 'queued'].includes(hostSyncStatus.state) ? 'text-amber-500' : hostSyncStatus.state === 'conflict' ? 'text-red-500' : hostSyncStatus.state === 'readonly' ? 'text-indigo-500' : 'text-gray-400'}`}
+                                        role="status"
+                                        aria-live="polite"
                                         title={hostSyncStatus.reason || hostSyncStatus.lastSavedAt || hostSyncStatus.label}
                                     >
                                         <span className="mr-1">{hostSyncStatus.state === 'saved' ? '✓' : ['saving', 'queued'].includes(hostSyncStatus.state) ? '◌' : hostSyncStatus.state === 'conflict' ? '!' : '○'}</span>
@@ -8626,7 +8630,7 @@ X 等对自动化浏览器登录敏感的网站，优先让柒柒在她日常使
                                     {!window.XingyueHostSync?.isLocalWriter?.() && (
                                         <button
                                             onClick={handleWritingHandoff}
-                                            className="text-[10px] text-indigo-600 underline underline-offset-2 text-left"
+                                            className="mc-chat-handoff text-[10px] text-indigo-600 underline underline-offset-2 text-left"
                                         >同步最新消息并在{desktopBridgeAvailable ? '电脑' : '手机'}继续</button>
                                     )}
                                     {hostSyncStatus.state === 'conflict' && (
@@ -8639,16 +8643,16 @@ X 等对自动化浏览器登录敏感的网站，优先让柒柒在她日常使
                                                     showToast('手机已恢复为2.0主机最新版，冲突提示已清除');
                                                 } catch (error) { showToast(`冲突确认失败：${error.message}`); }
                                             }}
-                                            className="text-[10px] text-red-600 underline underline-offset-2"
+                                            className="mc-chat-conflict text-[10px] text-red-600 underline underline-offset-2"
                                         >按主机2.0确认</button>
                                     )}
                                 </div>
                             </div>
                             <div className="flex items-center gap-2 flex-shrink-0">
-                                <button onClick={cycleTheme} className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-600" title="切换主题">
+                                <button onClick={cycleTheme} className="mc-chat-theme-button p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-600" aria-label="切换主题" title="切换主题">
                                     {config.theme === 'dark' ? <Icon name="Moon" size={20} /> : config.theme === 'claude' ? <Icon name="Coffee" size={20} /> : <Icon name="Sun" size={20} />}
                                 </button>
-                                <div className="cursor-pointer ml-1" onClick={() => setSettingsOpen(true)} title="设置">
+                                <div className="mc-chat-settings-button cursor-pointer ml-1" onClick={() => setSettingsOpen(true)} role="button" tabIndex={0} aria-label="打开设置" title="设置">
                                     <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 flex items-center justify-center shadow-md hover:shadow-lg hover:scale-105 transition-all">
                                         <Icon name="Sparkles" size={18} className="text-white"/>
                                     </div>
@@ -8656,9 +8660,9 @@ X 等对自动化浏览器登录敏感的网站，优先让柒柒在她日常使
                             </div>
                         </div>
 
-                        <div ref={messagesContainerRef} onScroll={handleChatScroll} className={`xy-chat-scroll flex-1 overflow-y-auto px-4 md:px-0 relative ${config.chatBgImage ? '' : 'bg-white'}`}>
+                        <div ref={messagesContainerRef} onScroll={handleChatScroll} className={`xy-chat-scroll mc-chat-scroll flex-1 overflow-y-auto px-4 md:px-0 relative ${config.chatBgImage ? '' : 'bg-white'}`} role="log" aria-label="聊天消息" aria-live="polite">
                             {/* ★ 背景图放在主聊天区的定位上下文里（不新增容器层） */}
-                            <div className="max-w-3xl mx-auto py-6 relative z-10" style={{paddingBottom: 'calc(12rem + env(safe-area-inset-bottom))'}}>
+                            <div className="mc-chat-messages max-w-3xl mx-auto py-6 relative z-10" style={{paddingBottom: 'calc(12rem + env(safe-area-inset-bottom))'}}>
                                 {messages.length === 0 ? (
                                     <div className="mt-16 flex flex-col items-center justify-center animate-fade-in px-4 text-center">
                                         <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent text-3xl md:text-4xl font-semibold mb-4 tracking-tight">欢迎回到星月舱 ✨</div>
@@ -8737,7 +8741,7 @@ X 等对自动化浏览器登录敏感的网站，优先让柒柒在她日常使
                                             <p className="text-gray-400 text-sm mb-8">在「外观 ✨」设置中填写相恋起始日，这里会展示你们的故事 💕</p>
                                         )}
 
-                                        <div className="mt-8 max-w-md rounded-xl border border-white/60 bg-white/45 px-4 py-3 text-[11px] leading-relaxed text-gray-500 backdrop-blur-sm">
+                                        <div className="mc-chat-config-summary mt-8 max-w-md rounded-xl border border-white/60 bg-white/45 px-4 py-3 text-[11px] leading-relaxed text-gray-500 backdrop-blur-sm">
                                             <div className="font-medium text-gray-600 mb-1">当前对话配置</div>
                                             <div className="break-words">模型：{config.model || '未配置'}</div>
                                             <div>PP：{memoryFiles.filter(f=>f.type==='core').length} · ❤：{longTermMemories.length} · 日志：{memoryFiles.filter(f=>f.type==='journal').length} · 模式：OpenAI兼容</div>
@@ -8768,14 +8772,14 @@ X 等对自动化浏览器登录敏感的网站，优先让柒柒在她日常使
                                             return (
                                             <React.Fragment key={msg.id || index}>
                                             {showDateDivider && (
-                                                <div className="flex items-center gap-3 py-1" title="主机 Agent 使用同一条东八区日期边界">
+                                                <div className="mc-chat-date-divider flex items-center gap-3 py-1" title="主机 Agent 使用同一条东八区日期边界" aria-label={`日期：${formatDateDivider(msg)}`}>
                                                     <div className="h-px flex-1 bg-gray-200/70"></div>
                                                     <span className="text-[11px] text-gray-400 px-2 py-0.5 rounded-full bg-white/60 border border-gray-200/60">{formatDateDivider(msg)}</span>
                                                     <div className="h-px flex-1 bg-gray-200/70"></div>
                                                 </div>
                                             )}
-                                            <div className={`flex animate-fade-in group ${isUser ? 'justify-end' : 'justify-start'}`}>
-                                                <div className={`flex flex-col ${isUser ? 'items-end max-w-[85%] md:max-w-[75%]' : 'items-start w-full'} min-w-0`}>
+                                            <div className={`mc-chat-message flex animate-fade-in group ${isUser ? 'justify-end' : 'justify-start'}`} data-role={isUser ? 'user' : 'assistant'}>
+                                                <div className={`mc-chat-message__body flex flex-col ${isUser ? 'items-end max-w-[85%] md:max-w-[75%]' : 'items-start w-full'} min-w-0`}>
                                                     {msg.reasoningContent && (
                                                         <details className="cot-details w-full">
                                                             <summary>
@@ -8821,7 +8825,8 @@ X 等对自动化浏览器登录敏感的网站，优先让柒柒在她日常使
                                                     {editingMessageIndex === index ? (
                                                         <div className="mt-1 flex flex-col gap-2 w-full animate-fade-in">
                                                             <textarea 
-                                                                className="w-full bg-blue-50/50 border border-blue-200 rounded-lg p-3 text-sm focus:bg-white focus:border-blue-400 outline-none resize-none min-h-[80px]" 
+                                                                className="mc-chat-edit-input w-full bg-blue-50/50 border border-blue-200 rounded-lg p-3 text-sm focus:bg-white focus:border-blue-400 outline-none resize-none min-h-[80px]" 
+                                                                aria-label="编辑消息"
                                                                 value={editingMessageContent}
                                                                 onChange={(e) => setEditingMessageContent(e.target.value)}
                                                                 autoFocus
@@ -8843,7 +8848,7 @@ X 等对自动化浏览器登录敏感的网站，优先让柒柒在她日常使
                                                                 const bubble = BUBBLE_COLORS.find(c => c.id === config.userBubbleColor) || BUBBLE_COLORS[0];
                                                                 const bg = config.userBubbleColor === 'custom' ? (config.userBubbleCustom || '#dbeafe') : bubble.bg;
                                                                 return (
-                                                                    <div className="xy-user-bubble text-gray-800 px-4 py-2.5 rounded-2xl rounded-tr-md break-words" style={{backgroundColor: bg}}>
+                                                                    <div className="xy-user-bubble mc-chat-user-bubble text-gray-800 px-4 py-2.5 rounded-2xl rounded-tr-md break-words" style={{backgroundColor: bg}}>
                                                                             {msg.video && (
                                                                                 <div className="mb-1.5 rounded-lg border border-blue-200/70 bg-blue-50/70 px-2.5 py-1.5 text-[11px] text-blue-700">
                                                                                     🎞️ 已发送原视频 · {msg.video.name || '本地视频'} · {msg.video.transport === 'unified' ? '统一模型直读' : '视频理解'}
@@ -8874,7 +8879,7 @@ X 等对自动化浏览器登录敏感的网站，优先让柒柒在她日常使
                                                             })()
                                                         ) : (
                                                             msg.content && (
-                                                                <div className="w-full">
+                                                                <div className="mc-chat-assistant-message w-full">
                                                                     <MessageContent content={msg.content} />
                                                                 </div>
                                                             )
@@ -8883,7 +8888,7 @@ X 等对自动化浏览器登录敏感的网站，优先让柒柒在她日常使
 
                                                     {/* ★ 底部操作栏：用户消息（复制/编辑）和 AI 消息（播放语音）分开展示 */}
                                                     {isUser ? (
-                                                        <div className="flex items-center gap-2 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <div className="mc-chat-message-actions mc-chat-user-actions flex items-center gap-2 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                                             <span className="text-[10px] text-gray-400 font-mono">{msg.timestamp || ''}</span>
                                                             <button onClick={() => { 
                                                                 const copyText = visibleContent;
@@ -8893,7 +8898,7 @@ X 等对自动化浏览器登录敏感的网站，优先让柒柒在她日常使
                                                         </div>
                                                     ) : (
                                                         /* ★ AI 消息底部工具栏：播放 · 复制 · 重新生成（仅最后一条）· 翻页 · 模型名 · 时间 */
-                                                        <div className="xy-message-actions mt-2 flex items-center gap-1 flex-wrap opacity-60 group-hover:opacity-100 transition-opacity">
+                                                        <div className="xy-message-actions mc-chat-message-actions mt-2 flex items-center gap-1 flex-wrap opacity-60 group-hover:opacity-100 transition-opacity">
                                                             {/* 播放语音 */}
                                                             <button 
                                                                 onClick={() => handleTTS(msg.content, index)}
@@ -8972,9 +8977,9 @@ X 等对自动化浏览器登录敏感的网站，优先让柒柒在她日常使
                                             </React.Fragment>
                                             );
                                         })}
-                                        {isLoading && <div className="flex justify-start"><div className="flex items-center gap-2 text-gray-400 text-sm"><Icon name="Sparkles" size={14} className="text-blue-400 animate-pulse" /><span>正在读取与思考...</span></div></div>}
+                                        {isLoading && <div className="mc-chat-loading flex justify-start" role="status" aria-live="polite"><div className="flex items-center gap-2 text-gray-400 text-sm"><Icon name="Sparkles" size={14} className="text-blue-400 animate-pulse" /><span>正在读取与思考...</span></div></div>}
                                         {activeToolCalls.length > 0 && (
-                                            <div className="flex justify-start animate-fade-in">
+                                            <div className="mc-chat-active-tools flex justify-start animate-fade-in" aria-live="polite">
                                                 <div className="flex flex-col gap-1 text-sm text-purple-500">
                                                     {activeToolCalls.map(tc => (
                                                         <div key={tc.id} className="flex items-center gap-2">
@@ -8992,27 +8997,28 @@ X 等对自动化浏览器登录敏感的网站，优先让柒柒在她日常使
                             </div>
                         </div>
 
-                        <div className="safe-bottom absolute bottom-0 left-0 w-full bg-white pt-4 pb-6 px-4 border-t border-gray-50 z-30">
+                        <div className="safe-bottom mc-chat-composer-dock absolute bottom-0 left-0 w-full bg-white pt-4 pb-6 px-4 border-t border-gray-50 z-30" role="region" aria-label="聊天输入区">
                             <div className="max-w-3xl mx-auto relative">
                                 {/* ★ 回到底部按钮：上翻历史时浮现，点击平滑滑到最新消息 */}
                                 {showScrollDown && (
                                     <button onClick={scrollToBottom}
-                                        className="absolute -top-14 right-2 w-10 h-10 bg-white border border-gray-200 rounded-full shadow-lg flex items-center justify-center text-gray-500 hover:text-blue-600 hover:shadow-xl transition-all animate-fade-in z-20"
+                                        className="mc-chat-scroll-down absolute -top-14 right-2 w-10 h-10 bg-white border border-gray-200 rounded-full shadow-lg flex items-center justify-center text-gray-500 hover:text-blue-600 hover:shadow-xl transition-all animate-fade-in z-20"
+                                        aria-label="回到最新消息"
                                         title="回到最新消息">
                                         <Icon name="ChevronDown" size={20} />
                                     </button>
                                 )}
                                 {/* 原右下角"重新生成"按钮已移至每条 AI 消息底部工具栏 */}
                                 {error && (
-                                    <div className="absolute -top-16 left-0 right-0 mx-auto w-max max-w-[90%] text-red-600 text-xs bg-red-50 border border-red-100 px-4 py-2 rounded-lg shadow-sm flex flex-col gap-1 items-center">
+                                    <div className="mc-chat-error absolute -top-16 left-0 right-0 mx-auto w-max max-w-[90%] text-red-600 text-xs bg-red-50 border border-red-100 px-4 py-2 rounded-lg shadow-sm flex flex-col gap-1 items-center" role="alert">
                                         <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-red-500 shrink-0"></span><span className="truncate">{error}</span></div>
                                         {(error.includes("429") || error.includes("Code 8")) && <span className="text-[10px] text-red-400">提示: 触发免费版频率限制，请稍等几秒再点击“重新生成”</span>}
                                     </div>
                                 )}
                                 {(attachments.length > 0 || pendingVideo || pendingTextAttachment) && (
-                                    <div className="xy-pending-attachments">
+                                    <div className="xy-pending-attachments mc-chat-pending-attachments" aria-label="待发送附件">
                                         {attachments.length > 0 && (
-                                            <div className="xy-chat-image-previews">
+                                            <div className="xy-chat-image-previews mc-chat-image-previews" aria-label="待发送图片">
                                                 {attachments.map((att, idx) => (
                                                     <div key={idx} className="w-16 h-16 rounded-lg overflow-hidden border border-gray-200 shadow-md group relative flex-shrink-0">
                                                         <img src={att.base64} className="w-full h-full object-cover" />
@@ -9036,26 +9042,26 @@ X 等对自动化浏览器登录敏感的网站，优先让柒柒在她日常使
                                     </div>
                                 )}
 
-                                <div className="xy-chat-composer bg-gray-100 hover:bg-gray-200/70 focus-within:bg-white focus-within:shadow-md focus-within:ring-1 focus-within:ring-gray-300 rounded-[24px] flex items-end p-2 pl-4 pr-3 transition-all duration-200 relative">
+                                <div className="xy-chat-composer mc-chat-composer bg-gray-100 hover:bg-gray-200/70 focus-within:bg-white focus-within:shadow-md focus-within:ring-1 focus-within:ring-gray-300 rounded-[24px] flex items-end p-2 pl-4 pr-3 transition-all duration-200 relative" role="group" aria-label="消息编辑器">
                                     
-                                    <button onClick={triggerAttachmentUpload} disabled={isLoading || pendingVideo?.phase === 'analyzing' || pendingVideo?.phase === 'inspecting' || pendingTextAttachment?.phase === 'reading'} className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-200 rounded-full transition-colors mb-1 mr-2 flex-shrink-0 disabled:opacity-40" title={`添加图片、视频或文本附件（文本≤${TEXT_MAX_BYTES / (1024 * 1024)} MiB、${TEXT_MAX_CHARS} 字）`}>
+                                    <button onClick={triggerAttachmentUpload} disabled={isLoading || pendingVideo?.phase === 'analyzing' || pendingVideo?.phase === 'inspecting' || pendingTextAttachment?.phase === 'reading'} className="mc-chat-attachment-button p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-200 rounded-full transition-colors mb-1 mr-2 flex-shrink-0 disabled:opacity-40" aria-label="添加图片、视频或文本附件" title={`添加图片、视频或文本附件（文本≤${TEXT_MAX_BYTES / (1024 * 1024)} MiB、${TEXT_MAX_CHARS} 字）`}>
                                         <Icon name="Plus" size={24} />
                                     </button>
                                     
-                                    <input type="file" ref={chatImageInputRef} style={{display: 'none'}} accept={ATTACHMENT_ACCEPT} multiple onChange={handleAttachmentSelect}/>
-                                    <textarea value={input} disabled={pendingVideo?.phase === 'analyzing'} onChange={(e) => setInput(e.target.value)} onKeyDown={handleKeyDown} placeholder="星月交辉✨......" className="bg-transparent border-0 focus:ring-0 text-gray-800 flex-1 resize-none py-3 max-h-32 min-h-[44px] outline-none placeholder:text-gray-400 text-base" rows={1}></textarea>
+                                    <input type="file" ref={chatImageInputRef} style={{display: 'none'}} accept={ATTACHMENT_ACCEPT} multiple onChange={handleAttachmentSelect} aria-label="选择聊天附件"/>
+                                    <textarea value={input} disabled={pendingVideo?.phase === 'analyzing'} onChange={(e) => setInput(e.target.value)} onKeyDown={handleKeyDown} placeholder="星月交辉✨......" className="mc-chat-input bg-transparent border-0 focus:ring-0 text-gray-800 flex-1 resize-none py-3 max-h-32 min-h-[44px] outline-none placeholder:text-gray-400 text-base" aria-label="输入消息" rows={1}></textarea>
                                     {isLoading ? (
-                                        <button onClick={handleStopGeneration} className="mb-1 p-2 bg-rose-500 text-white rounded-full hover:bg-rose-600 transition-colors shadow-sm" title="停止生成"><Icon name="StopCircle" size={20} /></button>
+                                        <button onClick={handleStopGeneration} className="mc-chat-stop-button mb-1 p-2 bg-rose-500 text-white rounded-full hover:bg-rose-600 transition-colors shadow-sm" aria-label="停止生成" title="停止生成"><Icon name="StopCircle" size={20} /></button>
                                     ) : isListening ? (
-                                        <button onClick={toggleSpeechRecognition} className="mb-1 p-2 bg-red-500 text-white rounded-full animate-pulse transition-colors" title="停止录音"><Icon name="StopCircle" size={20} /></button>
+                                        <button onClick={toggleSpeechRecognition} className="mc-chat-voice-button mb-1 p-2 bg-red-500 text-white rounded-full animate-pulse transition-colors" aria-label="停止录音" title="停止录音"><Icon name="StopCircle" size={20} /></button>
                                     ) : (input.trim() || attachments.length > 0 || pendingVideo || pendingTextAttachment) ? (
-                                        <button onClick={handleSend} title={pendingVideo ? '发送视频并开始理解（会上传到视频服务）' : pendingTextAttachment ? '发送图片和文本资料' : '发送'} className="mb-1 p-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors shadow-sm"><Icon name="Send" size={18} /></button>
+                                        <button onClick={handleSend} title={pendingVideo ? '发送视频并开始理解（会上传到视频服务）' : pendingTextAttachment ? '发送图片和文本资料' : '发送'} aria-label="发送消息" className="mc-chat-send-button mb-1 p-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors shadow-sm"><Icon name="Send" size={18} /></button>
                                     ) : (
-                                        <button onClick={toggleSpeechRecognition} className="mb-1 p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-200 rounded-full transition-colors" title="语音输入"><Icon name="Mic" size={20} /></button>
+                                        <button onClick={toggleSpeechRecognition} className="mc-chat-voice-button mb-1 p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-200 rounded-full transition-colors" aria-label="语音输入" title="语音输入"><Icon name="Mic" size={20} /></button>
                                     )}
-                                    {isListening && <button onClick={toggleSpeechRecognition} className="absolute -top-10 right-0 bg-red-50 border border-red-200 text-red-600 px-3 py-1.5 rounded-full text-xs font-medium shadow-sm flex items-center gap-1.5 animate-pulse"><Icon name="Mic" size={12}/> 正在聆听，点击停止</button>}
+                                    {isListening && <button onClick={toggleSpeechRecognition} className="mc-chat-listening-stop absolute -top-10 right-0 bg-red-50 border border-red-200 text-red-600 px-3 py-1.5 rounded-full text-xs font-medium shadow-sm flex items-center gap-1.5 animate-pulse" aria-label="停止语音输入"><Icon name="Mic" size={12}/> 正在聆听，点击停止</button>}
                                 </div>
-                                <div className="text-center mt-2 text-[10px] text-gray-400">API可能会产生不准确的信息，请注意甄别。</div>
+                                <div className="mc-chat-disclaimer text-center mt-2 text-[10px] text-gray-400">API可能会产生不准确的信息，请注意甄别。</div>
                             </div>
                         </div>
 
