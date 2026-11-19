@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-11-18T17:14:22.435Z",
+  "generatedAt": "2026-11-19T01:50:57.035Z",
   "entrypoint": "index.html",
   "outputRoot": ".",
   "sourceRoots": [
@@ -9,6 +9,7 @@
     "cloud-candidate/static"
   ],
   "parameters": {
+    "releaseVersion": "phone-r2",
     "apiBase": "https://jeeapoehmvwpsujsfhao.supabase.co/functions/v1/yunshufang-web-api",
     "agentBase": "https://desktop-8i3jek4.taild484c1.ts.net",
     "hostConnectionAvailable": false,
@@ -116,8 +117,8 @@
     },
     {
       "path": "index.html",
-      "bytes": 10813,
-      "sha256": "7b69909232f9a49eed01a031785119c2566b9532dc972e78911cebd78d2bf370"
+      "bytes": 11069,
+      "sha256": "a26b7b0726acb1b2bcdb98ba0d3cedc45e083dd18037fec13b291e745002013c"
     },
     {
       "path": "library/app.js",
@@ -266,8 +267,8 @@
     },
     {
       "path": "mobile-integration.css",
-      "bytes": 2666,
-      "sha256": "c363f7ddb7eaa9c83dfc78f86ebae0838d011b35d14a401190873838f509a00a"
+      "bytes": 5552,
+      "sha256": "12cce7f6eeeef450bb0df74bf94dccf05123f4ed7ac6ad556e9f631a5a8c9cef"
     },
     {
       "path": "mobile-library.jsx",
