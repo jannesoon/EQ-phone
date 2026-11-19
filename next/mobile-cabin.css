@@ -319,7 +319,8 @@
     color: var(--mc-green);
 }
 
-.mc-status--pending {
+.mc-status--pending,
+.mc-status--pairing {
     color: var(--mc-gold);
 }
 

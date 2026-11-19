@@ -55,25 +55,25 @@
 .mc-library-connection p{max-width:27em;margin:0;line-height:1.7}
 
 
-/* phone-r4: publish-only phone shell override; candidate source stays unchanged. */
+/* phone-r5: publish-only phone shell override; candidate source stays unchanged. */
 html, body { max-width: 100%; overflow-x: hidden; }
-body[data-xingyue-mobile-release="phone-r4"] { overflow-x: hidden; }
-body[data-xingyue-mobile-release="phone-r4"] #root { width: min(100vw, 480px); max-width: 480px; min-width: 0; min-height: 100dvh; margin: 0 auto; overflow: hidden; }
-body[data-xingyue-mobile-release="phone-r4"] .app-shell { position: relative; width: 100%; max-width: 100%; min-width: 0; min-height: 100dvh; height: 100dvh; overflow: hidden; }
-body[data-xingyue-mobile-release="phone-r4"] .xingyue-mobile-cabin[data-enabled="true"] { display: block; position: fixed; top: 0; right: auto; bottom: 0; left: 50%; width: min(100vw, 480px); max-width: 480px; min-width: 0; height: 100dvh; transform: translateX(-50%); overflow: hidden; }
-body[data-xingyue-mobile-release="phone-r4"] .mc-screen { width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; }
-body[data-xingyue-mobile-release="phone-r4"] .mc-nav { width: calc(100% - 24px); max-width: 456px; margin-right: auto; margin-left: auto; }
-body[data-xingyue-mobile-release="phone-r4"] .app-shell:not([data-mobile-view="chat"]) > [data-mobile-legacy-sidebar] { display: none !important; }
-body[data-xingyue-mobile-release="phone-r4"] .app-shell:not([data-mobile-view="chat"]) > .xy-chat-main > :not(.fixed) { display: none !important; }
-body[data-xingyue-mobile-release="phone-r4"] .app-shell[data-mobile-view="chat"] .xy-chat-main { width: 100%; max-width: 100%; min-width: 0; height: calc(100dvh - 84px - env(safe-area-inset-bottom, 0px)) !important; overflow: hidden; }
-body[data-xingyue-mobile-release="phone-r4"] .app-shell[data-mobile-view="chat"] > [data-mobile-legacy-sidebar] { position: absolute; top: calc(4rem + env(safe-area-inset-top, 0px)); right: auto; bottom: calc(84px + env(safe-area-inset-bottom, 0px)); left: 0; z-index: 20; max-width: 80vw; min-width: 0; flex: 0 0 auto; box-shadow: 12px 0 28px rgba(15, 23, 42, .16); }
-body[data-xingyue-mobile-release="phone-r4"] .mc-screen.mc-screen--embedded { width: 100%; max-width: 100%; min-width: 0; padding-right: 0; padding-left: 0; padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px)); overflow: hidden; }
-body[data-xingyue-mobile-release="phone-r4"] .mc-library-persistent { width: 100%; max-width: 100%; min-width: 0; height: 100%; min-height: 0; overflow: hidden; }
-body[data-xingyue-mobile-release="phone-r4"] .mc-library-frame { display: block; width: 100%; max-width: 100%; min-width: 0; height: 100%; border: 0; }
-body[data-xingyue-mobile-release="phone-r4"] .app-shell > .fixed.inset-0 { left: 50%; right: auto; width: min(100vw, 480px); max-width: 480px; min-width: 0; transform: translateX(-50%); }
-body[data-xingyue-mobile-release="phone-r4"] .app-shell > .fixed.inset-0 > div { width: 100%; max-width: 100%; min-width: 0; }
+body[data-xingyue-mobile-release="phone-r5"] { overflow-x: hidden; }
+body[data-xingyue-mobile-release="phone-r5"] #root { width: min(100vw, 480px); max-width: 480px; min-width: 0; min-height: 100dvh; margin: 0 auto; overflow: hidden; }
+body[data-xingyue-mobile-release="phone-r5"] .app-shell { position: relative; width: 100%; max-width: 100%; min-width: 0; min-height: 100dvh; height: 100dvh; overflow: hidden; }
+body[data-xingyue-mobile-release="phone-r5"] .xingyue-mobile-cabin[data-enabled="true"] { display: block; position: fixed; top: 0; right: auto; bottom: 0; left: 50%; width: min(100vw, 480px); max-width: 480px; min-width: 0; height: 100dvh; transform: translateX(-50%); overflow: hidden; }
+body[data-xingyue-mobile-release="phone-r5"] .mc-screen { width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; }
+body[data-xingyue-mobile-release="phone-r5"] .mc-nav { width: calc(100% - 24px); max-width: 456px; margin-right: auto; margin-left: auto; }
+body[data-xingyue-mobile-release="phone-r5"] .app-shell:not([data-mobile-view="chat"]) > [data-mobile-legacy-sidebar] { display: none !important; }
+body[data-xingyue-mobile-release="phone-r5"] .app-shell:not([data-mobile-view="chat"]) > .xy-chat-main > :not(.fixed) { display: none !important; }
+body[data-xingyue-mobile-release="phone-r5"] .app-shell[data-mobile-view="chat"] .xy-chat-main { width: 100%; max-width: 100%; min-width: 0; height: calc(100dvh - 84px - env(safe-area-inset-bottom, 0px)) !important; overflow: hidden; }
+body[data-xingyue-mobile-release="phone-r5"] .app-shell[data-mobile-view="chat"] > [data-mobile-legacy-sidebar] { position: absolute; top: calc(4rem + env(safe-area-inset-top, 0px)); right: auto; bottom: calc(84px + env(safe-area-inset-bottom, 0px)); left: 0; z-index: 20; max-width: 80vw; min-width: 0; flex: 0 0 auto; box-shadow: 12px 0 28px rgba(15, 23, 42, .16); }
+body[data-xingyue-mobile-release="phone-r5"] .mc-screen.mc-screen--embedded { width: 100%; max-width: 100%; min-width: 0; padding-right: 0; padding-left: 0; padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px)); overflow: hidden; }
+body[data-xingyue-mobile-release="phone-r5"] .mc-library-persistent { width: 100%; max-width: 100%; min-width: 0; height: 100%; min-height: 0; overflow: hidden; }
+body[data-xingyue-mobile-release="phone-r5"] .mc-library-frame { display: block; width: 100%; max-width: 100%; min-width: 0; height: 100%; border: 0; }
+body[data-xingyue-mobile-release="phone-r5"] .app-shell > .fixed.inset-0 { left: 50%; right: auto; width: min(100vw, 480px); max-width: 480px; min-width: 0; transform: translateX(-50%); }
+body[data-xingyue-mobile-release="phone-r5"] .app-shell > .fixed.inset-0 > div { width: 100%; max-width: 100%; min-width: 0; }
 @media (max-width: 480px) {
-  body[data-xingyue-mobile-release="phone-r4"] #root { width: 100vw; max-width: 100vw; margin-right: 0; margin-left: 0; }
-  body[data-xingyue-mobile-release="phone-r4"] .xingyue-mobile-cabin[data-enabled="true"] { left: 0; width: 100vw; max-width: 100vw; transform: none; }
-  body[data-xingyue-mobile-release="phone-r4"] .app-shell > .fixed.inset-0 { left: 0; width: 100vw; max-width: 100vw; transform: none; }
+  body[data-xingyue-mobile-release="phone-r5"] #root { width: 100vw; max-width: 100vw; margin-right: 0; margin-left: 0; }
+  body[data-xingyue-mobile-release="phone-r5"] .xingyue-mobile-cabin[data-enabled="true"] { left: 0; width: 100vw; max-width: 100vw; transform: none; }
+  body[data-xingyue-mobile-release="phone-r5"] .app-shell > .fixed.inset-0 { left: 0; width: 100vw; max-width: 100vw; transform: none; }
 }

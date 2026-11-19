@@ -100,6 +100,9 @@
             raw = String(value.status || value.state || value.connection || '').trim().toLowerCase();
             label = String(value.label || value.statusLabel || '').trim();
             if (typeof value.connected === 'boolean') connected = value.connected;
+            if (raw === 'online' && value.pairingState === 'connected') return { tone: 'online', label: '电脑已连接 · 已配对' };
+            if (raw === 'online' && ['unpaired', 'revoked'].includes(value.pairingState)) return { tone: 'pairing', label: value.pairingState === 'revoked' ? '电脑在线 · 配对已失效' : '电脑在线 · 待配对' };
+            if (raw === 'online' && ['unknown', 'error'].includes(value.pairingState)) return { tone: 'pairing', label: '电脑在线 · 配对待确认' };
         }
         if (connected === true || ['connected', 'online', 'ready', 'active', 'streaming'].indexOf(raw) >= 0) {
             return { tone: 'online', label: label || '已连接' };

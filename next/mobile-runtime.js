@@ -8,7 +8,7 @@
     manualHandoff: true,
     libraryUrl,
     libraryProbeUrl,
-    agentBase: "https://desktop-8i3jek4.taild484c1.ts.net",
+    agentBase: "https://desktop-8i3jek4.taild484c1.ts.net/mobile-host",
     hostConnectionAvailable: false
   });
   global.XINGYUE_MOBILE_DESIGN_PREVIEW = false;

@@ -17,7 +17,7 @@
     const createMonitor = (options = {}) => {
         const baseUrl = resolveBaseUrl(options);
         const fetchImpl = options.fetchImpl || global.fetch.bind(global);
-        const defaultTimeoutMs = isPrivateHostPage && !desktopRequest ? 6000 : 1200;
+        const defaultTimeoutMs = (isPrivateHostPage || isMobileRuntime) && !desktopRequest ? 6000 : 1200;
         const timeoutMs = Math.max(300, Number(options.timeoutMs) || defaultTimeoutMs);
         const intervalMs = Math.max(3000, Number(options.intervalMs) || 15000);
         let timer = null;

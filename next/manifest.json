@@ -2,7 +2,7 @@
   "name": "星月舱",
   "short_name": "星月舱",
   "description": "✨ 星月交辉 🌙 与你的灵魂伴侣对话",
-  "start_url": "./?v=phone-r4",
+  "start_url": "./?v=phone-r5",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
