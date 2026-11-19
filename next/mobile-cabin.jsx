@@ -11,6 +11,7 @@
         useCallback,
         useEffect,
         useMemo,
+        useRef,
         useState
     } = ReactRef;
 
@@ -522,6 +523,10 @@
         libraryContent = null,
         view,
         mobileView,
+        chatMessageCount = 0,
+        chatIsLoading = false,
+        chatInputFocused = false,
+        chatInputEntered = false,
         initialView = 'home',
         onViewChange = noop
     }) {
@@ -535,7 +540,34 @@
         const [failedImages, setFailedImages] = useState({});
         const activeView = normalizeView(controlledView, internalView);
         const [libraryVisited, setLibraryVisited] = useState(activeView === 'library');
+        const [chatNavExpanded, setChatNavExpanded] = useState(false);
+        const previousChatStateRef = useRef({
+            view: activeView,
+            messageCount: Number(chatMessageCount) || 0,
+            loading: Boolean(chatIsLoading),
+            focused: Boolean(chatInputFocused),
+            entered: Boolean(chatInputEntered)
+        });
         useEffect(() => { if (activeView === 'library') setLibraryVisited(true); }, [activeView]);
+        useEffect(() => {
+            const previous = previousChatStateRef.current;
+            const current = {
+                view: activeView,
+                messageCount: Number(chatMessageCount) || 0,
+                loading: Boolean(chatIsLoading),
+                focused: Boolean(chatInputFocused),
+                entered: Boolean(chatInputEntered)
+            };
+            const shouldReclaimChatNav = activeView === 'chat' && (
+                previous.view !== 'chat' ||
+                current.messageCount > previous.messageCount ||
+                (current.loading && !previous.loading) ||
+                (current.focused && !previous.focused) ||
+                (current.entered && !previous.entered)
+            );
+            if (activeView !== 'chat' || shouldReclaimChatNav) setChatNavExpanded(false);
+            previousChatStateRef.current = current;
+        }, [activeView, chatMessageCount, chatIsLoading, chatInputFocused, chatInputEntered]);
         const agent = useMemo(() => getAgentState(agentStatus), [agentStatus]);
         const today = useMemo(() => formatToday(), []);
         const isEnabled = enabled !== false;
@@ -571,6 +603,22 @@
             setPersona(nextPersona === 'wolf' ? 'wolf' : 'human');
         }, []);
 
+        const chatNavNeedsCollapse = activeView === 'chat' && (
+            (Number(chatMessageCount) || 0) > 0 || Boolean(chatIsLoading) || Boolean(chatInputEntered)
+        );
+        const chatNavCollapsed = activeView === 'chat' && chatNavNeedsCollapse && !chatNavExpanded;
+
+        useEffect(() => {
+            const shell = global.document?.querySelector('.app-shell');
+            if (!shell) return undefined;
+            shell.style.setProperty('--mc-chat-nav-space', chatNavCollapsed ? '0px' : '84px');
+            shell.dataset.mobileNav = chatNavCollapsed ? 'collapsed' : 'expanded';
+            return () => {
+                shell.style.removeProperty('--mc-chat-nav-space');
+                delete shell.dataset.mobileNav;
+            };
+        }, [chatNavCollapsed]);
+
         const screenClass = `mc-screen mc-screen--${activeView} ${persona === 'wolf' ? 'is-wolf' : 'is-human'}`;
 
         return (
@@ -580,6 +628,7 @@
                         className="xingyue-mobile-cabin"
                         data-enabled="true"
                         data-mobile-view={activeView}
+                        data-mobile-nav={chatNavCollapsed ? 'collapsed' : 'expanded'}
                         data-persona={persona}
                         aria-label="星月舱手机版"
                     >
@@ -614,20 +663,45 @@
                                 />
                             )}
                         </main>
-                        <nav className="mc-nav" aria-label="星月舱主导航">
-                            {NAV_ITEMS.map(item => (
-                                <button
-                                    className={`mc-nav__item ${activeView === item.id ? 'is-active' : ''}`}
-                                    key={item.id}
-                                    type="button"
-                                    aria-current={activeView === item.id ? 'page' : undefined}
-                                    onClick={() => changeView(item.id)}
-                                >
-                                    <Glyph name={item.icon} size={21} />
-                                    <span>{item.label}</span>
-                                </button>
-                            ))}
-                        </nav>
+                        {chatNavCollapsed && (
+                            <button
+                                className="mc-nav-reveal"
+                                type="button"
+                                aria-expanded="false"
+                                aria-controls="xingyue-mobile-nav"
+                                aria-label="展开星月舱主导航"
+                                onClick={() => setChatNavExpanded(true)}
+                            >
+                                <Glyph name="chevron" size={16} />
+                                <span>导航</span>
+                            </button>
+                        )}
+                        {!chatNavCollapsed && (
+                            <nav id="xingyue-mobile-nav" className="mc-nav" aria-label="星月舱主导航">
+                                {activeView === 'chat' && chatNavNeedsCollapse && (
+                                    <button
+                                        className="mc-nav__collapse"
+                                        type="button"
+                                        aria-label="收起底部导航"
+                                        onClick={() => setChatNavExpanded(false)}
+                                    >
+                                        <Glyph name="chevron" size={14} />
+                                    </button>
+                                )}
+                                {NAV_ITEMS.map(item => (
+                                    <button
+                                        className={`mc-nav__item ${activeView === item.id ? 'is-active' : ''}`}
+                                        key={item.id}
+                                        type="button"
+                                        aria-current={activeView === item.id ? 'page' : undefined}
+                                        onClick={() => changeView(item.id)}
+                                    >
+                                        <Glyph name={item.icon} size={21} />
+                                        <span>{item.label}</span>
+                                    </button>
+                                ))}
+                            </nav>
+                        )}
                     </div>
                 )}
             </Fragment>

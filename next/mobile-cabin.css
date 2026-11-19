@@ -157,6 +157,63 @@
     pointer-events: auto;
 }
 
+.mc-nav__collapse {
+    position: absolute;
+    top: -14px;
+    right: 18px;
+    display: grid;
+    width: 30px;
+    height: 24px;
+    place-items: center;
+    padding: 0;
+    border: 1px solid var(--mc-border);
+    border-radius: 10px 10px 7px 7px;
+    color: var(--mc-muted-strong);
+    background: rgba(17, 16, 53, 0.94);
+    box-shadow: 0 7px 16px rgba(3, 3, 20, 0.28);
+    cursor: pointer;
+    pointer-events: auto;
+}
+
+.mc-nav__collapse .mc-glyph {
+    transform: rotate(180deg);
+}
+
+.mc-nav__collapse:hover,
+.mc-nav__collapse:focus-visible,
+.mc-nav-reveal:hover,
+.mc-nav-reveal:focus-visible {
+    color: var(--mc-gold-soft);
+    border-color: var(--mc-border-bright);
+    outline: none;
+}
+
+.mc-nav-reveal {
+    position: absolute;
+    right: 16px;
+    bottom: calc(112px + env(safe-area-inset-bottom, 0px));
+    z-index: 26;
+    display: flex;
+    min-width: 48px;
+    min-height: 27px;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    padding: 4px 8px;
+    border: 1px solid var(--mc-border);
+    border-radius: 12px;
+    color: var(--mc-muted-strong);
+    background: rgba(17, 16, 53, 0.9);
+    box-shadow: 0 9px 20px rgba(3, 3, 20, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(18px) saturate(130%);
+    -webkit-backdrop-filter: blur(18px) saturate(130%);
+    cursor: pointer;
+    font: inherit;
+    font-size: 10px;
+    font-weight: 600;
+    pointer-events: auto;
+}
+
 .mc-nav__item,
 .mc-persona-switch button,
 .mc-theme-card__actions button,

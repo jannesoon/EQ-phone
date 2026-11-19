@@ -1012,6 +1012,8 @@
         function App() {
             const [mobileView, setMobileView] = useState('home');
             const [input, setInput] = useState('');
+            const [chatInputFocused, setChatInputFocused] = useState(false);
+            const [chatInputEntered, setChatInputEntered] = useState(false);
             const [messages, setMessages] = useState([]);
             const [historySessions, setHistorySessions] = useState([]);
             const [currentSessionId, setCurrentSessionId] = useState(null);
@@ -3723,6 +3725,13 @@ ${slice}
                 return true;
             };
             const [toast, setToast] = useState(null);
+
+            useEffect(() => {
+                if (mobileView !== 'chat') {
+                    setChatInputFocused(false);
+                    setChatInputEntered(false);
+                }
+            }, [mobileView]);
 
             useEffect(() => {
                 if (!desktopBridgeAvailable || !window.XingyueAgentClient?.createIdentityCoreClient) return undefined;
@@ -8119,6 +8128,10 @@ X 等对自动化浏览器登录敏感的网站，优先让柒柒在她日常使
                     {window.XingyueMobileCabin && <window.XingyueMobileCabin.MobileCabin
                         view={mobileView} onViewChange={next => { setMobileView(next); setSidebarOpen(false); }}
                         enabled={!desktopBridgeAvailable} agentStatus={window.XINGYUE_MOBILE_DESIGN_PREVIEW ? {state:'offline', label:'设计预览 · 未连接'} : localAgentStatus}
+                        chatMessageCount={messages.length}
+                        chatIsLoading={isLoading}
+                        chatInputFocused={chatInputFocused}
+                        chatInputEntered={chatInputEntered}
                         libraryContent={window.XINGYUE_MOBILE_RUNTIME?.connected && window.XingyueMobileLibrary ? <window.XingyueMobileLibrary.MobileLibrary /> : null}
                         avatarUrl={config.aiAvatar || ''} userName={config.userName || '柒柒'}
                         onAction={action => {
@@ -9106,7 +9119,7 @@ X 等对自动化浏览器登录敏感的网站，优先让柒柒在她日常使
                                     </button>
                                     
                                     <input type="file" ref={chatImageInputRef} style={{display: 'none'}} accept={ATTACHMENT_ACCEPT} multiple onChange={handleAttachmentSelect} aria-label="选择聊天附件"/>
-                                    <textarea value={input} disabled={pendingVideo?.phase === 'analyzing'} onChange={(e) => setInput(e.target.value)} onKeyDown={handleKeyDown} placeholder="星月交辉✨......" className="mc-chat-input bg-transparent border-0 focus:ring-0 text-gray-800 flex-1 resize-none py-3 max-h-32 min-h-[44px] outline-none placeholder:text-gray-400 text-base" aria-label="输入消息" rows={1}></textarea>
+                                    <textarea value={input} disabled={pendingVideo?.phase === 'analyzing'} onChange={(e) => setInput(e.target.value)} onFocus={() => { setChatInputFocused(true); setChatInputEntered(true); }} onBlur={() => setChatInputFocused(false)} onKeyDown={handleKeyDown} placeholder="星月交辉✨......" className="mc-chat-input bg-transparent border-0 focus:ring-0 text-gray-800 flex-1 resize-none py-3 max-h-32 min-h-[44px] outline-none placeholder:text-gray-400 text-base" aria-label="输入消息" rows={1}></textarea>
                                     {isLoading ? (
                                         <button onClick={handleStopGeneration} className="mc-chat-stop-button mb-1 p-2 bg-rose-500 text-white rounded-full hover:bg-rose-600 transition-colors shadow-sm" aria-label="停止生成" title="停止生成"><Icon name="StopCircle" size={20} /></button>
                                     ) : isListening ? (
