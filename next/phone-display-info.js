@@ -1,5 +1,28 @@
 (function (global) {
     'use strict';
+    let lastChatLayout = null;
+    let lastCollapsedChatLayout = null;
+    function bounds(element) {
+        if (!element) return null;
+        const rect = element.getBoundingClientRect();
+        return {top:Math.round(rect.top),bottom:Math.round(rect.bottom),height:Math.round(rect.height)};
+    }
+    function rememberChatLayout() {
+        const doc = global.document;
+        const shell = doc.querySelector('.app-shell[data-mobile-view="chat"]');
+        if (!shell) return;
+        const dock = shell.querySelector('.mc-chat-composer-dock');
+        lastChatLayout = {
+            nav: shell.dataset.mobileNav,
+            innerHeight:global.innerHeight,
+            visualHeight:global.visualViewport?.height,
+            app:bounds(shell),
+            chat:bounds(shell.querySelector('.xy-chat-main')),
+            inputDock:bounds(dock),
+            inputBottomPadding:dock ? global.getComputedStyle(dock).paddingBottom : null,
+        };
+        if (shell.dataset.mobileNav === 'collapsed') lastCollapsedChatLayout = lastChatLayout;
+    }
     // Deliberately excludes URLs, device IDs, credentials, files and messages.
     function read() {
         const doc = global.document;
@@ -21,7 +44,11 @@
             rootBackground: global.getComputedStyle(doc.documentElement).backgroundColor,
             bodyBackground: global.getComputedStyle(doc.body).backgroundColor,
             safeArea: insets,
+            lastChatLayout,
+            lastCollapsedChatLayout,
         };
     }
-    global.XingyuePhoneDisplayInfo = Object.freeze({read});
+    global.XingyuePhoneDisplayInfo = Object.freeze({read, rememberChatLayout});
+    global.addEventListener?.('resize', rememberChatLayout);
+    global.visualViewport?.addEventListener?.('resize', rememberChatLayout);
 })(window);

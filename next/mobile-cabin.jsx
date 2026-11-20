@@ -640,11 +640,12 @@
             if (!shell) return undefined;
             shell.style.setProperty('--mc-chat-nav-space', chatNavCollapsed ? '0px' : '84px');
             shell.dataset.mobileNav = chatNavCollapsed ? 'collapsed' : 'expanded';
+            global.XingyuePhoneDisplayInfo?.rememberChatLayout?.();
             return () => {
                 shell.style.removeProperty('--mc-chat-nav-space');
                 delete shell.dataset.mobileNav;
             };
-        }, [chatNavCollapsed]);
+        }, [chatNavCollapsed, activeView]);
 
         const screenClass = `mc-screen mc-screen--${activeView} ${persona === 'wolf' ? 'is-wolf' : 'is-human'}`;
 
