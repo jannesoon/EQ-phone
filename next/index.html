@@ -5,29 +5,29 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="theme-color" content="#241f50">
-<script src="phone-appearance.js?v=phone-r11"></script>
-<script src="phone-display-info.js?v=phone-r11"></script>
+<script src="phone-appearance.js?v=phone-r12"></script>
+<script src="phone-display-info.js?v=phone-r12"></script>
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="星月舱">
     <title>星月舱</title>
 
-    <link rel="manifest" href="manifest.json?v=phone-r11">
+    <link rel="manifest" href="manifest.json?v=phone-r12">
     <link rel="icon" type="image/png" href="icons/app-icon.png">
     <link rel="apple-touch-icon" href="icons/app-icon.png">
 
     <!-- 页面运行依赖随星月舱一起保存，不再依赖外部 CDN。 -->
-    <link rel="stylesheet" href="vendor/tailwind.css?v=phone-r11">
-    <script src="vendor/react.production.min.js?v=phone-r11"></script>
-    <script src="vendor/react-dom.production.min.js?v=phone-r11"></script>
-    <script src="vendor/babel.min.js?v=phone-r11"></script>
-    <script src="vendor/marked.umd.js?v=phone-r11"></script>
-    <link rel="stylesheet" href="vendor/katex.min.css?v=phone-r11">
-    <script src="vendor/katex.min.js?v=phone-r11"></script>
+    <link rel="stylesheet" href="vendor/tailwind.css?v=phone-r12">
+    <script src="vendor/react.production.min.js?v=phone-r12"></script>
+    <script src="vendor/react-dom.production.min.js?v=phone-r12"></script>
+    <script src="vendor/babel.min.js?v=phone-r12"></script>
+    <script src="vendor/marked.umd.js?v=phone-r12"></script>
+    <link rel="stylesheet" href="vendor/katex.min.css?v=phone-r12">
+    <script src="vendor/katex.min.js?v=phone-r12"></script>
     <!-- ★ Supabase 客户端 —— 用于星辰记忆仓的云端存储 -->
-    <script src="vendor/supabase.js?v=phone-r11"></script>
+    <script src="vendor/supabase.js?v=phone-r12"></script>
 
-    <link rel="stylesheet" href="style.css?v=phone-r11">
+    <link rel="stylesheet" href="style.css?v=phone-r12">
 
     <style>
         /* 启动加载动画 —— 在 React 还没接管页面时显示，避免白屏焦虑 */
@@ -54,9 +54,9 @@
             color: #8b5cf6; font-size: 14px; letter-spacing: 0.05em;
         }
     </style>
-<link rel="stylesheet" href="mobile-cabin.css?v=phone-r11"><link rel="stylesheet" href="mobile-integration.css?v=phone-r11"><link rel="stylesheet" href="phone-themes.css?v=phone-r11"></head>
-<body class="bg-white text-gray-900 overflow-hidden mc-force-mobile" data-xingyue-mobile-release="phone-r11">
-    <script src="mobile-runtime.js?v=phone-r11"></script>
+<link rel="stylesheet" href="mobile-cabin.css?v=phone-r12"><link rel="stylesheet" href="mobile-integration.css?v=phone-r12"><link rel="stylesheet" href="phone-themes.css?v=phone-r12"></head>
+<body class="bg-white text-gray-900 overflow-hidden mc-force-mobile" data-xingyue-mobile-release="phone-r12">
+    <script src="mobile-runtime.js?v=phone-r12"></script>
     <div id="boot-loader">
         <div class="boot-spark"></div>
         <div class="boot-text">✨ 星月舱启动中 🌙</div>
@@ -86,48 +86,48 @@
     
     <div id="root"></div>
 
-    <script src="openai-compatible.js?v=phone-r11"></script>
-    <script src="app-settings.js?v=phone-r11"></script>
-    <script type="text/babel" src="app-shell.jsx?v=phone-r11"></script>
-    <script type="text/babel" src="api-settings.jsx?v=phone-r11"></script>
-    <script src="chat-client.js?v=phone-r11"></script>
-    <script src="session-manager.js?v=phone-r11"></script>
-    <script src="title-generator.js?v=phone-r11"></script>
-    <script src="recent-life.js?v=phone-r11"></script>
-    <script src="context-assembler.js?v=phone-r11"></script>
-    <script src="rolling-continuity.js?v=phone-r11"></script>
-    <script src="rich-content.js?v=phone-r11"></script>
-    <script src="voice-manager.js?v=phone-r11"></script>
-    <script src="speech-director.js?v=phone-r11"></script>
-    <script src="drawing-manager.js?v=phone-r11"></script>
-    <script src="health-manager.js?v=phone-r11"></script>
-    <script type="text/babel" src="health-calendar.jsx?v=phone-r11"></script>
-    <script src="backup-manager.js?v=phone-r11"></script>
-    <script type="text/babel" src="migration-panel.jsx?v=phone-r11"></script>
-    <script type="text/babel" src="device-pairing-panel.jsx?v=phone-r11"></script>
-    <script src="cloud-library.js?v=phone-r11"></script>
-    <script src="diary-intent.js?v=phone-r11"></script>
-    <script src="memory-candidate-intent.js?v=phone-r11"></script>
-    <script src="portable-worldbook.js?v=phone-r11"></script>
-    <script src="memory-vault-router.js?v=phone-r11"></script>
-    <script src="history-tool-policy.js?v=phone-r11"></script>
-    <script src="agent-client.js?v=phone-r11"></script>
-    <script src="video-client.js?v=phone-r11"></script>
-    <script src="attachment-content.js?v=phone-r11"></script>
-    <script type="text/babel" src="video-settings-panel.jsx?v=phone-r11"></script>
-    <script type="text/babel" src="task-center-panel.jsx?v=phone-r11"></script>
-    <script type="text/babel" src="identity-core-panel.jsx?v=phone-r11"></script>
-    <script type="text/babel" src="memory-governance-panel.jsx?v=phone-r11"></script>
-    <script type="text/babel" src="memory-overview-panel.jsx?v=phone-r11"></script>
-    <script type="text/babel" src="portable-worldbook-panel.jsx?v=phone-r11"></script>
-    <script type="text/babel" src="memory-sources-panel.jsx?v=phone-r11"></script>
-    <script type="text/babel" src="session-checkpoint-panel.jsx?v=phone-r11"></script>
-    <script src="sync-queue.js?v=phone-r11"></script>
-    <script src="host-sync-client.js?v=phone-r11"></script>
-    <script type="text/babel" src="mobile-library.jsx?v=phone-r11"></script>
-    <script type="text/babel" src="mobile-cabin.jsx?v=phone-r11"></script>
-    <script type="text/babel" src="phone-appearance-panel.jsx?v=phone-r11"></script>
-<script type="text/babel" src="script.js?v=phone-r11"></script>
+    <script src="openai-compatible.js?v=phone-r12"></script>
+    <script src="app-settings.js?v=phone-r12"></script>
+    <script type="text/babel" src="app-shell.jsx?v=phone-r12"></script>
+    <script type="text/babel" src="api-settings.jsx?v=phone-r12"></script>
+    <script src="chat-client.js?v=phone-r12"></script>
+    <script src="session-manager.js?v=phone-r12"></script>
+    <script src="title-generator.js?v=phone-r12"></script>
+    <script src="recent-life.js?v=phone-r12"></script>
+    <script src="context-assembler.js?v=phone-r12"></script>
+    <script src="rolling-continuity.js?v=phone-r12"></script>
+    <script src="rich-content.js?v=phone-r12"></script>
+    <script src="voice-manager.js?v=phone-r12"></script>
+    <script src="speech-director.js?v=phone-r12"></script>
+    <script src="drawing-manager.js?v=phone-r12"></script>
+    <script src="health-manager.js?v=phone-r12"></script>
+    <script type="text/babel" src="health-calendar.jsx?v=phone-r12"></script>
+    <script src="backup-manager.js?v=phone-r12"></script>
+    <script type="text/babel" src="migration-panel.jsx?v=phone-r12"></script>
+    <script type="text/babel" src="device-pairing-panel.jsx?v=phone-r12"></script>
+    <script src="cloud-library.js?v=phone-r12"></script>
+    <script src="diary-intent.js?v=phone-r12"></script>
+    <script src="memory-candidate-intent.js?v=phone-r12"></script>
+    <script src="portable-worldbook.js?v=phone-r12"></script>
+    <script src="memory-vault-router.js?v=phone-r12"></script>
+    <script src="history-tool-policy.js?v=phone-r12"></script>
+    <script src="agent-client.js?v=phone-r12"></script>
+    <script src="video-client.js?v=phone-r12"></script>
+    <script src="attachment-content.js?v=phone-r12"></script>
+    <script type="text/babel" src="video-settings-panel.jsx?v=phone-r12"></script>
+    <script type="text/babel" src="task-center-panel.jsx?v=phone-r12"></script>
+    <script type="text/babel" src="identity-core-panel.jsx?v=phone-r12"></script>
+    <script type="text/babel" src="memory-governance-panel.jsx?v=phone-r12"></script>
+    <script type="text/babel" src="memory-overview-panel.jsx?v=phone-r12"></script>
+    <script type="text/babel" src="portable-worldbook-panel.jsx?v=phone-r12"></script>
+    <script type="text/babel" src="memory-sources-panel.jsx?v=phone-r12"></script>
+    <script type="text/babel" src="session-checkpoint-panel.jsx?v=phone-r12"></script>
+    <script src="sync-queue.js?v=phone-r12"></script>
+    <script src="host-sync-client.js?v=phone-r12"></script>
+    <script type="text/babel" src="mobile-library.jsx?v=phone-r12"></script>
+    <script type="text/babel" src="mobile-cabin.jsx?v=phone-r12"></script>
+    <script type="text/babel" src="phone-appearance-panel.jsx?v=phone-r12"></script>
+<script type="text/babel" src="script.js?v=phone-r12"></script>
 
     <script>
         // 隐藏启动动画 —— 等 root 里有内容了就淡出
@@ -192,7 +192,7 @@
             });
         }
     </script>
-<script src="phone-update.js?v=phone-r11"></script></body>
+<script src="phone-update.js?v=phone-r12"></script></body>
 </html>
 
 

@@ -211,8 +211,7 @@
         userName,
         today,
         onAction,
-        onViewChange,
-        onPersonaChange
+        onViewChange
     }) {
         const hour = new Date().getHours();
         return (
@@ -235,29 +234,6 @@
                         ) : (
                             <MoonArt wolf={persona === 'wolf'} />
                         )}
-                    </div>
-                    <div className="mc-hero-card__theme" role="group" aria-label="陪伴主题">
-                        <span className="mc-hero-card__theme-label">陪伴主题</span>
-                        <div className="mc-persona-switch">
-                            <button
-                                className={persona === 'human' ? 'is-selected' : ''}
-                                type="button"
-                                aria-pressed={persona === 'human'}
-                                onClick={() => onPersonaChange('human')}
-                            >
-                                <span className="mc-persona-switch__orb mc-persona-switch__orb--human" aria-hidden="true" />
-                                <span>真人逸辰</span>
-                            </button>
-                            <button
-                                className={persona === 'wolf' ? 'is-selected' : ''}
-                                type="button"
-                                aria-pressed={persona === 'wolf'}
-                                onClick={() => onPersonaChange('wolf')}
-                            >
-                                <span className="mc-persona-switch__orb mc-persona-switch__orb--wolf" aria-hidden="true" />
-                                <span>小狼崽</span>
-                            </button>
-                        </div>
                     </div>
                     <div className="mc-hero-card__body">
                         <div className="mc-hero-card__copy">
@@ -674,7 +650,6 @@
                                     today={today}
                                     onAction={dispatchAction}
                                     onViewChange={changeView}
-                                    onPersonaChange={setTheme}
                                 />
                             )}
                             {activeView === 'chat' && <ChatPassThrough />}
