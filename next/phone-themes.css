@@ -1,0 +1,963 @@
+/*
+ * Xingyue phone release themes.
+ *
+ * This file is loaded after mobile-cabin.css and mobile-integration.css.  The
+ * html data attribute is written by the phone theme module; the selectors stay
+ * below that release-only boundary so the desktop app keeps its own palette.
+ * --phone-canvas-bg is intentionally owned by the theme module.  This file
+ * supplies the rest of the semantic palette and never replaces a user's
+ * custom chat background layer.
+ */
+
+html[data-phone-theme="violet"] {
+    color-scheme: dark;
+    --phone-text: #f8f5ff;
+    --phone-muted: #b9b2d1;
+    --phone-subtle: #8f89aa;
+    --phone-surface: rgba(34, 30, 82, 0.82);
+    --phone-surface-strong: rgba(51, 43, 116, 0.92);
+    --phone-surface-soft: rgba(255, 255, 255, 0.08);
+    --phone-panel: #242052;
+    --phone-border: rgba(224, 215, 255, 0.2);
+    --phone-border-strong: rgba(245, 221, 153, 0.55);
+    --phone-accent: #c8b7ff;
+    --phone-accent-strong: #9d88f4;
+    --phone-accent-contrast: #211945;
+    --phone-warm: #f4d995;
+    --phone-success: #9fe1c1;
+    --phone-warning: #f1d797;
+    --phone-danger: #f2b4c4;
+    --phone-input: rgba(69, 59, 139, 0.72);
+    --phone-user-bubble: rgba(112, 91, 198, 0.58);
+    --phone-ai-bubble: rgba(66, 56, 126, 0.68);
+    --phone-nav: rgba(17, 16, 53, 0.92);
+    --phone-shadow: 0 18px 42px rgba(5, 4, 30, 0.3);
+}
+
+html[data-phone-theme="champagne"] {
+    color-scheme: light;
+    --phone-text: #352d30;
+    --phone-muted: #786c6a;
+    --phone-subtle: #9a8d88;
+    --phone-surface: rgba(255, 250, 242, 0.88);
+    --phone-surface-strong: rgba(255, 246, 232, 0.97);
+    --phone-surface-soft: rgba(118, 89, 63, 0.07);
+    --phone-panel: #fffaf2;
+    --phone-border: rgba(137, 104, 72, 0.2);
+    --phone-border-strong: rgba(168, 125, 76, 0.52);
+    --phone-accent: #9a6c43;
+    --phone-accent-strong: #b4814e;
+    --phone-accent-contrast: #fffaf2;
+    --phone-warm: #b7834f;
+    --phone-success: #4f8d6d;
+    --phone-warning: #a86e31;
+    --phone-danger: #a44f5f;
+    --phone-input: rgba(255, 250, 242, 0.96);
+    --phone-user-bubble: rgba(215, 183, 141, 0.64);
+    --phone-ai-bubble: rgba(255, 250, 241, 0.92);
+    --phone-nav: rgba(255, 250, 242, 0.96);
+    --phone-shadow: 0 16px 38px rgba(102, 73, 47, 0.15);
+}
+
+html[data-phone-theme="moonblue"] {
+    color-scheme: light;
+    --phone-text: #26384b;
+    --phone-muted: #63758a;
+    --phone-subtle: #8b9bad;
+    --phone-surface: rgba(248, 252, 255, 0.88);
+    --phone-surface-strong: rgba(239, 247, 253, 0.98);
+    --phone-surface-soft: rgba(61, 96, 132, 0.07);
+    --phone-panel: #f7fbff;
+    --phone-border: rgba(71, 109, 144, 0.2);
+    --phone-border-strong: rgba(93, 133, 173, 0.52);
+    --phone-accent: #557da9;
+    --phone-accent-strong: #3d638d;
+    --phone-accent-contrast: #f7fbff;
+    --phone-warm: #a97752;
+    --phone-success: #3e846c;
+    --phone-warning: #9b6d36;
+    --phone-danger: #aa596b;
+    --phone-input: rgba(248, 252, 255, 0.98);
+    --phone-user-bubble: rgba(160, 192, 222, 0.68);
+    --phone-ai-bubble: rgba(247, 251, 255, 0.94);
+    --phone-nav: rgba(248, 252, 255, 0.96);
+    --phone-shadow: 0 16px 38px rgba(48, 79, 107, 0.16);
+}
+
+html[data-phone-theme="obsidian"] {
+    color-scheme: dark;
+    --phone-text: #f7f0df;
+    --phone-muted: #b9ad98;
+    --phone-subtle: #857b6e;
+    --phone-surface: rgba(28, 27, 25, 0.9);
+    --phone-surface-strong: rgba(40, 37, 31, 0.96);
+    --phone-surface-soft: rgba(255, 244, 214, 0.07);
+    --phone-panel: #24221e;
+    --phone-border: rgba(233, 207, 148, 0.22);
+    --phone-border-strong: rgba(233, 197, 112, 0.62);
+    --phone-accent: #dfbd73;
+    --phone-accent-strong: #c89d4c;
+    --phone-accent-contrast: #201b12;
+    --phone-warm: #e3c47f;
+    --phone-success: #9bc49b;
+    --phone-warning: #e0b568;
+    --phone-danger: #e29aa7;
+    --phone-input: rgba(45, 42, 36, 0.94);
+    --phone-user-bubble: rgba(104, 80, 38, 0.72);
+    --phone-ai-bubble: rgba(43, 40, 35, 0.86);
+    --phone-nav: rgba(20, 19, 17, 0.96);
+    --phone-shadow: 0 18px 42px rgba(0, 0, 0, 0.48);
+}
+
+/* Keep the phone shell and its legacy --mc variables on the same semantic
+ * palette.  The canvas itself remains module-owned. */
+html[data-phone-theme] .xingyue-mobile-cabin[data-enabled="true"] {
+    --mc-ink: var(--phone-text);
+    --mc-muted: var(--phone-muted);
+    --mc-muted-strong: var(--phone-text);
+    --mc-bg-deep: var(--phone-canvas-bg);
+    --mc-bg-mid: var(--phone-canvas-bg);
+    --mc-bg-purple: var(--phone-surface-strong);
+    --mc-surface: var(--phone-surface);
+    --mc-surface-strong: var(--phone-surface-strong);
+    --mc-surface-soft: var(--phone-surface-soft);
+    --mc-border: var(--phone-border);
+    --mc-border-bright: var(--phone-border-strong);
+    --mc-gold: var(--phone-warm);
+    --mc-gold-soft: var(--phone-warm);
+    --mc-lavender: var(--phone-accent);
+    --mc-violet: var(--phone-accent-strong);
+    --mc-blue: var(--phone-accent);
+    --mc-green: var(--phone-success);
+    --mc-orange: var(--phone-warning);
+    --mc-danger: var(--phone-danger);
+    color: var(--phone-text);
+}
+
+html[data-phone-theme] body.mc-force-mobile {
+    background: var(--phone-canvas-bg);
+}
+
+@media (max-width: 767px) {
+    html[data-phone-theme] body {
+        background: var(--phone-canvas-bg);
+    }
+}
+
+html[data-phone-theme] .xingyue-mobile-cabin[data-enabled="true"] .mc-screen {
+    color: var(--phone-text);
+    background: var(--phone-canvas-bg);
+}
+
+html[data-phone-theme] .xingyue-mobile-cabin[data-enabled="true"] :is(.mc-topbar, .mc-section-heading, .mc-page-header) {
+    color: var(--phone-text);
+}
+
+html[data-phone-theme] .xingyue-mobile-cabin[data-enabled="true"] .mc-brand-kicker,
+html[data-phone-theme] .xingyue-mobile-cabin[data-enabled="true"] .mc-eyebrow,
+html[data-phone-theme] .xingyue-mobile-cabin[data-enabled="true"] .mc-tile__eyebrow {
+    color: var(--phone-muted);
+}
+
+html[data-phone-theme] .xingyue-mobile-cabin[data-enabled="true"] .mc-brand-mark,
+html[data-phone-theme] .xingyue-mobile-cabin[data-enabled="true"] .mc-page-header__icon,
+html[data-phone-theme] .xingyue-mobile-cabin[data-enabled="true"] .mc-feature-card__icon,
+html[data-phone-theme] .xingyue-mobile-cabin[data-enabled="true"] .mc-tile__icon,
+html[data-phone-theme] .xingyue-mobile-cabin[data-enabled="true"] .mc-shortcut-card__icon {
+    color: var(--phone-accent-contrast);
+    border-color: var(--phone-border-strong);
+    background: var(--phone-accent);
+}
+
+html[data-phone-theme] .xingyue-mobile-cabin[data-enabled="true"] .mc-status,
+html[data-phone-theme] .xingyue-mobile-cabin[data-enabled="true"] .mc-info-card,
+html[data-phone-theme] .xingyue-mobile-cabin[data-enabled="true"] .mc-feature-card,
+html[data-phone-theme] .xingyue-mobile-cabin[data-enabled="true"] .mc-list-card,
+html[data-phone-theme] .xingyue-mobile-cabin[data-enabled="true"] .mc-profile-card,
+html[data-phone-theme] .xingyue-mobile-cabin[data-enabled="true"] .mc-profile-group,
+html[data-phone-theme] .xingyue-mobile-cabin[data-enabled="true"] .mc-theme-card,
+html[data-phone-theme] .xingyue-mobile-cabin[data-enabled="true"] .mc-library-banner {
+    color: var(--phone-text);
+    border-color: var(--phone-border);
+    background: var(--phone-surface);
+    box-shadow: var(--phone-shadow);
+}
+
+html[data-phone-theme] .xingyue-mobile-cabin[data-enabled="true"] .mc-status__label,
+html[data-phone-theme] .xingyue-mobile-cabin[data-enabled="true"] .mc-list-row__status,
+html[data-phone-theme] .xingyue-mobile-cabin[data-enabled="true"] .mc-shortcut-card__hint,
+html[data-phone-theme] .xingyue-mobile-cabin[data-enabled="true"] .mc-empty-state p {
+    color: var(--phone-muted);
+}
+
+html[data-phone-theme] .xingyue-mobile-cabin[data-enabled="true"] .mc-status--online { color: var(--phone-success); }
+html[data-phone-theme] .xingyue-mobile-cabin[data-enabled="true"] .mc-status--pending,
+html[data-phone-theme] .xingyue-mobile-cabin[data-enabled="true"] .mc-status--pairing { color: var(--phone-warning); }
+html[data-phone-theme] .xingyue-mobile-cabin[data-enabled="true"] .mc-status--offline,
+html[data-phone-theme] .xingyue-mobile-cabin[data-enabled="true"] .mc-status--unknown { color: var(--phone-danger); }
+
+html[data-phone-theme] .xingyue-mobile-cabin[data-enabled="true"] .mc-hero-card,
+html[data-phone-theme] .xingyue-mobile-cabin[data-enabled="true"] .mc-shortcut-card,
+html[data-phone-theme] .xingyue-mobile-cabin[data-enabled="true"] .mc-tile {
+    color: var(--phone-text);
+    border-color: var(--phone-border);
+    background: var(--phone-surface);
+    box-shadow: var(--phone-shadow);
+}
+
+html[data-phone-theme] .xingyue-mobile-cabin[data-enabled="true"] .mc-hero-card__visual {
+    background-color: var(--phone-surface-strong);
+}
+
+html[data-phone-theme] .xingyue-mobile-cabin[data-enabled="true"] .mc-hero-card__body {
+    color: var(--phone-text);
+    background: linear-gradient(180deg, transparent 0%, var(--phone-surface) 28%, var(--phone-surface-strong) 86%);
+}
+
+html[data-phone-theme] .xingyue-mobile-cabin[data-enabled="true"] .mc-moon-art {
+    background: linear-gradient(155deg, var(--phone-accent), var(--phone-surface-strong));
+    box-shadow: inset 0 0 55px color-mix(in srgb, var(--phone-text) 18%, transparent), var(--phone-shadow);
+}
+
+html[data-phone-theme] .xingyue-mobile-cabin[data-enabled="true"] .mc-moon-art.is-wolf {
+    background: linear-gradient(155deg, var(--phone-accent-strong), var(--phone-surface-strong));
+}
+
+html[data-phone-theme] .xingyue-mobile-cabin[data-enabled="true"] .mc-moon-art__halo {
+    border-color: var(--phone-border-strong);
+    box-shadow: 0 0 0 11px var(--phone-surface-soft), 0 0 0 23px var(--phone-surface-soft);
+}
+
+html[data-phone-theme] .xingyue-mobile-cabin[data-enabled="true"] .mc-moon-art__moon {
+    background: linear-gradient(135deg, var(--phone-warm), var(--phone-accent));
+    box-shadow: 0 0 32px color-mix(in srgb, var(--phone-warm) 68%, transparent);
+}
+
+html[data-phone-theme] .xingyue-mobile-cabin[data-enabled="true"] .mc-moon-art__hill {
+    background: var(--phone-surface-strong);
+}
+
+html[data-phone-theme] .xingyue-mobile-cabin[data-enabled="true"] .mc-moon-art__hill--back {
+    background: var(--phone-accent-strong);
+}
+
+html[data-phone-theme] .xingyue-mobile-cabin[data-enabled="true"] .mc-hero-card__copy :is(h1, h2, h3),
+html[data-phone-theme] .xingyue-mobile-cabin[data-enabled="true"] .mc-info-card__heading h3,
+html[data-phone-theme] .xingyue-mobile-cabin[data-enabled="true"] .mc-profile-card :is(h1, h2, h3),
+html[data-phone-theme] .xingyue-mobile-cabin[data-enabled="true"] .mc-library-banner :is(h1, h2, h3) {
+    color: var(--phone-text);
+}
+
+html[data-phone-theme] .xingyue-mobile-cabin[data-enabled="true"] .mc-primary-button,
+html[data-phone-theme] .xingyue-mobile-cabin[data-enabled="true"] .mc-small-button {
+    color: var(--phone-accent-contrast);
+    border-color: var(--phone-accent-strong);
+    background: var(--phone-accent);
+}
+
+html[data-phone-theme] .xingyue-mobile-cabin[data-enabled="true"] :is(.mc-icon-button, .mc-text-action, .mc-list-row button) {
+    color: var(--phone-accent-strong);
+    border-color: var(--phone-border);
+}
+
+html[data-phone-theme] .xingyue-mobile-cabin[data-enabled="true"] .mc-persona-switch,
+html[data-phone-theme] .xingyue-mobile-cabin[data-enabled="true"] .mc-persona-switch button,
+html[data-phone-theme] .xingyue-mobile-cabin[data-enabled="true"] .mc-theme-card__actions button {
+    color: var(--phone-text);
+    border-color: var(--phone-border);
+    background: var(--phone-surface-soft);
+}
+
+html[data-phone-theme] .xingyue-mobile-cabin[data-enabled="true"] .mc-persona-switch button[aria-pressed="true"],
+html[data-phone-theme] .xingyue-mobile-cabin[data-enabled="true"] .mc-theme-card__actions button[aria-pressed="true"] {
+    color: var(--phone-accent-contrast);
+    background: var(--phone-accent);
+}
+
+html[data-phone-theme] .xingyue-mobile-cabin[data-enabled="true"] .mc-empty-state,
+html[data-phone-theme] .xingyue-mobile-cabin[data-enabled="true"] .mc-info-card--life-empty {
+    color: var(--phone-text);
+    border-color: var(--phone-border);
+    background: var(--phone-surface-soft);
+}
+
+html[data-phone-theme] .xingyue-mobile-cabin[data-enabled="true"] .mc-nav {
+    border-color: var(--phone-border);
+    background: var(--phone-nav);
+    box-shadow: var(--phone-shadow);
+}
+
+html[data-phone-theme] .xingyue-mobile-cabin[data-enabled="true"] .mc-nav__item {
+    color: var(--phone-muted);
+}
+
+html[data-phone-theme] .xingyue-mobile-cabin[data-enabled="true"] .mc-nav__item.is-active,
+html[data-phone-theme] .xingyue-mobile-cabin[data-enabled="true"] .mc-nav__item:hover,
+html[data-phone-theme] .xingyue-mobile-cabin[data-enabled="true"] .mc-nav__item:focus-visible {
+    color: var(--phone-accent-strong);
+    background: var(--phone-surface-soft);
+}
+
+html[data-phone-theme] .xingyue-mobile-cabin[data-enabled="true"] :is(.mc-nav-reveal, .mc-nav__collapse) {
+    color: var(--phone-text);
+    border-color: var(--phone-border);
+    background: var(--phone-nav);
+}
+
+html[data-phone-theme] .app-shell[data-mobile-view="chat"] {
+    color: var(--phone-text);
+    background: var(--phone-canvas-bg) !important;
+}
+
+html[data-phone-theme] .app-shell[data-mobile-view="chat"] .mc-chat-main {
+    color: var(--phone-text);
+    background: var(--phone-canvas-bg) !important;
+}
+
+/* The host's inline background-image is a sibling layer inside mc-chat-main.
+ * Keep the scroll surface transparent so that layer remains visible. */
+html[data-phone-theme] .app-shell[data-mobile-view="chat"] .mc-chat-scroll {
+    color: var(--phone-text);
+    background: transparent !important;
+}
+
+html[data-phone-theme] .app-shell[data-mobile-view="chat"] .mc-chat-header,
+html[data-phone-theme] .app-shell[data-mobile-view="chat"] .mc-chat-composer-dock {
+    color: var(--phone-text);
+    border-color: var(--phone-border) !important;
+    background: var(--phone-surface) !important;
+    box-shadow: var(--phone-shadow);
+}
+
+html[data-phone-theme] .app-shell[data-mobile-view="chat"] :is(.mc-chat-mobile-back, .mc-chat-mobile-sessions, .mc-chat-mobile-more, .mc-chat-theme-button, .mc-chat-settings-button) {
+    color: var(--phone-text) !important;
+    border-color: var(--phone-border) !important;
+    background: var(--phone-surface-soft) !important;
+}
+
+html[data-phone-theme] .app-shell[data-mobile-view="chat"] .mc-chat-mobile-profile__copy strong,
+html[data-phone-theme] .app-shell[data-mobile-view="chat"] .mc-chat-title > span:first-child {
+    color: var(--phone-text) !important;
+}
+
+html[data-phone-theme] .app-shell[data-mobile-view="chat"] .mc-chat-mobile-profile__status,
+html[data-phone-theme] .app-shell[data-mobile-view="chat"] .mc-chat-mobile-connection__state,
+html[data-phone-theme] .app-shell[data-mobile-view="chat"] .mc-chat-mobile-connection__notice,
+html[data-phone-theme] .app-shell[data-mobile-view="chat"] .mc-chat-message-actions,
+html[data-phone-theme] .app-shell[data-mobile-view="chat"] .mc-chat-disclaimer {
+    color: var(--phone-muted) !important;
+}
+
+html[data-phone-theme] .app-shell[data-mobile-view="chat"] .mc-chat-mobile-profile__status.is-online,
+html[data-phone-theme] .app-shell[data-mobile-view="chat"] .mc-chat-agent-status.text-emerald-500,
+html[data-phone-theme] .app-shell[data-mobile-view="chat"] .mc-chat-sync-status.text-emerald-500 {
+    color: var(--phone-success) !important;
+}
+
+html[data-phone-theme] .app-shell[data-mobile-view="chat"] .mc-chat-mobile-profile__status.is-checking,
+html[data-phone-theme] .app-shell[data-mobile-view="chat"] .mc-chat-agent-status.text-amber-500,
+html[data-phone-theme] .app-shell[data-mobile-view="chat"] .mc-chat-sync-status.text-amber-500 {
+    color: var(--phone-warning) !important;
+}
+
+html[data-phone-theme] .app-shell[data-mobile-view="chat"] .mc-chat-mobile-profile__status.is-pending,
+html[data-phone-theme] .app-shell[data-mobile-view="chat"] .mc-chat-sync-status.text-red-500,
+html[data-phone-theme] .app-shell[data-mobile-view="chat"] .mc-chat-conflict,
+html[data-phone-theme] .app-shell[data-mobile-view="chat"] .mc-chat-error {
+    color: var(--phone-danger) !important;
+}
+
+html[data-phone-theme] .app-shell[data-mobile-view="chat"] .mc-chat-mobile-avatar,
+html[data-phone-theme] .app-shell[data-mobile-view="chat"] .mc-chat-empty-portrait {
+    border-color: var(--phone-border-strong);
+    background: var(--phone-surface-strong);
+}
+
+html[data-phone-theme] .app-shell[data-mobile-view="chat"] .mc-chat-mobile-connection,
+html[data-phone-theme] .app-shell[data-mobile-view="chat"] .mc-chat-composer,
+html[data-phone-theme] .app-shell[data-mobile-view="chat"] .mc-chat-scroll-down,
+html[data-phone-theme] .app-shell[data-mobile-view="chat"] .mc-chat-mobile-connection__statuses {
+    color: var(--phone-text);
+    border-color: var(--phone-border) !important;
+    background: var(--phone-surface-soft) !important;
+}
+
+html[data-phone-theme] .app-shell[data-mobile-view="chat"] .mc-chat-mobile-connection.is-conflict,
+html[data-phone-theme] .app-shell[data-mobile-view="chat"] .mc-chat-error {
+    border-color: color-mix(in srgb, var(--phone-danger) 55%, transparent) !important;
+    background: color-mix(in srgb, var(--phone-danger) 16%, var(--phone-surface-strong)) !important;
+}
+
+html[data-phone-theme] .app-shell[data-mobile-view="chat"] .mc-chat-mobile-connection.is-readonly {
+    border-color: color-mix(in srgb, var(--phone-warning) 52%, transparent) !important;
+}
+
+html[data-phone-theme] .app-shell[data-mobile-view="chat"] .mc-chat-mobile-connection__summary,
+html[data-phone-theme] .app-shell[data-mobile-view="chat"] .mc-chat-mobile-connection__actions button {
+    color: var(--phone-text);
+}
+
+html[data-phone-theme] .app-shell[data-mobile-view="chat"] .mc-chat-handoff,
+html[data-phone-theme] .app-shell[data-mobile-view="chat"] .mc-chat-mobile-theme,
+html[data-phone-theme] .app-shell[data-mobile-view="chat"] .mc-chat-mobile-settings {
+    color: var(--phone-accent-strong) !important;
+}
+
+html[data-phone-theme] .app-shell[data-mobile-view="chat"] .mc-chat-messages {
+    color: var(--phone-text);
+}
+
+html[data-phone-theme] .app-shell[data-mobile-view="chat"] .mc-chat-date-divider span {
+    color: var(--phone-muted);
+    border-color: var(--phone-border);
+    background: var(--phone-surface-soft);
+}
+
+html[data-phone-theme] .app-shell[data-mobile-view="chat"] .mc-chat-assistant-message {
+    color: var(--phone-text);
+    border-color: var(--phone-border);
+    background: var(--phone-ai-bubble);
+    box-shadow: var(--phone-shadow);
+}
+
+html[data-phone-theme] .app-shell[data-mobile-view="chat"] .mc-chat-assistant-message .prose,
+html[data-phone-theme] .app-shell[data-mobile-view="chat"] .mc-chat-assistant-message .prose :is(p, li, strong, em, blockquote, h1, h2, h3, h4) {
+    color: var(--phone-text) !important;
+}
+
+html[data-phone-theme] .app-shell[data-mobile-view="chat"] .mc-chat-assistant-message .prose a {
+    color: var(--phone-accent-strong) !important;
+}
+
+html[data-phone-theme] .app-shell[data-mobile-view="chat"] .mc-chat-user-bubble {
+    color: var(--phone-text) !important;
+    border-color: var(--phone-border-strong) !important;
+    background-color: var(--phone-user-bubble) !important;
+    background-image: linear-gradient(145deg, rgba(255, 255, 255, 0.2), transparent 72%);
+    box-shadow: var(--phone-shadow);
+}
+
+html[data-phone-theme] .app-shell[data-mobile-view="chat"] .mc-chat-user-bubble .prose,
+html[data-phone-theme] .app-shell[data-mobile-view="chat"] .mc-chat-user-bubble .prose :is(p, li, strong, em, blockquote) {
+    color: var(--phone-text) !important;
+}
+
+html[data-phone-theme] .app-shell[data-mobile-view="chat"] .mc-chat-composer {
+    color: var(--phone-text);
+    border-color: var(--phone-border) !important;
+    background: var(--phone-input) !important;
+}
+
+html[data-phone-theme] .app-shell[data-mobile-view="chat"] .mc-chat-input,
+html[data-phone-theme] .app-shell[data-mobile-view="chat"] .mc-chat-edit-input {
+    color: var(--phone-text) !important;
+    -webkit-text-fill-color: var(--phone-text) !important;
+    background: transparent !important;
+    caret-color: var(--phone-accent-strong);
+}
+
+html[data-phone-theme] .app-shell[data-mobile-view="chat"] .mc-chat-input::placeholder {
+    color: var(--phone-muted) !important;
+    -webkit-text-fill-color: var(--phone-muted) !important;
+}
+
+html[data-phone-theme] .app-shell[data-mobile-view="chat"] :is(.mc-chat-attachment-button, .mc-chat-voice-button) {
+    color: var(--phone-accent-strong) !important;
+    background: var(--phone-surface-soft) !important;
+}
+
+html[data-phone-theme] .app-shell[data-mobile-view="chat"] .mc-chat-send-button {
+    color: var(--phone-accent-contrast) !important;
+    background: var(--phone-accent) !important;
+}
+
+html[data-phone-theme] .app-shell[data-mobile-view="chat"] .mc-chat-stop-button {
+    color: var(--phone-accent-contrast) !important;
+    background: var(--phone-danger) !important;
+}
+
+html[data-phone-theme] .app-shell[data-mobile-view="chat"] .mc-chat-pending-attachments,
+html[data-phone-theme] .app-shell[data-mobile-view="chat"] .mc-chat-image-previews {
+    color: var(--phone-text);
+}
+
+html[data-phone-theme] .app-shell[data-mobile-view="chat"] .mc-chat-loading,
+html[data-phone-theme] .app-shell[data-mobile-view="chat"] .mc-chat-active-tools {
+    color: var(--phone-accent-strong);
+}
+
+html[data-phone-theme] .app-shell[data-mobile-view="chat"] details.cot-details {
+    color: var(--phone-text);
+    border-color: var(--phone-border);
+    background: var(--phone-surface-soft);
+}
+
+html[data-phone-theme] .app-shell[data-mobile-view="chat"] details.cot-details :is(summary, .cot-content) {
+    color: var(--phone-muted);
+}
+
+html[data-phone-theme] .app-shell[data-mobile-view="chat"] .mc-chat-empty-copy :is(h1, p),
+html[data-phone-theme] .app-shell[data-mobile-view="chat"] .mc-chat-empty-kicker {
+    color: var(--phone-text) !important;
+}
+
+html[data-phone-theme] .app-shell[data-mobile-view="chat"] .mc-chat-empty-copy p,
+html[data-phone-theme] .app-shell[data-mobile-view="chat"] .mc-chat-empty-kicker {
+    color: var(--phone-muted) !important;
+}
+
+html[data-phone-theme] .app-shell[data-mobile-view="chat"] .mc-chat-empty-stars,
+html[data-phone-theme] .app-shell[data-mobile-view="chat"] .mc-chat-empty-portrait__sparkle {
+    color: var(--phone-warm);
+}
+
+html[data-phone-theme] .app-shell[data-mobile-view="chat"] .mc-chat-mobile-connection__actions .mc-chat-conflict {
+    border-color: var(--phone-danger) !important;
+    background: color-mix(in srgb, var(--phone-danger) 12%, var(--phone-surface-strong)) !important;
+}
+
+/* Appearance/profile panel hooks added by the release profile surface. */
+html[data-phone-theme] .xingyue-mobile-cabin[data-enabled="true"] .phone-appearance-panel {
+    color: var(--phone-text);
+    border-color: var(--phone-border);
+    background: var(--phone-surface);
+    box-shadow: var(--phone-shadow);
+}
+
+html[data-phone-theme] .xingyue-mobile-cabin[data-enabled="true"] .phone-theme-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    min-width: 0;
+}
+
+html[data-phone-theme] .xingyue-mobile-cabin[data-enabled="true"] .phone-theme-option {
+    display: flex;
+    min-width: 0;
+    min-height: 74px;
+    align-items: center;
+    gap: 9px;
+    padding: 10px;
+    overflow: hidden;
+    border: 1px solid var(--phone-border);
+    border-radius: 15px;
+    color: var(--phone-text);
+    background: var(--phone-surface-soft);
+    text-align: left;
+}
+
+html[data-phone-theme] .xingyue-mobile-cabin[data-enabled="true"] .phone-theme-option[aria-checked="true"] {
+    border-color: var(--phone-accent-strong);
+    background: var(--phone-surface-strong);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--phone-accent) 28%, transparent);
+}
+
+html[data-phone-theme] .xingyue-mobile-cabin[data-enabled="true"] .phone-theme-option__swatch {
+    width: 30px;
+    height: 30px;
+    flex: 0 0 30px;
+    border: 1px solid var(--phone-border-strong);
+    border-radius: 10px;
+}
+
+html[data-phone-theme] .xingyue-mobile-cabin[data-enabled="true"] .phone-theme-option__copy {
+    min-width: 0;
+    overflow: hidden;
+}
+
+html[data-phone-theme] .xingyue-mobile-cabin[data-enabled="true"] .phone-theme-option__copy :is(strong, span, small) {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+html[data-phone-theme] .xingyue-mobile-cabin[data-enabled="true"] :is(.phone-cover-controls, .phone-cover-status, .phone-cover-preview) {
+    color: var(--phone-text);
+    border-color: var(--phone-border);
+    background: var(--phone-surface-soft);
+}
+
+html[data-phone-theme] .xingyue-mobile-cabin[data-enabled="true"] .phone-cover-status {
+    color: var(--phone-muted);
+}
+
+html[data-phone-theme] .xingyue-mobile-cabin[data-enabled="true"] .phone-cover-preview {
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+    border-radius: 16px;
+}
+
+html[data-phone-theme] .xingyue-mobile-cabin[data-enabled="true"] .phone-cover-preview img {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    object-fit: cover;
+}
+
+@media (max-width: 390px) {
+    html[data-phone-theme] .xingyue-mobile-cabin[data-enabled="true"] .mc-topbar {
+        gap: 7px;
+    }
+
+    html[data-phone-theme] .xingyue-mobile-cabin[data-enabled="true"] .mc-shortcut-grid {
+        gap: 7px;
+    }
+
+    html[data-phone-theme] .xingyue-mobile-cabin[data-enabled="true"] .mc-shortcut-card {
+        min-height: 100px;
+        padding-right: 8px;
+        padding-left: 8px;
+    }
+
+    html[data-phone-theme] .app-shell[data-mobile-view="chat"] .mc-chat-header,
+    html[data-phone-theme] .app-shell[data-mobile-view="chat"] .mc-chat-composer-dock {
+        padding-right: 9px !important;
+        padding-left: 9px !important;
+    }
+
+    html[data-phone-theme] .app-shell[data-mobile-view="chat"] .mc-chat-mobile-profile__copy strong {
+        font-size: 14px;
+    }
+
+    html[data-phone-theme] .app-shell[data-mobile-view="chat"] .mc-chat-assistant-message,
+    html[data-phone-theme] .app-shell[data-mobile-view="chat"] .mc-chat-user-bubble {
+        font-size: 14px;
+    }
+
+    html[data-phone-theme] .xingyue-mobile-cabin[data-enabled="true"] .phone-theme-grid {
+        gap: 7px;
+    }
+
+    html[data-phone-theme] .xingyue-mobile-cabin[data-enabled="true"] .phone-theme-option {
+        min-height: 66px;
+        gap: 6px;
+        padding: 8px;
+        font-size: 12px;
+    }
+}
+
+/* Actual profile panel class names.  The shorter phone-* hooks above remain
+ * aliases for preview builds, while the xy-phone-* selectors match the
+ * mounted phone-appearance-panel component. */
+html[data-phone-theme] :is(.xy-phone-appearance-panel, .phone-appearance-panel) {
+    min-width: 0;
+    max-width: 100%;
+    padding: 16px;
+    overflow: hidden;
+    border: 1px solid var(--phone-border);
+    border-radius: 20px;
+    color: var(--phone-text);
+    background: var(--phone-surface);
+    box-shadow: var(--phone-shadow);
+}
+
+html[data-phone-theme] :is(.xy-phone-appearance-heading, .phone-appearance-heading) {
+    min-width: 0;
+    color: var(--phone-text);
+}
+
+html[data-phone-theme] :is(.xy-phone-appearance-eyebrow, .phone-appearance-eyebrow) {
+    margin: 0 0 4px;
+    color: var(--phone-muted);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .14em;
+}
+
+html[data-phone-theme] :is(.xy-phone-appearance-heading, .phone-appearance-heading) h3 {
+    margin: 0;
+    color: var(--phone-text);
+    font-size: 18px;
+    line-height: 1.3;
+}
+
+html[data-phone-theme] :is(.xy-phone-appearance-heading, .phone-appearance-heading) p:last-child {
+    margin: 6px 0 0;
+    color: var(--phone-muted);
+    font-size: 12px;
+    line-height: 1.55;
+}
+
+html[data-phone-theme] .xy-phone-appearance-themes {
+    min-width: 0;
+    margin: 18px 0 0;
+    padding: 0;
+    border: 0;
+}
+
+html[data-phone-theme] .xy-phone-appearance-themes legend {
+    margin-bottom: 8px;
+    color: var(--phone-text);
+    font-size: 13px;
+    font-weight: 700;
+}
+
+html[data-phone-theme] .xy-phone-appearance-swatches {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    min-width: 0;
+}
+
+html[data-phone-theme] .xy-phone-appearance-swatch {
+    position: relative;
+    display: grid;
+    min-width: 0;
+    min-height: 63px;
+    grid-template-columns: 30px minmax(0, 1fr);
+    align-items: center;
+    gap: 8px;
+    padding: 9px;
+    overflow: hidden;
+    border: 1px solid var(--phone-border);
+    border-radius: 14px;
+    color: var(--phone-text);
+    background: var(--phone-surface-soft);
+    cursor: pointer;
+}
+
+html[data-phone-theme] .xy-phone-appearance-swatch.is-selected,
+html[data-phone-theme] .xy-phone-appearance-swatch:has(input:checked) {
+    border-color: var(--phone-accent-strong);
+    background: var(--phone-surface-strong);
+    box-shadow: 0 0 0 2px var(--phone-border);
+}
+
+html[data-phone-theme] .xy-phone-appearance-swatch:has(input:focus-visible) {
+    outline: 2px solid var(--phone-accent);
+    outline-offset: 2px;
+}
+
+html[data-phone-theme] .xy-phone-appearance-swatch input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
+}
+
+html[data-phone-theme] .xy-phone-appearance-swatch-dot {
+    display: block;
+    width: 30px;
+    height: 30px;
+    border: 1px solid var(--phone-border-strong);
+    border-radius: 10px;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .3);
+}
+
+html[data-phone-theme] .xy-phone-appearance-swatch > span:last-child {
+    display: block;
+    min-width: 0;
+    overflow: hidden;
+}
+
+html[data-phone-theme] .xy-phone-appearance-swatch strong,
+html[data-phone-theme] .xy-phone-appearance-swatch small {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+html[data-phone-theme] .xy-phone-appearance-swatch strong {
+    color: var(--phone-text);
+    font-size: 12px;
+}
+
+html[data-phone-theme] .xy-phone-appearance-swatch small {
+    margin-top: 2px;
+    color: var(--phone-muted);
+    font-size: 10px;
+}
+
+html[data-phone-theme] .xy-phone-appearance-cover {
+    min-width: 0;
+    margin-top: 16px;
+    padding: 12px;
+    border: 1px solid var(--phone-border);
+    border-radius: 16px;
+    background: var(--phone-surface-soft);
+}
+
+html[data-phone-theme] .xy-phone-appearance-cover-heading {
+    display: flex;
+    min-width: 0;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+html[data-phone-theme] .xy-phone-appearance-cover-heading > div {
+    min-width: 0;
+}
+
+html[data-phone-theme] .xy-phone-appearance-cover-heading h4 {
+    margin: 0;
+    color: var(--phone-text);
+    font-size: 13px;
+}
+
+html[data-phone-theme] .xy-phone-appearance-cover-heading p {
+    margin: 4px 0 0;
+    color: var(--phone-muted);
+    font-size: 10px;
+    line-height: 1.5;
+}
+
+html[data-phone-theme] .xy-phone-appearance-cover-state {
+    flex: 0 0 auto;
+    padding: 3px 7px;
+    border: 1px solid var(--phone-border-strong);
+    border-radius: 999px;
+    color: var(--phone-success);
+    font-size: 10px;
+    white-space: nowrap;
+}
+
+html[data-phone-theme] .xy-phone-appearance-cover-preview,
+html[data-phone-theme] .xy-phone-appearance-cover-empty {
+    width: 100%;
+    min-height: 120px;
+    margin-top: 10px;
+    overflow: hidden;
+    border: 1px solid var(--phone-border);
+    border-radius: 14px;
+    background-color: var(--phone-surface-strong);
+}
+
+html[data-phone-theme] .xy-phone-appearance-cover-preview {
+    background-repeat: no-repeat;
+    background-size: cover;
+}
+
+html[data-phone-theme] .xy-phone-appearance-cover-empty {
+    display: grid;
+    min-height: 86px;
+    place-items: center;
+    padding: 14px;
+    color: var(--phone-muted);
+    font-size: 11px;
+    line-height: 1.55;
+    text-align: center;
+}
+
+html[data-phone-theme] .xy-phone-appearance-file-button {
+    display: flex;
+    min-height: 40px;
+    align-items: center;
+    justify-content: center;
+    margin-top: 10px;
+    padding: 8px 12px;
+    border: 1px solid var(--phone-border-strong);
+    border-radius: 11px;
+    color: var(--phone-accent-contrast);
+    background: var(--phone-accent);
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+html[data-phone-theme] .xy-phone-appearance-file-button input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
+}
+
+html[data-phone-theme] .xy-phone-appearance-position {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 8px;
+    margin-top: 12px;
+    color: var(--phone-muted);
+    font-size: 11px;
+}
+
+html[data-phone-theme] .xy-phone-appearance-position input[type="range"] {
+    width: 100%;
+    min-width: 0;
+    accent-color: var(--phone-accent-strong);
+}
+
+html[data-phone-theme] .xy-phone-appearance-position output {
+    min-width: 34px;
+    color: var(--phone-text);
+    text-align: right;
+}
+
+html[data-phone-theme] .xy-phone-appearance-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 14px;
+}
+
+html[data-phone-theme] .xy-phone-appearance-actions button {
+    min-height: 38px;
+    flex: 1 1 140px;
+    padding: 8px 11px;
+    border: 1px solid var(--phone-border);
+    border-radius: 11px;
+    color: var(--phone-accent-strong);
+    background: var(--phone-surface-soft);
+    cursor: pointer;
+    font: inherit;
+    font-size: 11px;
+    font-weight: 650;
+}
+
+html[data-phone-theme] .xy-phone-appearance-local-note,
+html[data-phone-theme] :is(.xy-phone-appearance-status, .xy-phone-appearance-error) {
+    margin: 10px 0 0;
+    font-size: 10px;
+    line-height: 1.55;
+}
+
+html[data-phone-theme] .xy-phone-appearance-local-note,
+html[data-phone-theme] .xy-phone-appearance-status {
+    color: var(--phone-muted);
+}
+
+html[data-phone-theme] .xy-phone-appearance-error {
+    color: var(--phone-danger);
+}
+
+@media (max-width: 390px) {
+    html[data-phone-theme] :is(.xy-phone-appearance-panel, .phone-appearance-panel) {
+        padding: 12px;
+    }
+
+    html[data-phone-theme] .xy-phone-appearance-swatches {
+        gap: 6px;
+    }
+
+    html[data-phone-theme] .xy-phone-appearance-swatch {
+        grid-template-columns: 26px minmax(0, 1fr);
+        gap: 6px;
+        padding: 7px;
+    }
+
+    html[data-phone-theme] .xy-phone-appearance-swatch-dot {
+        width: 26px;
+        height: 26px;
+    }
+
+    html[data-phone-theme] .xy-phone-appearance-cover {
+        padding: 9px;
+    }
+}
+html[data-phone-theme] .phone-display-info{margin:20px 0;padding:16px;border:1px solid var(--phone-border);border-radius:18px;background:var(--phone-surface);color:var(--phone-text)}
+html[data-phone-theme] .phone-display-info summary{cursor:pointer;font-size:14px;font-weight:600}
+html[data-phone-theme] .phone-display-info p{font-size:12px;line-height:1.6;color:var(--phone-muted);margin:10px 0}
+html[data-phone-theme] .phone-display-info button{padding:10px 14px;border:1px solid var(--phone-border);border-radius:12px;background:var(--phone-surface-strong);color:var(--phone-text)}
+html[data-phone-theme] .phone-display-info textarea{display:block;width:100%;max-width:100%;font-size:12px;line-height:1.5;border:1px solid var(--phone-border);border-radius:12px;padding:10px;background:var(--phone-surface-strong)!important;color:var(--phone-text)!important;-webkit-text-fill-color:var(--phone-text)}
+html[data-phone-theme] .xingyue-mobile-cabin[data-enabled="true"] .mc-hero-card__theme .mc-persona-switch{background:var(--phone-surface-strong);border:1px solid var(--phone-border)}
+html[data-phone-theme] body[data-phone-theme] .app-shell[data-mobile-view="chat"] .mc-chat-message[data-role="user"] .mc-chat-user-bubble .prose{color:var(--phone-text)!important;-webkit-text-fill-color:var(--phone-text)}
+html[data-phone-theme] .app-shell[data-mobile-view="chat"] .mc-chat-mobile-connection__label{color:var(--phone-text)!important}
+html[data-phone-theme] .app-shell[data-mobile-view="chat"] .mc-chat-message-actions,
+html[data-phone-theme] .app-shell[data-mobile-view="chat"] .mc-chat-message-actions :is(button,span){color:var(--phone-muted)!important;opacity:1}

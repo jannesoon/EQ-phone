@@ -203,6 +203,8 @@
     function HomeView({
         agent,
         imageSource,
+        coverPosition = 50,
+        customCover = false,
         imageFailed,
         onImageError,
         persona,
@@ -229,7 +231,7 @@
                 <section className={`mc-hero-card mc-hero-card--poster ${persona === 'wolf' ? 'is-wolf' : 'is-human'}`} aria-labelledby="mc-home-greeting">
                     <div className="mc-hero-card__visual">
                         {imageSource && !imageFailed ? (
-                            <img src={imageSource} alt={persona === 'wolf' ? '小狼崽主题图' : '逸辰主题图'} onError={onImageError} />
+                            <img src={imageSource} alt={customCover ? '自选首页封面' : persona === 'wolf' ? '小狼崽主题图' : '逸辰主题图'} style={{objectPosition:`50% ${coverPosition}%`}} onError={onImageError} />
                         ) : (
                             <MoonArt wolf={persona === 'wolf'} />
                         )}
@@ -428,6 +430,18 @@
     }
 
     function ProfileView({ agent, persona, imageSource, imageFailed, onImageError, onAction, onPersonaChange }) {
+        const [displayInfo, setDisplayInfo] = useState('');
+        const [displayCopyStatus, setDisplayCopyStatus] = useState('');
+        const refreshDisplayInfo = () => {
+            const value = JSON.stringify(global.XingyuePhoneDisplayInfo?.read?.() || {error:'显示检查暂不可用'}, null, 2);
+            setDisplayInfo(value);
+            return value;
+        };
+        const copyDisplayInfo = async () => {
+            const value = refreshDisplayInfo();
+            try { await global.navigator.clipboard.writeText(value); setDisplayCopyStatus('显示信息已复制，可贴回聊天协助检查白边。'); }
+            catch (_) { setDisplayCopyStatus('请长按下方文字手动复制。'); }
+        };
         const [updateState, setUpdateState] = useState({ checking: false, available: false, text: '检查网页的新版本' });
         const checkUpdate = async () => {
             if (updateState.available) { onAction('update'); return; }
@@ -465,8 +479,8 @@
                 </section>
                 <section className="mc-theme-card">
                     <div>
-                        <h2>陪伴主题</h2>
-                        <p>选择一个形象，首页和我的页会同步展示。</p>
+                        <h2>陪伴形象</h2>
+                        <p>选择陪伴形象，配色和首页封面可另外设置。</p>
                     </div>
                     <div className="mc-theme-card__actions">
                         <button type="button" className={persona === 'human' ? 'is-selected' : ''} aria-pressed={persona === 'human'} onClick={() => onPersonaChange('human')}>
@@ -479,6 +493,14 @@
                         </button>
                     </div>
                 </section>
+                {global.XingyuePhoneAppearancePanel?.AppearancePanel && <global.XingyuePhoneAppearancePanel.AppearancePanel />}
+                <details className="phone-display-info" onToggle={event => { if (event.currentTarget.open) refreshDisplayInfo(); }}>
+                    <summary>版本与显示检查</summary>
+                    <p>用于检查手机白边，仅包含版本、屏幕与安全区数值。</p>
+                    <button type="button" onClick={copyDisplayInfo}>复制显示信息</button>
+                    <p role="status">{displayCopyStatus}</p>
+                    <textarea aria-label="显示检查信息" readOnly value={displayInfo} rows={8} />
+                </details>
                 <section className="mc-section mc-section--stacked">
                     <SectionHeading eyebrow="SETTINGS" title="设置与连接" />
                     <div className="mc-profile-group">
@@ -538,7 +560,11 @@
         const [internalView, setInternalView] = useState(() => normalizeView(initialView));
         const [persona, setPersona] = useState('human');
         const [failedImages, setFailedImages] = useState({});
+        const [appearance, setAppearance] = useState(() => global.XingyuePhoneAppearance?.getSnapshot() || {themeId:'violet',coverUrl:'',coverPosition:50});
+        useEffect(() => global.XingyuePhoneAppearance?.subscribe(setAppearance), []);
         const activeView = normalizeView(controlledView, internalView);
+        const pageScrollRef = useRef(null);
+        useEffect(() => { if (pageScrollRef.current) pageScrollRef.current.scrollTop = 0; }, [activeView]);
         const [libraryVisited, setLibraryVisited] = useState(activeView === 'library');
         const [chatNavExpanded, setChatNavExpanded] = useState(false);
         const previousChatStateRef = useRef({
@@ -579,6 +605,7 @@
             ? PERSONA_IMAGES.human
             : preferredImage;
         const imageFailed = Boolean(failedImages[imageSource]);
+        const homeImageSource = appearance.coverUrl && !failedImages[appearance.coverUrl] ? appearance.coverUrl : imageSource;
 
         useEffect(() => {
             setFailedImages({});
@@ -632,13 +659,15 @@
                         data-persona={persona}
                         aria-label="星月舱手机版"
                     >
-                        <main className={`${screenClass} ${activeView === 'library' && libraryContent ? 'mc-screen--embedded' : ''}`}>
+                        <main ref={pageScrollRef} className={`${screenClass} ${activeView === 'library' && libraryContent ? 'mc-screen--embedded' : ''}`}>
                             {activeView === 'home' && (
                                 <HomeView
                                     agent={agent}
-                                    imageSource={imageSource}
-                                    imageFailed={imageFailed}
-                                    onImageError={() => markImageFailed(imageSource)}
+                                    imageSource={homeImageSource}
+                                    imageFailed={Boolean(failedImages[homeImageSource])}
+                                    coverPosition={homeImageSource === appearance.coverUrl ? (appearance.coverPosition ?? 50) : 50}
+                                    customCover={homeImageSource === appearance.coverUrl}
+                                    onImageError={() => markImageFailed(homeImageSource)}
                                     persona={persona}
                                     userName={userName}
                                     today={today}
