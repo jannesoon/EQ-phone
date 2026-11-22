@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-11-22T07:32:02.845Z",
+  "generatedAt": "2026-11-22T10:19:43.962Z",
   "entrypoint": "index.html",
   "outputRoot": ".",
   "sourceRoots": [
@@ -9,7 +9,7 @@
     "cloud-candidate/static"
   ],
   "parameters": {
-    "releaseVersion": "phone-r13",
+    "releaseVersion": "phone-r14",
     "apiBase": "https://jeeapoehmvwpsujsfhao.supabase.co/functions/v1/yunshufang-web-api",
     "agentBase": "https://desktop-8i3jek4.taild484c1.ts.net/mobile-host",
     "hostConnectionAvailable": false,
@@ -26,9 +26,9 @@
       "sha256": "b62392e8efe9ee423ec94f2f4be47b883016e2c0dafb5c2d2c78e917a774222d"
     },
     {
-      "path": "api-settings.jsx",
-      "bytes": 8347,
-      "sha256": "f0a226751ba74fada93531b003eafb57fd184a7af0086660f41b3ce04d377dff"
+      "path": "api-settings.js",
+      "bytes": 24793,
+      "sha256": "5886f19e997fd0765a9f7849e20a04f1257f3015b8aa8193db5856e77963623c"
     },
     {
       "path": "app-settings.js",
@@ -36,9 +36,9 @@
       "sha256": "4f3220cfe15000d451eaeddf166526310014974f8924f58d8278e4067815c70b"
     },
     {
-      "path": "app-shell.jsx",
-      "bytes": 5593,
-      "sha256": "8ef4c3f70a35647de82d9e384872dafef7aca7c22d9413722f1d1b4d633e030e"
+      "path": "app-shell.js",
+      "bytes": 7122,
+      "sha256": "9a5af1642f934aee06839b7c1f54240d19126a358f375ff1e6c8e8bc66dc961b"
     },
     {
       "path": "assets/ethan-human.png",
@@ -76,9 +76,9 @@
       "sha256": "41ac7448e0de5d2887698e58bb83447d9a77cea045b11128924f172f3ca44d85"
     },
     {
-      "path": "device-pairing-panel.jsx",
-      "bytes": 16300,
-      "sha256": "f0dae162fbae3aef740c39f961316c622d04ed742706555b87ab97dabd186ed3"
+      "path": "device-pairing-panel.js",
+      "bytes": 46252,
+      "sha256": "da408221a1961d1c9f4c39e81dcdcdada24cc711b9ea87e700a413a3fe085546"
     },
     {
       "path": "diary-intent.js",
@@ -91,9 +91,9 @@
       "sha256": "91bc6677f1765bc68dadcdb2b58ce3a1871cfcace9e4e41ee4d3d41919caec51"
     },
     {
-      "path": "health-calendar.jsx",
-      "bytes": 5738,
-      "sha256": "684a408e6f75cf5605822b199d5acb936d9bbaccf2920fccfe5a1966dc97b001"
+      "path": "health-calendar.js",
+      "bytes": 8990,
+      "sha256": "0c36ccbb8f95d127a9b339dbacd049d54e451465a3ca56648e8faf0ef341249e"
     },
     {
       "path": "health-manager.js",
@@ -116,19 +116,19 @@
       "sha256": "1694966cb9ce8c1136e0ed8917a467041c9f24c11ae2638c336a384676e16f49"
     },
     {
-      "path": "identity-core-panel.jsx",
-      "bytes": 19770,
-      "sha256": "23f5180627af711eb905b46bd76dc5fdb17e89685fd5061b22aafbcfaf3d8fbc"
+      "path": "identity-core-panel.js",
+      "bytes": 43202,
+      "sha256": "c1721efad6b477b9d1dd6db5c8fd7d8c2a82d8d2220d2fcb51e3bf7b2dc322ed"
     },
     {
       "path": "index.html",
-      "bytes": 11014,
-      "sha256": "d2cab73311a46018e7284e52745ac32931f1666fc0eabfbe3d12831e93702918"
+      "bytes": 10627,
+      "sha256": "ba22d875a973c8b927608abb8a035225edc6b2e67a0c2fefa2d4ab5956350762"
     },
     {
       "path": "library/app.js",
       "bytes": 152060,
-      "sha256": "69e00f0856f56a7e54dfbe10e39cdd8514c44ac3d7f533c04c5bf2154b2ecc7a"
+      "sha256": "2003d3b36aff96ac448a44960a9b40675c008e598c5aebf48c66642ffc9ec0e8"
     },
     {
       "path": "library/assets/doctor-office-clean.png",
@@ -173,7 +173,7 @@
     {
       "path": "library/auth-client.js",
       "bytes": 3060,
-      "sha256": "05e5e5b84376d7a62d2b52f3f9a7bced6922ae905b0496ab5f5d6aef61935f49"
+      "sha256": "f8bd10c6eb849bedfbde8d5b245abee5323a6cfe501c0606e5013461a7c19ae1"
     },
     {
       "path": "library/cloud-view.css",
@@ -193,17 +193,17 @@
     {
       "path": "library/gate.html",
       "bytes": 5890,
-      "sha256": "7abf76602b10267649e22303d8a14ad3720c49466b5065a6b91563e5e18719cc"
+      "sha256": "dfa28eebb02d40efe8db4d5b6e2fcd95eb3a17d507405e98ffbf12e61bc2a175"
     },
     {
       "path": "library/gate.js",
       "bytes": 4433,
-      "sha256": "49c89b92c3746fd0e68dcc9bf60eaffd48c40fe5c51e000bf174ad9ec608f1c4"
+      "sha256": "7f04295d084f190915eff1112e948f45c9790eed444529f3a26a333f7f1f2910"
     },
     {
       "path": "library/index.html",
       "bytes": 10837,
-      "sha256": "4f698b5cd84f747ae465596d92f2d808ddd17e99613ef37e13e083c80f941d0f"
+      "sha256": "f2f7d495ad39f42de23b0d64833c19e980cf1e9a40ac6d822ff9d0f2b47768c8"
     },
     {
       "path": "library/phone-refinements.css",
@@ -223,7 +223,7 @@
     {
       "path": "library/transport.js",
       "bytes": 9184,
-      "sha256": "ed32fcc33c5a27fbcff67291a6b9044cec9a4abce4973bfd84646b75459d67af"
+      "sha256": "390ceac191f984a64a775c353e191dce5bb04f2662b410aba82cffd7c34b534a"
     },
     {
       "path": "manifest.json",
@@ -236,19 +236,19 @@
       "sha256": "4d8141d8afd0f08566d74117d4c94c9a666bbceeef62d0b1254d651923c141ab"
     },
     {
-      "path": "memory-governance-panel.jsx",
-      "bytes": 9943,
-      "sha256": "460b471ba955efd827fd673d51dfb9570f4d84ad395036b82fb72c17083f8913"
+      "path": "memory-governance-panel.js",
+      "bytes": 26361,
+      "sha256": "3ca28f2d4aae2d07c38980ca663c0466945823ae1758a40133201c30f6d38d33"
     },
     {
-      "path": "memory-overview-panel.jsx",
-      "bytes": 5969,
-      "sha256": "cb5ae01d23aa4288420cb863e5f7a03ec263181a56eee88cb6ec462bfca4bb41"
+      "path": "memory-overview-panel.js",
+      "bytes": 24628,
+      "sha256": "e206eb9a4cb467a1be2ac50ffd9788feb725620488763c810da57984c2886c0c"
     },
     {
-      "path": "memory-sources-panel.jsx",
-      "bytes": 5836,
-      "sha256": "c7e48c80db08eabf9f3d570589c7e67557efafacf1850b697eb5d05b8647414c"
+      "path": "memory-sources-panel.js",
+      "bytes": 22407,
+      "sha256": "1b63ed4e3490ec9209ae7251ee6862467a843722beb3a437d4a847b03e436929"
     },
     {
       "path": "memory-vault-router.js",
@@ -256,9 +256,9 @@
       "sha256": "9fc23a61238392edcf3301dd6262c4970ec5e96317f7356fe641913d2ca9f2f8"
     },
     {
-      "path": "migration-panel.jsx",
-      "bytes": 7772,
-      "sha256": "b4d2c242963193dd9fbb38d45c55073a973a9adbd1ef49a0a880d33172e819fa"
+      "path": "migration-panel.js",
+      "bytes": 23504,
+      "sha256": "16b3eb74bd9cd503e664eeea5d175c26e80ca9d4e016a356b63af02ee0c88aaf"
     },
     {
       "path": "mobile-cabin.css",
@@ -266,24 +266,24 @@
       "sha256": "a51fd6171d635082becee8f398808b66b8cb0442fbd76e6850014b76d0ca716a"
     },
     {
-      "path": "mobile-cabin.jsx",
-      "bytes": 39623,
-      "sha256": "0cf9aca3213c34f23fc668d227ee00e2de1094db8809eb8dcd6a038f7c5758bf"
+      "path": "mobile-cabin.js",
+      "bytes": 64520,
+      "sha256": "813b1a429919c4a068e838ada6da3dc52410775d6ce7abb167a3dbcacf4b280b"
     },
     {
       "path": "mobile-integration.css",
       "bytes": 30821,
-      "sha256": "4df9f1479154ad1319bf622f718c7af8691f0a2b21975fdf1ed21aebab5ec08a"
+      "sha256": "6a9ca814d25dd43c72ad8d24a0f02471ada73c063a26da64474f3246817b804d"
     },
     {
-      "path": "mobile-library.jsx",
-      "bytes": 1521,
-      "sha256": "43e7008cb32ce04ea823b40f0b9051dd2acdbd76b0c541651c0fca624ee7eaac"
+      "path": "mobile-library.js",
+      "bytes": 1760,
+      "sha256": "7d4f6b0174575a62e7e00232e233b2080f28f7f5ae0dd654ccfb3c63a6168740"
     },
     {
       "path": "mobile-runtime.js",
       "bytes": 664,
-      "sha256": "0d92e8c06969b40f8445341d2d204b3e6255ad55a8deabe2d34dc2249719c68d"
+      "sha256": "e4b44eaeed360ba9cd1ecb9134d0408729937081a66e4b46a900242a6280fccf"
     },
     {
       "path": "openai-compatible.js",
@@ -291,14 +291,19 @@
       "sha256": "7854223efb43253aadbb5ded522e3017ac454bdb38917247dcc025218e778402"
     },
     {
-      "path": "phone-appearance-panel.jsx",
-      "bytes": 9363,
-      "sha256": "60f4af5f6ecc041a17aa88387108da32aa8e6b055e1adea913fc47c3359fff80"
+      "path": "phone-appearance-panel.js",
+      "bytes": 27273,
+      "sha256": "5cdaaa1f5a0527c77091eebc39cad42e4b95d7b7d0fb70e6e1d513eb86db9948"
     },
     {
       "path": "phone-appearance.js",
       "bytes": 18344,
       "sha256": "ed7128b73c6e5e41413af7bd9b9b86e3d4b79a34ac92ff357eda5220de13e35e"
+    },
+    {
+      "path": "phone-boot.js",
+      "bytes": 2602,
+      "sha256": "490fc1b28bc45a7ea625757b99356581ef924084e9569cb38af70603db1dee26"
     },
     {
       "path": "phone-display-info.js",
@@ -307,8 +312,8 @@
     },
     {
       "path": "phone-sw.js",
-      "bytes": 8675,
-      "sha256": "d2fdb81d80f1d83e48f38a2eb2a256fbf460bb5c7c55b29ba16160a84ea4fd4a"
+      "bytes": 8653,
+      "sha256": "812f7183bbac94cc5aad036fa32456e36879074fd252a0543ab5a5d34e94c0ea"
     },
     {
       "path": "phone-themes.css",
@@ -321,9 +326,9 @@
       "sha256": "abdb88f5e97d743c672b8520711a4cfc44eff61abe6aa814fbaa7bbabc61cce3"
     },
     {
-      "path": "portable-worldbook-panel.jsx",
-      "bytes": 27802,
-      "sha256": "e0cbe467cf25b01435287098c61af337b17ffe6d849c417dd586a9bc2a5c9e28"
+      "path": "portable-worldbook-panel.js",
+      "bytes": 63462,
+      "sha256": "4cb1a1cf16b74ddf236aa03137b5928a1330df03c51a1ab7fcc71a230085987a"
     },
     {
       "path": "portable-worldbook.js",
@@ -347,13 +352,13 @@
     },
     {
       "path": "script.js",
-      "bytes": 954995,
-      "sha256": "195fbf7cefd3ef7824e3d2dc2c6f1e84534f8325b14c9f6aeae00c40904e690e"
+      "bytes": 1083251,
+      "sha256": "88f443854c6dcf6cbe534d5439b53b8dc0744efa9eee4358c715cd9111544910"
     },
     {
-      "path": "session-checkpoint-panel.jsx",
-      "bytes": 18289,
-      "sha256": "49b8c0a3a5aa0a3d212da061db6bac9a28d529dd5c537457c735f7786ef5553a"
+      "path": "session-checkpoint-panel.js",
+      "bytes": 39645,
+      "sha256": "4bd7c9ddb996a63090380cb34399bdbfe30e0863c4e54177fc4e58e54062c8b0"
     },
     {
       "path": "session-manager.js",
@@ -376,19 +381,14 @@
       "sha256": "4b6b77b4eb2ba740099d55903a42f25ee51751a81bcc36cd2d8138d21f2657a8"
     },
     {
-      "path": "task-center-panel.jsx",
-      "bytes": 10589,
-      "sha256": "a8ae9c061939b40db2d231e8828481e63145f9f6b2d70142d2c4c5a304d1c4c0"
+      "path": "task-center-panel.js",
+      "bytes": 29822,
+      "sha256": "a9589991050cd954327209cb709b5f2c0b8e87781fb384d60f73af68d8ba3153"
     },
     {
       "path": "title-generator.js",
       "bytes": 3737,
       "sha256": "a655588e8b1bb255df589899cb95899fee5b1d74c135d34aaf535f0b49d4961b"
-    },
-    {
-      "path": "vendor/babel.min.js",
-      "bytes": 3021422,
-      "sha256": "84b65a368c65e30a39fea7c1ba4081c588f0b917f9f3fd318e9e1e3356fb6309"
     },
     {
       "path": "vendor/fonts/KaTeX_AMS-Regular.ttf",
@@ -731,9 +731,9 @@
       "sha256": "a85f9e0faa0b82f31ccc515df33ffc47b1c279023882ab8c11d29b5d07932254"
     },
     {
-      "path": "video-settings-panel.jsx",
-      "bytes": 20516,
-      "sha256": "5224383b850206923460a8d6540e2f4c7afea4ba0ccb9e0bf6ae12f2e144e4ee"
+      "path": "video-settings-panel.js",
+      "bytes": 41477,
+      "sha256": "776e0e18c0433818c902859318169b07b91dcfa81d4e3eb1e6a14b4341d4c4b4"
     },
     {
       "path": "voice-manager.js",

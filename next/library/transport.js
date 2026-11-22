@@ -1,4 +1,4 @@
-import { RUNTIME_CONFIG } from './runtime-config.js?v=phone-r13';
+import { RUNTIME_CONFIG } from './runtime-config.js?v=phone-r14';
 
 export const SESSION_HEADER = 'X-Yunshufang-Session';
 export const SESSION_STORAGE_KEY = 'yunshufang.session.v1';
