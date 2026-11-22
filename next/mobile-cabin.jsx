@@ -303,48 +303,40 @@
     }
 
     function LifeView({ today, onAction }) {
+        const now = new Date();
         return (
-            <div className="mc-page">
+            <div className="mc-page mc-page--life">
                 <header className="mc-page-header">
                     <div>
-                        <p className="mc-eyebrow">LIFE SPACE</p>
+                        <p className="mc-eyebrow">LITTLE MOMENTS</p>
                         <h1>生活</h1>
-                        <p>{today}</p>
+                        <p>照顾自己，也收藏平凡的小事。</p>
                     </div>
                     <span className="mc-page-header__icon"><Glyph name="heart" size={24} /></span>
                 </header>
-                <section className="mc-feature-card mc-feature-card--health">
-                    <div className="mc-feature-card__icon"><Glyph name="activity" size={24} /></div>
-                    <div>
-                        <p className="mc-eyebrow">HEALTH CALENDAR · 今日照护</p>
-                        <h2>健康日历</h2>
-                        <p>打开健康日历，查看或记录今天的身体状态。</p>
+                <section className="mc-life-health" aria-labelledby="mc-life-health-title">
+                    <div className="mc-life-health__top">
+                        <div className="mc-life-date" aria-hidden="true"><span>{now.getMonth() + 1} 月</span><strong>{now.getDate()}</strong></div>
+                        <div><p className="mc-eyebrow">{today}</p><h2 id="mc-life-health-title">今天，感觉怎么样？</h2></div>
                     </div>
-                    <button className="mc-icon-button" type="button" aria-label="打开健康日历" onClick={() => onAction('health')}>
-                        <Glyph name="arrow" size={18} />
+                    <p className="mc-life-health__intro">身体的变化、心情的起伏，都可以慢慢记下来。</p>
+                    <button className="mc-life-health__open" type="button" onClick={() => onAction('health')}>
+                        <span><Glyph name="activity" size={21} /><strong>打开健康日历</strong></span><Glyph name="arrow" size={19} />
                     </button>
+                    <p className="mc-life-caption">查看记录 · 记下身体状态</p>
                 </section>
-                <div className="mc-two-column">
-                    <button className="mc-tile mc-tile--diary" type="button" onClick={() => onAction('diary')}>
-                        <span className="mc-tile__icon"><Glyph name="pen" size={21} /></span>
-                        <span className="mc-tile__eyebrow">DIARY ENTRY</span>
-                        <strong>星月日记</strong>
-                        <span>打开日记本</span>
-                    </button>
-                    <button className="mc-tile" type="button" onClick={() => onAction('drawing')}>
-                        <span className="mc-tile__icon"><Glyph name="palette" size={21} /></span>
-                        <strong>图片创作</strong>
-                        <span>探索灵感</span>
-                    </button>
-                </div>
-                <section className="mc-section mc-section--stacked">
-                    <SectionHeading eyebrow="YOUR RECORDS" title="近期生活" />
-                    <div className="mc-info-card mc-info-card--life-empty">
-                        <EmptyState
-                            icon="calendar"
-                            title="查看生活记录"
-                            text="从健康日历、星月日记和日程入口查看已保存内容。"
-                        />
+                <section className="mc-life-journal" aria-labelledby="mc-life-journal-title">
+                    <div className="mc-life-journal__top"><span className="mc-eyebrow">A PAGE OF TODAY</span><Glyph name="pen" size={22} /></div>
+                    <h2 id="mc-life-journal-title">星月日记</h2>
+                    <p>今天有什么，想留给以后的我们？</p>
+                    <div className="mc-life-journal__lines" aria-hidden="true"><span /><span /></div>
+                    <button className="mc-text-action" type="button" onClick={() => onAction('diary')}>去云书房写一页 <Glyph name="arrow" size={17} /></button>
+                </section>
+                <section className="mc-section mc-section--stacked" aria-labelledby="mc-life-more-title">
+                    <SectionHeading eyebrow="MAKE & KEEP" title="灵感与收藏" id="mc-life-more-title" />
+                    <div className="mc-life-tools">
+                        <button type="button" onClick={() => onAction('drawing')}><span className="mc-life-tools__icon"><Glyph name="palette" size={22} /></span><strong>图片创作</strong><span>和逸辰聊聊灵感</span><Glyph name="arrow" size={16} /></button>
+                        <button type="button" onClick={() => onAction('vault')}><span className="mc-life-tools__icon"><Glyph name="book" size={22} /></span><strong>云书房收藏</strong><span>翻看已保存的点滴</span><Glyph name="arrow" size={16} /></button>
                     </div>
                 </section>
             </div>

@@ -5,7 +5,7 @@
   const libraryProbeUrl = "https://jeeapoehmvwpsujsfhao.supabase.co/functions/v1/yunshufang-web-api/api/auth/status";
   global.XINGYUE_MOBILE_RUNTIME = Object.freeze({
     connected: true,
-    releaseVersion: "phone-r12",
+    releaseVersion: "phone-r13",
     manualHandoff: true,
     libraryUrl,
     libraryProbeUrl,

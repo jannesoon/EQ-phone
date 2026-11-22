@@ -1,5 +1,5 @@
 import './app.js';
-import { clearSession, isApiConfigured, readSession, requestJson } from './transport.js?v=phone-r12';
+import { clearSession, isApiConfigured, readSession, requestJson } from './transport.js?v=phone-r13';
 
 let locking = false;
 let checking = false;
