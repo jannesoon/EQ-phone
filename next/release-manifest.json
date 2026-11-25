@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-11-22T10:19:43.962Z",
+  "generatedAt": "2026-11-25T16:57:57.373Z",
   "entrypoint": "index.html",
   "outputRoot": ".",
   "sourceRoots": [
@@ -9,7 +9,7 @@
     "cloud-candidate/static"
   ],
   "parameters": {
-    "releaseVersion": "phone-r14",
+    "releaseVersion": "phone-r15",
     "apiBase": "https://jeeapoehmvwpsujsfhao.supabase.co/functions/v1/yunshufang-web-api",
     "agentBase": "https://desktop-8i3jek4.taild484c1.ts.net/mobile-host",
     "hostConnectionAvailable": false,
@@ -122,13 +122,13 @@
     },
     {
       "path": "index.html",
-      "bytes": 10627,
-      "sha256": "ba22d875a973c8b927608abb8a035225edc6b2e67a0c2fefa2d4ab5956350762"
+      "bytes": 10690,
+      "sha256": "c2891f87056ea198a1364265b52e96f427770708c1eda5fb3fb62372aaacce92"
     },
     {
       "path": "library/app.js",
       "bytes": 152060,
-      "sha256": "2003d3b36aff96ac448a44960a9b40675c008e598c5aebf48c66642ffc9ec0e8"
+      "sha256": "37a9d7cab30dc5dcc9670468aeb3ec81154a5183ac584d83aab8bead4f064510"
     },
     {
       "path": "library/assets/doctor-office-clean.png",
@@ -173,7 +173,7 @@
     {
       "path": "library/auth-client.js",
       "bytes": 3060,
-      "sha256": "f8bd10c6eb849bedfbde8d5b245abee5323a6cfe501c0606e5013461a7c19ae1"
+      "sha256": "d15b6054c2bbd15b107607be4bac41873dffcb9330f8f446561d4cd18608b782"
     },
     {
       "path": "library/cloud-view.css",
@@ -193,17 +193,17 @@
     {
       "path": "library/gate.html",
       "bytes": 5890,
-      "sha256": "dfa28eebb02d40efe8db4d5b6e2fcd95eb3a17d507405e98ffbf12e61bc2a175"
+      "sha256": "755c474dd534e5846fd513fd158242c18c1a38b725a9d770e71bba3c9a89a629"
     },
     {
       "path": "library/gate.js",
       "bytes": 4433,
-      "sha256": "7f04295d084f190915eff1112e948f45c9790eed444529f3a26a333f7f1f2910"
+      "sha256": "ab81c84cac13f35ea2a797f61aa2b77ade1f145b3ba46387cb9759ba1c235751"
     },
     {
       "path": "library/index.html",
       "bytes": 10837,
-      "sha256": "f2f7d495ad39f42de23b0d64833c19e980cf1e9a40ac6d822ff9d0f2b47768c8"
+      "sha256": "4ed2f2701ca27c87d1bb637d70db726cd877a04a89215dd3bc7a46eb2579944b"
     },
     {
       "path": "library/phone-refinements.css",
@@ -223,7 +223,7 @@
     {
       "path": "library/transport.js",
       "bytes": 9184,
-      "sha256": "390ceac191f984a64a775c353e191dce5bb04f2662b410aba82cffd7c34b534a"
+      "sha256": "17073388a889a99a2ea081e4a0abc6913960206d25acf42f099c136ea887987b"
     },
     {
       "path": "manifest.json",
@@ -271,9 +271,14 @@
       "sha256": "813b1a429919c4a068e838ada6da3dc52410775d6ce7abb167a3dbcacf4b280b"
     },
     {
+      "path": "mobile-diary-client.js",
+      "bytes": 9180,
+      "sha256": "c1c87f8e5f90aa8df67db38d5efd2222f7691e6d6ab7132961054465eedc60b1"
+    },
+    {
       "path": "mobile-integration.css",
       "bytes": 30821,
-      "sha256": "6a9ca814d25dd43c72ad8d24a0f02471ada73c063a26da64474f3246817b804d"
+      "sha256": "f697cb5f009baadd70298e07d68e8baeeb39ec0b1e00c5350c8ecec39aa0452b"
     },
     {
       "path": "mobile-library.js",
@@ -283,7 +288,7 @@
     {
       "path": "mobile-runtime.js",
       "bytes": 664,
-      "sha256": "e4b44eaeed360ba9cd1ecb9134d0408729937081a66e4b46a900242a6280fccf"
+      "sha256": "38d3ac7be7ee1943a49c88dce24c3e27dd1424d199d99ce9ac77f016838e62e1"
     },
     {
       "path": "openai-compatible.js",
@@ -312,8 +317,8 @@
     },
     {
       "path": "phone-sw.js",
-      "bytes": 8653,
-      "sha256": "812f7183bbac94cc5aad036fa32456e36879074fd252a0543ab5a5d34e94c0ea"
+      "bytes": 8679,
+      "sha256": "e1c6305fbfb305f444f1f31ca6d5d3cbeb8e33412fb7a55f82f2fad6127b4691"
     },
     {
       "path": "phone-themes.css",
@@ -352,8 +357,8 @@
     },
     {
       "path": "script.js",
-      "bytes": 1083251,
-      "sha256": "88f443854c6dcf6cbe534d5439b53b8dc0744efa9eee4358c715cd9111544910"
+      "bytes": 1091234,
+      "sha256": "3cc7c22389f4fc634f50a66734542013da2dc6ca6bc05f0d8ef3d3a31c7c96e9"
     },
     {
       "path": "session-checkpoint-panel.js",

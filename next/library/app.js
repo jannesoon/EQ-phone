@@ -1,5 +1,5 @@
-import { renderReadableContent } from './content-format.js?v=phone-r14';
-import { request as apiRequest } from './transport.js?v=phone-r14';
+import { renderReadableContent } from './content-format.js?v=phone-r15';
+import { request as apiRequest } from './transport.js?v=phone-r15';
 
 const $ = id => document.getElementById(id);
 const escapeHTML = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
